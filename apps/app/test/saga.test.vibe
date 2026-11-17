@@ -1,0 +1,25 @@
+// The shell of src/saga.vibe across a reload: what the conformance driver (test/drivers/app__saga.ts) cannot see,
+// which is a saga started again from its store, and a store holding what is not one.
+import { assert, layer } from "@effect/vitest"
+import * as KeyValueStore from "effect/persistence/KeyValueStore"
+import { Campaign, stored } from "../src/saga.vibe"
+
+/** The saga a page opened now would show. */
+effect function reopened() { return Option.getOrUndefined(try Stream.runHead(Context.get(try Layer.build(stored), Campaign).changes)) }
+
+layer(KeyValueStore.layerMemory)((it) => {
+  // spec/app/saga.md, "Story: Play five campaigns"
+  it.effect("Play five campaigns, then open the page again", () => effect {
+    const campaign = Context.get(try Layer.build(stored), Campaign)
+    try campaign.receive({ type: "finish", who: 0 })
+    // spec/app/saga.md, "There are forty things to learn, and a protagonist learns each of them once"
+    try campaign.receive({ type: "learn", who: 0, fact: 5 })
+    // spec/app/saga.md, "One act moves one measure by at most twenty, and never past its ends"
+    try campaign.receive({ type: "shift", measure: 0, amount: -5 })
+    const again = try reopened()
+    // spec/app/saga.md, "No campaign is ever before its first chapter or past its tenth"
+    try (try KeyValueStore.KeyValueStore).set("saga", JSON.stringify({ ...again, forbidden: 11 }))
+    const invalid = try reopened()
+    try Effect.try(() => assert.deepStrictEqual([again?.forbidden, again?.crown, again?.known, invalid?.forbidden, invalid?.crown], [1, 55, [5], 0, 60]))
+  })
+})

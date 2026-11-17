@@ -1,0 +1,61 @@
+{
+ "owner": null,
+ "doing": [
+  {
+   "t": "Waiting on the owner",
+   "why": "Movement brief, pixel effects and the Seeker characters are in. Next is the owner's call: keep the Seeker or go back to stick figures, the run button, and which reviewer defects to take on."
+  }
+ ],
+ "queue": [
+  "Owner: the video says no run button; Shift-to-run is still in because enemy chases and island gaps are tuned to it",
+  "Owner: name the game to rate against (the first rating used Stick Fight: The Game)",
+  "Owner: read the spec diff and run `pnpm accept` to sign off the 40 rules",
+  "Owner: decide whether to commit; the repo is still a clone of the vibestack template with its history",
+  "Run the browser journey test (`pnpm --filter @repo/app test:browser`)",
+  "Host the workbench behind a password so it opens on a phone",
+  "Reviewer: combo '2 HIT' labels overprint into a smear during beams (same in the original file)",
+  "Reviewer: enemies are low-contrast grey and hard to tell from each other; the caster is only a red dot",
+  "Reviewer: islands are identical black slabs with no hazards or theming",
+  "Reviewer: vector auras and beams sit beside pixel-art effects; pick one style for all effects",
+  "Reviewer: minimap is unreadable specks; HP and aura bars are small",
+  "Reviewer: characters are small at game scale",
+  "Reviewer: move list runs off the bottom of a 720-pixel-tall window",
+  "No dash-refill pickups yet (the video's crystals): the dash only comes back on the ground",
+  "The first effects pack's 13 sheets are no longer used (kept in workbench/backup/fx-sheets); say if any should come back",
+  "pixelfx glow is made for dark scenes: on the paper background it reads as a pale haze. A darker arena or a per-effect glow pass would fix it",
+  "Ink and Moss have no palette of their own in the pack, so they are the Void palette recoloured by the game",
+  "Unused pack animations: crouch, enter door, grapple",
+  "The kick and the charge are still scripted composites; open art/seeker/<Palette>/*.aseprite to hand-polish them",
+  "Move animations: the slash does not yet land exactly in the hit window for every move (hook, haymaker and sweep are tuned; the rest are by eye)",
+  "Moves that share an engine move across fighters (the knee, the spike, the rising fist) share a choreography, differing only in palette and pace",
+  "Not from the video's list: coins. The game has none, so the coin combo and score pop were applied to hits and knockouts instead",
+  "The music is a small synthesised loop; replace it with a real track when there is one",
+  "This pass loosened the earlier 'falls straight down' air friction (the two videos disagree; the later one won)"
+ ],
+ "done": [
+  "Live site redeployed with the feel pass, the Seeker Complete characters, the per-move animations and the pixelfx effects",
+  "Game-feel pass from the Coding Quests video (via its blog write-up; the captions were blocked): air momentum, 45% jump cut, heavier fall, spring squash and stretch, strongest-wins shake that decays steadily, landing thump scaled to the fall, capped freeze frames, stomp bounce, pitch-varied sounds, combo-pitched hits and '+1' knockout pops, camera lead and zoom punch, music that ducks on a knockout, a one-path knockout sequence",
+  "Game deployed: https://ledge-brawler.vercel.app (static build, redeploy by building and running the Vercel CLI in deploy/ledge-brawler)",
+  "An Aseprite animation for every move on every fighter's move list: 95 in all (ten combos, three specials and six powers each), choreographed from the Seeker's frames and played by the game",
+  "Seeker Complete pack in: 19 of its animations drive the fighters (three-hit combo, up, down, jump and heavy attacks, cast, bow, dash, climb, wall slide, double jump, knockback); Ember, Tide and Volt wear its Ember, Frost and Void palettes, enemies wear Bone",
+  "Kick and charge, which the pack does not have, rebuilt in Aseprite for all four palettes",
+  "pixelfx effects run live in the game, in each fighter's colours: plasma explosions, mana bursts, an implosion on Overdrive, poofs on teleports and knockouts, ground slams, flame pillars, zaps, crit and hit sparks, thorns and a quake on Eruption, a whirlpool",
+  "Second independent rating: 4.5 out of 10, unchanged",
+  "Seeker characters replace the stick figures: recoloured per fighter, aura-coloured blade, death animation on knockouts",
+  "Movement brief from the Game Maker's Toolkit video: 6-step run-up, 3-step stop, 3-height jump with hang time, air friction, still camera, one dash per airtime, wall climb on 110 hidden stamina, squash and stretch, rumble, coyote time, jump buffer, corner slip, smaller hurtbox, dash-jump tech",
+  "Rules grew to 31 actions and 468 proof obligations, all proved",
+  "Independent rating: 4.5 out of 10 against Stick Fight: The Game, from 12 stills",
+  "Pixel effect sheets wired into 13 moments: explosions, Overdrive, teleports, ground slams, fire pillars, lightning, quake spikes, beam flash, take-off, heavy hits, knockouts",
+  "Workbench catalogue: 5 fighters, 2 enemies, 50 combos, 15 specials, 4 powers, 14 islands, 2 props, 40 rules, all photographed from the running engine",
+  "Five gameplay clips recorded from the real engine",
+  "Game runs in the browser from the vibestack app: title, select, fight, move list, touch pad",
+  "All 315 proof obligations of the match rules proved (one by hand: found moves stay among the seventeen)",
+  "Headless arena test: a wave arrives, a charge breaks into Overdrive, a fall costs 25 health",
+  "Engine ported from the single HTML file to typed modules: sim, render, audio, data",
+  "Match rules written as a spec: 24 actions, 10 always-rules, 3 step rules, 4 reachable goals, 1 law",
+  "Project created from the vibestack template at ~/dev/ledge-brawler"
+ ],
+ "stuck": [
+  "vibestack's own self-test `testing.test.ts` fails on Windows path separators (src\\x vs src/x). It is the template's test, not the game's; left as it is."
+ ]
+}

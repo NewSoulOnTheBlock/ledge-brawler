@@ -1,0 +1,446 @@
+// spec/app/index.md, "Story: Fight the waves"
+// Draws the arena of sim.ts on a canvas: ink on paper, with each fighter's own colours from data.ts.
+import { CHARS, FX, KATA, KICK_X, STANCE, type Skeleton, type Vec, sampleKeys, skeleton } from "./data.ts";
+import { type Fighter, FOG_Y, GROUND_TOP, type Game, KATA_KEYS, type SpecialState } from "./sim.ts";
+
+const PAPER = "#fbfbf9", INK = "#111111", RED = "#d42a1e", RULE = "#d6d6d2", GREY = "#8a8a86";
+type Ctx = CanvasRenderingContext2D;
+
+// The pixel effect sheets of ./fx, loaded when the first view is made.
+const sheetUrls = import.meta.glob<string>("./fx/*.png", { eager: true, query: "?url", import: "default" });
+const sheets = new Map<string, HTMLImageElement>();
+function sheet(file: string) {
+  let image = sheets.get(file);
+  if (!image) { image = new Image(); image.src = sheetUrls[`./fx/${file}.png`]; sheets.set(file, image); }
+  return image.complete && image.naturalWidth > 0 ? image : null;
+}
+
+// Rooftop skyline, generated once.
+const skyline = (() => {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const far = [], near = [];
+  for (let x = -2000; x < 9000; x += 40 + rnd() * 70) far.push({ x, w: 40 + rnd() * 80, h: 80 + rnd() * 200, ant: false });
+  for (let x = -2000; x < 9000; x += 70 + rnd() * 120) near.push({ x, w: 60 + rnd() * 110, h: 60 + rnd() * 150, ant: rnd() < 0.25 });
+  return { far, near };
+})();
+
+export function drawStick(ctx: Ctx, s: Skeleton, color: string, alpha: number, width: number) {
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(s.fistB.x, s.fistB.y); ctx.lineTo(s.elbowB.x, s.elbowB.y); ctx.lineTo(s.shoulder.x, s.shoulder.y);
+  ctx.lineTo(s.elbowF.x, s.elbowF.y); ctx.lineTo(s.fistF.x, s.fistF.y);
+  ctx.moveTo(s.shoulder.x, s.shoulder.y); ctx.lineTo(s.hip.x, s.hip.y);
+  ctx.moveTo(s.footB.x, s.footB.y); ctx.lineTo(s.kneeB.x, s.kneeB.y); ctx.lineTo(s.hip.x, s.hip.y);
+  ctx.lineTo(s.kneeF.x, s.kneeF.y); ctx.lineTo(s.footF.x, s.footF.y);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(s.head.x, s.head.y, 10 + (width > 8 ? width / 3 : 0), 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+export function drawAura(ctx: Ctx, sk: Skeleton, strength: number, color: string, fx: string, t: number) {
+  const fl = Math.sin(t * 30) * 3;
+  drawStick(ctx, sk, color, 0.28 * strength, 18 + fl);
+  const base = Math.max(sk.footF.y, sk.footB.y) + 4;
+  ctx.fillStyle = `rgba(${fx},${0.24 * strength})`;
+  for (let i = 0; i < 5; i++) {
+    const bx = sk.hip.x + (i - 2) * 10 + Math.sin(t * 20 + i) * 3;
+    const top = sk.head.y - 22 - Math.abs(Math.sin(t * 13 + i * 1.7)) * 30 * strength;
+    ctx.beginPath(); ctx.moveTo(bx - 9, base);
+    ctx.quadraticCurveTo(bx - 12, (base + top) / 2, bx + Math.sin(t * 25 + i) * 5, top);
+    ctx.quadraticCurveTo(bx + 12, (base + top) / 2, bx + 9, base);
+    ctx.fill();
+  }
+}
+
+/** A character card: the focused fighter loops a short kata inside its aura, the others breathe. */
+export function drawPreview(ctx: Ctx, index: number, focused: boolean, t: number) {
+  const c = CHARS[index];
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  ctx.clearRect(0, 0, 120, 150);
+  ctx.fillStyle = INK; ctx.fillRect(14, 141, 92, 5);
+  let pose;
+  if (focused) {
+    const k = t * 1.4;
+    pose = sampleKeys(KATA_KEYS[KATA[Math.floor(k) % KATA.length]], k % 1);
+  } else {
+    const br = Math.sin(t * 3 + index) * 0.04;
+    pose = STANCE.slice(); pose[0] += br; pose[3] += br * 2; pose[5] += br * 2;
+  }
+  const sk = skeleton(pose, 58, 98, 1);
+  if (focused) drawAura(ctx, sk, 0.85, c.aura, c.fx, t);
+  drawStick(ctx, sk, c.color, 1, 5);
+}
+
+/** The camera and the drawing of one canvas. */
+export function createView(canvas: HTMLCanvasElement, game: Game) {
+  const ctx = canvas.getContext("2d")!;
+  for (const { file } of Object.values(FX)) sheet(file);
+  const S = game.scene;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  let cssW = 0, cssH = 0, dpr = 1, baseScale = 1, scale = 1, zoom = 1, camX = 0, camY = 0, fights = 0;
+  // How far the fighter may move about the middle of the view before the camera follows.
+  const STILL_X = 110, STILL_Y = 70;
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    cssW = r.width; cssH = r.height; dpr = Math.min(2, devicePixelRatio || 1);
+    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+    baseScale = Math.min(cssH / 900, cssW / 760) || 1;
+  }
+
+  const playing = () => S.match.screen === "Play" && S.hero !== null;
+  const heroFx = () => (S.hero?.char ? S.hero.char.fx : "242,178,0");
+  const onScreen = (min: Vec, max: Vec) => max.x > camX - 100 && min.x < camX + cssW / scale + 100;
+
+  function updateCamera(realDt: number) {
+    zoom += ((S.slowMs > 0 ? 1.22 : 1) - zoom) * Math.min(1, realDt * 0.006);
+    scale = baseScale * zoom;
+    const viewW = cssW / scale, viewH = cssH / scale;
+    const H = S.hero;
+    if (!playing() || !H) {
+      // Attract mode: drift along the islands.
+      camX = S.worldMin + ((performance.now() / 1000 * 80) % Math.max(1, S.worldMax - S.worldMin - viewW));
+      camY = 740 - viewH * 0.72;
+    } else {
+      if (fights !== S.fights) { fights = S.fights; zoom = 1; camX = H.body.position.x - cssW / baseScale / 2; }
+      const focus = H.alive ? H.body.position : (S.ragdolls.length ? S.ragdolls[S.ragdolls.length - 1].parts[0].position : S.lastSafe);
+      // The view holds still while the fighter moves about its middle, so that the fighter is the only thing moving.
+      const offX = focus.x - (camX + viewW / 2), offY = focus.y - (camY + viewH * 0.45);
+      const tx = camX + offX - Math.max(-STILL_X, Math.min(STILL_X, offX));
+      const ty = Math.min(740 - viewH * 0.72, camY + offY - Math.max(-STILL_Y, Math.min(STILL_Y, offY)));
+      camX += (tx - camX) * 0.14; camY += (ty - camY) * 0.1;
+    }
+    S.camX = camX; S.camY = camY;
+  }
+
+  function drawBackground() {
+    ctx.fillStyle = PAPER; ctx.fillRect(0, 0, cssW, cssH);
+    const horizon = (GROUND_TOP + 160 - camY) * scale;
+    const layer = (list: typeof skyline.near, par: number, color: string) => {
+      ctx.fillStyle = color;
+      for (const b of list) {
+        const x = (b.x - camX * par) * scale * 0.6 + cssW * 0.2;
+        if (x > cssW || x + b.w * scale < 0) continue;
+        ctx.fillRect(x, horizon - b.h * scale * 0.9, b.w * scale * 0.9, b.h * scale * 0.9 + 400);
+        if (b.ant) ctx.fillRect(x + b.w * scale * 0.3, horizon - b.h * scale * 0.9 - 30 * scale, 2, 30 * scale);
+      }
+    };
+    layer(skyline.far, 0.15, "#eeeeeb");
+    layer(skyline.near, 0.3, "#e3e3df");
+    ctx.fillStyle = RULE; ctx.fillRect(0, horizon, cssW, 1.5);
+  }
+
+  function worldTransform() {
+    const sx = S.shake && !reduceMotion ? (Math.random() - 0.5) * S.shake : 0;
+    const sy = S.shake && !reduceMotion ? (Math.random() - 0.5) * S.shake : 0;
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (sx - camX * scale), dpr * (sy - camY * scale));
+  }
+
+  function drawStatics() {
+    for (const s of S.statics) {
+      const { min, max } = s.bounds;
+      if (!onScreen(min, max)) continue;
+      const w = max.x - min.x, h = max.y - min.y;
+      ctx.fillStyle = INK; ctx.fillRect(min.x, min.y, w, h);
+      if (s.label !== "wall") { ctx.fillStyle = PAPER; ctx.fillRect(min.x + 3, min.y + 6, w - 6, 1.5); }
+    }
+  }
+
+  function drawProps() {
+    ctx.lineJoin = "round";
+    for (const b of S.props) {
+      if (!onScreen(b.bounds.min, b.bounds.max)) continue;
+      ctx.save(); ctx.translate(b.position.x, b.position.y); ctx.rotate(b.angle);
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.fillStyle = "#ffffff";
+      if (b.label === "ball") {
+        const r = b.circleRadius ?? 18;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.stroke();
+      } else {
+        const s = b.size ?? 40, h = s / 2;
+        ctx.fillRect(-h, -h, s, s); ctx.strokeRect(-h, -h, s, s);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, h); ctx.moveTo(h, -h); ctx.lineTo(-h, h); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawSpikes(F: Fighter) {
+    const h = F.skel!.head;
+    ctx.fillStyle = F.color;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 - F.facing * (-0.5 + i * 0.32);
+      const len = 20 + (i % 2) * 6;
+      ctx.beginPath();
+      ctx.moveTo(h.x + Math.cos(a - 0.35) * 9, h.y + Math.sin(a - 0.35) * 9);
+      ctx.lineTo(h.x + Math.cos(a) * len, h.y + Math.sin(a) * len);
+      ctx.lineTo(h.x + Math.cos(a + 0.35) * 9, h.y + Math.sin(a + 0.35) * 9);
+      ctx.fill();
+    }
+  }
+
+  function chargeBall(p: Vec, r: number, color: string) {
+    r += Math.sin(S.time * 40) * 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+  }
+
+  const hands = (F: Fighter): Vec => { const s = F.skel!; return { x: (s.fistF.x + s.fistB.x) / 2, y: (s.fistF.y + s.fistB.y) / 2 }; };
+
+  function drawBeam(F: Fighter, s: SpecialState) {
+    const c = F.char!, o = hands(F), a = s.ang || 0, width = Number(s.p.width), len = Number(s.p.len);
+    const w = width + Math.sin(S.time * 55) * width * 0.16;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    ctx.rotate(Math.atan2(Math.sin(a), F.facing * Math.cos(a)));
+    ctx.fillStyle = `rgba(${c.fx},0.45)`; ctx.fillRect(0, -w / 2 - 8, len, w + 16);
+    ctx.fillStyle = c.orb; ctx.fillRect(0, -w / 2, len, w);
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, -w * 0.18, len, w * 0.36);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -w / 2); ctx.lineTo(len, -w / 2); ctx.moveTo(0, w / 2); ctx.lineTo(len, w / 2); ctx.stroke();
+    if (c.element === "volt") {
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      for (let x = 30; x < len; x += 30) ctx.lineTo(x, (Math.random() - 0.5) * w * 1.6);
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(0, 0, w * 0.85 + 4, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  }
+
+  /** What a special shows besides its pose. */
+  function drawSpecial(F: Fighter, s: SpecialState) {
+    const c = F.char!, at = F.body.position;
+    switch (s.def.kind) {
+      case "beam":
+        if (s.t < 44) chargeBall(hands(F), 4 + s.t / 3, c.orb); else if (s.t < 104) drawBeam(F, s);
+        break;
+      case "nova":
+        if (s.t >= 42) break;
+        ctx.beginPath(); ctx.arc(at.x, at.y, 20 + s.t * 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${c.fx},0.18)`; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+        break;
+      case "bigorb":
+        if (s.t < 18) chargeBall({ x: at.x, y: F.skel!.head.y - 46 }, 8 + s.t * 1.2, c.orb);
+        break;
+      case "vortex": {
+        if (s.t >= 86 || !s.c) break;
+        const grow = Math.min(1, s.t / 12);
+        ctx.lineWidth = 3;
+        for (let arm = 0; arm < 3; arm++) {
+          ctx.beginPath();
+          for (let i = 0; i <= 30; i++) {
+            const a = S.time * 9 + arm * 2.09 + i * 0.22, r = (8 + i * 8.5) * grow;
+            ctx.lineTo(s.c.x + Math.cos(a) * r, s.c.y + Math.sin(a) * r * 0.55);
+          }
+          ctx.strokeStyle = `rgba(${c.fx},0.75)`; ctx.stroke();
+        }
+        ctx.beginPath(); ctx.ellipse(s.c.x, s.c.y, 260 * grow, 140 * grow, 0, 0, Math.PI * 2); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+        break;
+      }
+    }
+  }
+
+  function drawFighter(F: Fighter) {
+    if (!F.alive || !F.skel || !onScreen(F.body.bounds.min, F.body.bounds.max)) return;
+    const sp = F.special, time = S.time;
+    const charging = F.charging || (sp && sp.t < 44 && (sp.def.kind === "beam" || sp.def.kind === "nova"));
+    if (F.char && (F.od > 0 || charging)) drawAura(ctx, F.skel, F.od > 0 ? 1 : 0.6 + F.aura / 250, F.char.aura, F.char.fx, time);
+    F.trail.forEach((sk, i) => drawStick(ctx, sk, F.od > 0 && F.char ? F.char.aura : F.color, 0.08 + 0.05 * i, 5));
+    if (sp) drawSpecial(F, sp);
+    const flashCol = F.color === RED ? INK : RED;
+    drawStick(ctx, F.skel, F.flash > 0 && F.flash % 4 < 2 ? flashCol : F.color, 1, 5);
+    // A hollow head: the dash is spent until the fighter touches the ground.
+    if (F.isPlayer && S.match.dashes === 0) { ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(F.skel.head.x, F.skel.head.y, 6, 0, Math.PI * 2); ctx.fill(); }
+    if (F.od > 0) drawSpikes(F);
+    if (F.burn > 0) { ctx.fillStyle = "rgba(255,122,26,0.5)"; ctx.beginPath(); ctx.arc(F.skel.head.x, F.skel.head.y - 4, 13 + Math.sin(time * 30) * 2, Math.PI, 0); ctx.fill(); }
+    if (F.caster) { ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(F.skel.head.x, F.skel.head.y, 3.5, 0, Math.PI * 2); ctx.fill(); }
+    if (!F.isPlayer && F.hp < F.maxHp) {
+      const x = F.body.position.x - 18, y = F.skel.head.y - 22;
+      ctx.fillStyle = RULE; ctx.fillRect(x, y, 36, 4);
+      ctx.fillStyle = RED; ctx.fillRect(x, y, 36 * Math.max(0, F.hp / F.maxHp), 4);
+    }
+  }
+
+  function drawRagdolls() {
+    ctx.lineCap = "round";
+    for (const r of S.ragdolls) {
+      ctx.globalAlpha = Math.min(1, r.life / 60);
+      ctx.strokeStyle = r.color; ctx.fillStyle = r.color; ctx.lineWidth = 5;
+      ctx.beginPath();
+      for (const p of r.parts) {
+        if (p === r.head) continue;
+        const h = (p.len ?? 0) / 2, dx = -Math.sin(p.angle) * h, dy = Math.cos(p.angle) * h;
+        ctx.moveTo(p.position.x - dx, p.position.y - dy); ctx.lineTo(p.position.x + dx, p.position.y + dy);
+      }
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(r.head.position.x, r.head.position.y, 10, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawOrbs() {
+    for (const o of S.orbs) {
+      o.trail.forEach((p, i) => {
+        ctx.globalAlpha = (i + 1) / (o.trail.length + 1) * 0.35;
+        ctx.fillStyle = o.color; ctx.beginPath(); ctx.arc(p.x, p.y, o.r * (0.5 + i / 12), 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      if (o.disc) {
+        ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.spin);
+        ctx.beginPath(); ctx.ellipse(0, 0, o.r * 1.5, o.r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fillStyle = o.color; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(0, 0, o.r * 0.6, o.r * 0.25, 0, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.restore();
+        continue;
+      }
+      const r = o.r + Math.sin(S.time * 45) * (o.big ? 3 : 1.2);
+      ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = o.color; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+      ctx.beginPath(); ctx.arc(o.x, o.y, r * 0.45, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+    }
+  }
+
+  function drawSprites() {
+    ctx.imageSmoothingEnabled = false;
+    for (const s of S.sprites) {
+      const image = sheet(FX[s.fx].file);
+      if (image) ctx.drawImage(image, Math.floor(s.age / 2) * 64, s.row * 64, 64, 64, s.x - s.size / 2, s.standing ? s.y - s.size : s.y - s.size / 2, s.size, s.size);
+    }
+    ctx.imageSmoothingEnabled = true;
+  }
+
+  function drawEffects() {
+    const time = S.time;
+    for (const e of S.effects) {
+      switch (e.kind) {
+        case "pillar": {
+          const k = e.t < 6 ? e.t / 6 : 1 - Math.max(0, (e.t - 20) / 10), h = 270 * k, w = 52 + Math.sin(time * 40) * 6;
+          const g = ctx.createLinearGradient(0, e.y, 0, e.y - h);
+          g.addColorStop(0, RED); g.addColorStop(0.5, "#ff7a1a"); g.addColorStop(1, "#ffd54a");
+          ctx.fillStyle = g; ctx.fillRect(e.x - w / 2, e.y - h, w, h);
+          ctx.fillStyle = "#fff6d0"; ctx.fillRect(e.x - w / 6, e.y - h * 0.9, w / 3, h * 0.9);
+          ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(e.x - w / 2, e.y - h, w, h);
+          break;
+        }
+        case "quake":
+          ctx.fillStyle = INK;
+          for (let i = 0; i < 4; i++) {
+            const sx = e.x - e.dir * i * 18, h = 34 - i * 7 + Math.sin(time * 30 + i) * 4;
+            ctx.beginPath(); ctx.moveTo(sx - 10, e.y); ctx.lineTo(sx - e.dir * 2, e.y - h); ctx.lineTo(sx + 10, e.y); ctx.fill();
+          }
+          ctx.fillStyle = "#ff7a1a"; ctx.fillRect(e.x - 14, e.y - 3, 28, 3);
+          break;
+        case "cyclone":
+          for (let i = 0; i < 9; i++) {
+            const yy = e.y - 10 - i * 26, w = 18 + i * 7, off = Math.sin(time * 14 + i * 0.8) * 10;
+            ctx.beginPath(); ctx.ellipse(e.x + off, yy, w, 8 + i, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(140,233,154,0.35)"; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+          }
+          break;
+        case "echo": {
+          const a = e.t > 34 ? 1 - (e.t - 34) / 6 : 1;
+          e.trail.forEach((tx, i) => drawStick(ctx, skeleton(KICK_X, tx, e.y + 2, e.dir), e.aura, a * 0.1 * (i + 1), 5));
+          drawStick(ctx, skeleton(KICK_X, e.x, e.y + 2, e.dir), e.color, a * 0.7, 5);
+          break;
+        }
+        case "bolt": {
+          ctx.globalAlpha = e.life / 10;
+          ctx.lineJoin = "round";
+          const path = () => { ctx.beginPath(); e.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); };
+          path(); ctx.strokeStyle = INK; ctx.lineWidth = e.width + 3; ctx.stroke();
+          path(); ctx.strokeStyle = e.color; ctx.lineWidth = e.width; ctx.stroke();
+          path(); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(1.5, e.width / 3); ctx.stroke();
+          ctx.globalAlpha = 1;
+          break;
+        }
+      }
+    }
+    for (const r of S.rings) {
+      ctx.globalAlpha = Math.min(1, r.life / 10);
+      ctx.lineWidth = 6; ctx.strokeStyle = `rgba(${heroFx()},0.7)`;
+      ctx.beginPath();
+      if (r.flat) ctx.ellipse(r.x, r.y, r.r, r.r * 0.18, 0, 0, Math.PI * 2); else ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    for (const b of S.bursts) {
+      const k = 1 - b.life / b.max, r = b.r * (0.6 + k * 0.7);
+      ctx.globalAlpha = 1 - k * 0.6;
+      ctx.beginPath();
+      for (let i = 0; i < 18; i++) {
+        const a = b.rot + (i / 18) * Math.PI * 2, rr = i % 2 ? r * 0.45 : r;
+        ctx.lineTo(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr);
+      }
+      ctx.closePath();
+      ctx.fillStyle = b.color; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    for (const p of S.particles) {
+      ctx.fillStyle = `rgba(${p.color},${p.life / p.max})`;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.textAlign = "center"; ctx.font = '700 17px "Chakra Petch", sans-serif';
+    for (const fl of S.floaters) {
+      ctx.fillStyle = fl.red ? `rgba(212,42,30,${Math.min(1, fl.life / 20)})` : `rgba(17,17,17,${Math.min(1, fl.life / 20)})`;
+      ctx.fillText(fl.text, fl.x, fl.y);
+    }
+  }
+
+  function drawMinimap() {
+    const mw = coarse ? Math.min(260, cssW - 250) : Math.min(340, cssW * 0.3), mh = 34;
+    if (mw < 100) return;
+    const mx = coarse ? cssW - mw - 16 : 16, my = coarse ? 14 : cssH - mh - 16;
+    const sx = (x: number) => mx + (x - S.worldMin) / (S.worldMax - S.worldMin) * mw;
+    const sy = (y: number) => my + 4 + (y + 500) / 1500 * (mh - 8);
+    ctx.fillStyle = "rgba(251,251,249,0.88)"; ctx.fillRect(mx, my, mw, mh);
+    ctx.strokeStyle = RULE; ctx.lineWidth = 1; ctx.strokeRect(mx + 0.5, my + 0.5, mw - 1, mh - 1);
+    ctx.fillStyle = INK;
+    for (const s of S.statics) ctx.fillRect(sx(s.bounds.min.x), sy(s.bounds.min.y), Math.max(1, sx(s.bounds.max.x) - sx(s.bounds.min.x)), s.label === "ground" ? 2 : 1);
+    ctx.strokeStyle = GREY;
+    ctx.strokeRect(sx(camX), my + 1.5, Math.max(4, (cssW / scale) / (S.worldMax - S.worldMin) * mw), mh - 3);
+    ctx.fillStyle = RED;
+    for (const E of S.enemies) ctx.fillRect(sx(E.body.position.x) - 1.5, sy(E.body.position.y) - 1.5, 3, 3);
+    const H = S.hero;
+    if (H && H.alive) { ctx.fillStyle = H.color; ctx.beginPath(); ctx.arc(sx(H.body.position.x), sy(H.body.position.y), 3.5, 0, Math.PI * 2); ctx.fill(); }
+  }
+
+  function drawScreen() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const top = (FOG_Y - camY) * scale;
+    const g = ctx.createLinearGradient(0, top, 0, cssH);
+    g.addColorStop(0, "rgba(251,251,249,0)"); g.addColorStop(1, "rgba(251,251,249,1)");
+    ctx.fillStyle = g; ctx.fillRect(0, top, cssW, Math.max(0, cssH - top));
+    if (S.flashT > 0 && S.hero) { ctx.fillStyle = `rgba(${heroFx()},${S.flashT / 22 * 0.5})`; ctx.fillRect(0, 0, cssW, cssH); }
+    if (S.slowMs > 0) {
+      const bar = Math.min(1, S.slowMs / 300) * cssH * 0.06;
+      ctx.fillStyle = INK; ctx.fillRect(0, 0, cssW, bar); ctx.fillRect(0, cssH - bar, cssW, bar);
+    }
+    if (playing()) drawMinimap();
+  }
+
+  return {
+    resize,
+    /** Moves the camera by `realDt` milliseconds and draws the scene. */
+    draw(realDt: number) {
+      updateCamera(realDt);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawBackground();
+      worldTransform();
+      drawStatics(); drawProps(); drawRagdolls();
+      S.enemies.forEach(drawFighter);
+      if (S.hero && playing()) drawFighter(S.hero);
+      drawOrbs();
+      drawEffects();
+      drawSprites();
+      drawScreen();
+    },
+  };
+}

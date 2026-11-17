@@ -1,0 +1,150 @@
+[
+ {
+  "title": "Rules check (pnpm check)",
+  "columns": [
+   "Measure",
+   "Now"
+  ],
+  "rows": [
+   [
+    "Actions the match accepts",
+    "31"
+   ],
+   [
+    "Rules that always hold",
+    "12"
+   ],
+   [
+    "Rules about every step",
+    "3"
+   ],
+   [
+    "States shown reachable",
+    "6"
+   ],
+   [
+    "Simulated traces with no rule broken",
+    "12000"
+   ],
+   [
+    "Proof obligations proved",
+    "468 of 468"
+   ],
+   [
+    "Generated code agrees with the model on",
+    "407 traces"
+   ]
+  ]
+ },
+ {
+  "title": "The port",
+  "columns": [
+   "Measure",
+   "Before",
+   "Now"
+  ],
+  "rows": [
+   [
+    "Files holding the game",
+    "1 HTML file",
+    "9 source files + spec"
+   ],
+   [
+    "Lines of game code",
+    "2174",
+    "2503, typed, with the screens"
+   ],
+   [
+    "Fighters",
+    "5",
+    "5"
+   ],
+   [
+    "Combos",
+    "50",
+    "50"
+   ],
+   [
+    "Specials",
+    "15",
+    "15"
+   ],
+   [
+    "Islands",
+    "14",
+    "14"
+   ],
+   [
+    "Pixel effects",
+    "0",
+    "12, live code (pixelfx)"
+   ]
+  ]
+ },
+ {
+  "title": "Catalogue capture",
+  "columns": [
+   "Measure",
+   "Now"
+  ],
+  "rows": [
+   [
+    "Combos that reached their move on camera",
+    "50 of 50"
+   ],
+   [
+    "Specials caught mid-effect",
+    "15 of 15"
+   ],
+   [
+    "Page errors during capture",
+    "0"
+   ]
+  ]
+ },
+ {
+  "title": "Movement, measured by the headless test",
+  "columns": [
+   "Measure",
+   "Before",
+   "Now"
+  ],
+  "rows": [
+   [
+    "Steps to full run speed",
+    "about 12 (easing)",
+    "6"
+   ],
+   [
+    "Steps to a stop",
+    "about 20 (easing)",
+    "5 on the ground, about 22 in the air"
+   ],
+   [
+    "Jump height in body heights",
+    "2.8",
+    "about 3"
+   ],
+   [
+    "Dashes per airtime",
+    "none",
+    "1"
+   ],
+   [
+    "Wall-climb stamina",
+    "none",
+    "110, hidden"
+   ],
+   [
+    "Jump kept when the button is let go",
+    "gradual",
+    "45% of the rise"
+   ],
+   [
+    "Longest freeze on a hit",
+    "9 steps",
+    "7 steps"
+   ]
+  ]
+ }
+]

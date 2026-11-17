@@ -1,0 +1,686 @@
+{
+ "mossy": {
+  "tuft": {
+   "file": "mossy/tuft.webp",
+   "w": 132,
+   "h": 160
+  },
+  "plank": {
+   "file": "mossy/plank.webp",
+   "w": 524,
+   "h": 228
+  },
+  "pillar": {
+   "file": "mossy/pillar.webp",
+   "w": 224,
+   "h": 472
+  },
+  "block": {
+   "file": "mossy/block.webp",
+   "w": 192,
+   "h": 188
+  },
+  "plankB": {
+   "file": "mossy/plankB.webp",
+   "w": 528,
+   "h": 228
+  },
+  "tuftB": {
+   "file": "mossy/tuftB.webp",
+   "w": 144,
+   "h": 136
+  },
+  "long": {
+   "file": "mossy/long.webp",
+   "w": 784,
+   "h": 224
+  },
+  "longest": {
+   "file": "mossy/longest.webp",
+   "w": 1008,
+   "h": 224
+  },
+  "moundS": {
+   "file": "mossy/moundS.webp",
+   "w": 128,
+   "h": 160
+  },
+  "hill": {
+   "file": "mossy/hill.webp",
+   "w": 580,
+   "h": 248
+  },
+  "hillBig": {
+   "file": "mossy/hillBig.webp",
+   "w": 620,
+   "h": 428
+  },
+  "hillLow": {
+   "file": "mossy/hillLow.webp",
+   "w": 664,
+   "h": 228
+  },
+  "moundBig": {
+   "file": "mossy/moundBig.webp",
+   "w": 268,
+   "h": 216
+  },
+  "rock": {
+   "file": "mossy/rock.webp",
+   "w": 322,
+   "h": 178
+  },
+  "rockFlat": {
+   "file": "mossy/rockFlat.webp",
+   "w": 286,
+   "h": 128
+  },
+  "rockTall": {
+   "file": "mossy/rockTall.webp",
+   "w": 264,
+   "h": 230
+  },
+  "thorns": {
+   "file": "mossy/thorns.webp",
+   "w": 370,
+   "h": 158
+  },
+  "thornsHook": {
+   "file": "mossy/thornsHook.webp",
+   "w": 308,
+   "h": 204
+  },
+  "thornsArch": {
+   "file": "mossy/thornsArch.webp",
+   "w": 230,
+   "h": 214
+  },
+  "thornsS": {
+   "file": "mossy/thornsS.webp",
+   "w": 186,
+   "h": 80
+  },
+  "leafA": {
+   "file": "mossy/leafA.webp",
+   "w": 72,
+   "h": 66
+  },
+  "leafB": {
+   "file": "mossy/leafB.webp",
+   "w": 70,
+   "h": 96
+  },
+  "fiddle": {
+   "file": "mossy/fiddle.webp",
+   "w": 38,
+   "h": 92
+  },
+  "sprig": {
+   "file": "mossy/sprig.webp",
+   "w": 84,
+   "h": 112
+  },
+  "leafC": {
+   "file": "mossy/leafC.webp",
+   "w": 76,
+   "h": 58
+  },
+  "grass": {
+   "file": "mossy/grass.webp",
+   "w": 100,
+   "h": 112
+  },
+  "shoots": {
+   "file": "mossy/shoots.webp",
+   "w": 64,
+   "h": 120
+  },
+  "grassB": {
+   "file": "mossy/grassB.webp",
+   "w": 92,
+   "h": 100
+  },
+  "trunkA": {
+   "file": "mossy/trunkA.webp",
+   "w": 104,
+   "h": 368
+  },
+  "trunkB": {
+   "file": "mossy/trunkB.webp",
+   "w": 108,
+   "h": 370
+  },
+  "trunkC": {
+   "file": "mossy/trunkC.webp",
+   "w": 106,
+   "h": 370
+  },
+  "trunkD": {
+   "file": "mossy/trunkD.webp",
+   "w": 62,
+   "h": 376
+  },
+  "farColumn": {
+   "file": "mossy/farColumn.webp",
+   "w": 264,
+   "h": 1008
+  },
+  "farColumnB": {
+   "file": "mossy/farColumnB.webp",
+   "w": 260,
+   "h": 588
+  },
+  "farMound": {
+   "file": "mossy/farMound.webp",
+   "w": 272,
+   "h": 252
+  },
+  "farHill": {
+   "file": "mossy/farHill.webp",
+   "w": 420,
+   "h": 228
+  },
+  "farSlope": {
+   "file": "mossy/farSlope.webp",
+   "w": 420,
+   "h": 436
+  },
+  "farDome": {
+   "file": "mossy/farDome.webp",
+   "w": 232,
+   "h": 164
+  },
+  "frond": {
+   "file": "mossy/frond.webp",
+   "w": 129,
+   "h": 412
+  },
+  "frondB": {
+   "file": "mossy/frondB.webp",
+   "w": 129,
+   "h": 342
+  },
+  "frondC": {
+   "file": "mossy/frondC.webp",
+   "w": 129,
+   "h": 342
+  },
+  "frondD": {
+   "file": "mossy/frondD.webp",
+   "w": 109,
+   "h": 288
+  },
+  "frondEdge": {
+   "file": "mossy/frondEdge.webp",
+   "w": 92,
+   "h": 330
+  },
+  "curl": {
+   "file": "mossy/curl.webp",
+   "w": 269,
+   "h": 182
+  },
+  "mossDrop": {
+   "file": "mossy/mossDrop.webp",
+   "w": 162,
+   "h": 484
+  },
+  "mossDropB": {
+   "file": "mossy/mossDropB.webp",
+   "w": 162,
+   "h": 484
+  },
+  "curlB": {
+   "file": "mossy/curlB.webp",
+   "w": 266,
+   "h": 179
+  },
+  "curlC": {
+   "file": "mossy/curlC.webp",
+   "w": 266,
+   "h": 179
+  },
+  "earth": {
+   "file": "mossy/earth.webp",
+   "w": 368,
+   "h": 368
+  },
+  "earthTall": {
+   "file": "mossy/earthTall.webp",
+   "w": 112,
+   "h": 364
+  },
+  "earthWide": {
+   "file": "mossy/earthWide.webp",
+   "w": 264,
+   "h": 112
+  }
+ },
+ "shadow": {
+  "blockA": {
+   "file": "shadow/blockA.png",
+   "w": 79,
+   "h": 48
+  },
+  "blockB": {
+   "file": "shadow/blockB.png",
+   "w": 78,
+   "h": 48
+  },
+  "blockS": {
+   "file": "shadow/blockS.png",
+   "w": 52,
+   "h": 41
+  },
+  "plank": {
+   "file": "shadow/plank.png",
+   "w": 127,
+   "h": 50
+  },
+  "pillar": {
+   "file": "shadow/pillar.png",
+   "w": 54,
+   "h": 73
+  },
+  "strip": {
+   "file": "shadow/strip.png",
+   "w": 112,
+   "h": 19
+  },
+  "frame": {
+   "file": "shadow/frame.png",
+   "w": 192,
+   "h": 167
+  },
+  "bareA": {
+   "file": "shadow/bareA.png",
+   "w": 78,
+   "h": 48
+  },
+  "bareB": {
+   "file": "shadow/bareB.png",
+   "w": 78,
+   "h": 48
+  },
+  "bareS": {
+   "file": "shadow/bareS.png",
+   "w": 52,
+   "h": 41
+  },
+  "barePlank": {
+   "file": "shadow/barePlank.png",
+   "w": 127,
+   "h": 44
+  },
+  "barePillar": {
+   "file": "shadow/barePillar.png",
+   "w": 54,
+   "h": 72
+  },
+  "bareStrip": {
+   "file": "shadow/bareStrip.png",
+   "w": 112,
+   "h": 19
+  },
+  "bareFrame": {
+   "file": "shadow/bareFrame.png",
+   "w": 192,
+   "h": 160
+  }
+ },
+ "fields": {
+  "tree": {
+   "file": "fields/tree.png",
+   "w": 112,
+   "h": 136
+  },
+  "treeS": {
+   "file": "fields/treeS.png",
+   "w": 54,
+   "h": 64
+  },
+  "ground": {
+   "file": "fields/ground.png",
+   "w": 160,
+   "h": 36
+  },
+  "mound": {
+   "file": "fields/mound.png",
+   "w": 64,
+   "h": 22
+  },
+  "lantern": {
+   "file": "fields/lantern.png",
+   "w": 15,
+   "h": 29
+  },
+  "lanternLong": {
+   "file": "fields/lanternLong.png",
+   "w": 10,
+   "h": 46
+  },
+  "vines": {
+   "file": "fields/vines.png",
+   "w": 48,
+   "h": 48
+  },
+  "rock": {
+   "file": "fields/rock.png",
+   "w": 32,
+   "h": 21
+  },
+  "plank": {
+   "file": "fields/plank.png",
+   "w": 80,
+   "h": 16
+  },
+  "bush": {
+   "file": "fields/bush.png",
+   "w": 41,
+   "h": 20
+  },
+  "sprout": {
+   "file": "fields/sprout.png",
+   "w": 10,
+   "h": 12
+  },
+  "sproutB": {
+   "file": "fields/sproutB.png",
+   "w": 12,
+   "h": 15
+  },
+  "boulder": {
+   "file": "fields/boulder.png",
+   "w": 16,
+   "h": 10
+  },
+  "sky0": {
+   "file": "fields/sky0.png",
+   "w": 288,
+   "h": 180
+  },
+  "sky1": {
+   "file": "fields/sky1.png",
+   "w": 288,
+   "h": 180
+  },
+  "sky2": {
+   "file": "fields/sky2.png",
+   "w": 288,
+   "h": 180
+  }
+ },
+ "gate": {
+  "gate": {
+   "file": "gate/gate.png",
+   "w": 160,
+   "h": 59
+  }
+ },
+ "cove": {
+  "platform": {
+   "file": "cove/platform.png",
+   "w": 256,
+   "h": 96
+  },
+  "clouds": {
+   "file": "cove/clouds.png",
+   "w": 640,
+   "h": 360
+  },
+  "trees": {
+   "file": "cove/trees.png",
+   "w": 256,
+   "h": 128
+  },
+  "sea": {
+   "file": "cove/sea.png",
+   "w": 3200,
+   "h": 360
+  },
+  "sun": {
+   "file": "cove/sun.png",
+   "w": 384,
+   "h": 64
+  }
+ },
+ "village": {
+  "ground": {
+   "file": "village/ground.png",
+   "w": 96,
+   "h": 48
+  },
+  "wall": {
+   "file": "village/wall.png",
+   "w": 24,
+   "h": 96
+  },
+  "spikes": {
+   "file": "village/spikes.png",
+   "w": 64,
+   "h": 8
+  },
+  "bridge": {
+   "file": "village/bridge.png",
+   "w": 112,
+   "h": 24
+  },
+  "house": {
+   "file": "village/house.png",
+   "w": 120,
+   "h": 80
+  },
+  "houseFlip": {
+   "file": "village/houseFlip.png",
+   "w": 120,
+   "h": 80
+  },
+  "tree": {
+   "file": "village/tree.png",
+   "w": 112,
+   "h": 135
+  },
+  "treeFlip": {
+   "file": "village/treeFlip.png",
+   "w": 112,
+   "h": 135
+  },
+  "sign": {
+   "file": "village/sign.png",
+   "w": 16,
+   "h": 16
+  },
+  "signGrass": {
+   "file": "village/signGrass.png",
+   "w": 16,
+   "h": 16
+  },
+  "warning": {
+   "file": "village/warning.png",
+   "w": 16,
+   "h": 16
+  },
+  "boulder": {
+   "file": "village/boulder.png",
+   "w": 16,
+   "h": 8
+  },
+  "rock": {
+   "file": "village/rock.png",
+   "w": 16,
+   "h": 16
+  },
+  "bones": {
+   "file": "village/bones.png",
+   "w": 16,
+   "h": 8
+  },
+  "bonesB": {
+   "file": "village/bonesB.png",
+   "w": 16,
+   "h": 8
+  }
+ },
+ "cavern": {
+  "ground": {
+   "file": "cavern/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "cavern/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "cavern/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "cavern/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "cavern/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ },
+ "frost": {
+  "ground": {
+   "file": "frost/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "frost/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "frost/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "frost/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "frost/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ },
+ "shrine": {
+  "ground": {
+   "file": "shrine/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "shrine/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "shrine/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "shrine/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "shrine/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ },
+ "ruin": {
+  "ground": {
+   "file": "ruin/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "ruin/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "ruin/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "ruin/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "ruin/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ },
+ "fungal": {
+  "ground": {
+   "file": "fungal/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "fungal/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "fungal/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "fungal/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "fungal/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ },
+ "ember": {
+  "ground": {
+   "file": "ember/ground.png",
+   "w": 128,
+   "h": 48
+  },
+  "ledge": {
+   "file": "ember/ledge.png",
+   "w": 112,
+   "h": 16
+  },
+  "wall": {
+   "file": "ember/wall.png",
+   "w": 48,
+   "h": 72
+  },
+  "block": {
+   "file": "ember/block.png",
+   "w": 24,
+   "h": 24
+  },
+  "rock": {
+   "file": "ember/rock.png",
+   "w": 16,
+   "h": 12
+  }
+ }
+}

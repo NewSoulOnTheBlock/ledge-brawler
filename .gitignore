@@ -14,3 +14,14 @@ generated/
 storybook-static/
 .vibe/
 build/
+workbench/.wb_pass
+workbench/vercel/.vercel
+workbench/vercel/.env.local
+workbench/vercel/public/
+workbench/vercel/node_modules/
+workbench/clips/
+workbench/catalog/
+shots/
+deploy/
+apps/app/.env.local
+.boost/

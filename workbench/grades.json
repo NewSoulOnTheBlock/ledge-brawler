@@ -1,0 +1,28 @@
+[
+ {
+  "t": "11:40 PM",
+  "overall": 4.5,
+  "note": "Independent review of 12 stills against Stick Fight: The Game (no target named by the owner yet). Clean, cohesive ink-on-paper look with a strong title and select screen; the fight itself reads as a polished prototype: bare repeating islands, enemies hard to tell apart, combo text that overprints. Stills cannot judge motion or feel.",
+  "areas": {
+   "Visual style": 5.5,
+   "Readability": 4.5,
+   "Interface": 5.5,
+   "Effects": 4.5,
+   "World": 3.5,
+   "Characters": 4
+  }
+ },
+ {
+  "t": "12:05 AM",
+  "overall": 4.5,
+  "note": "Second independent review, 12 new stills, same target (Stick Fight: The Game). Unchanged overall: interface and effects up a little, world down. The hooded characters read as tiny at game scale and enemies are grey recolours of the player; the arena is still one flat slab. Stills cannot judge the new movement.",
+  "areas": {
+   "Visual style": 5.5,
+   "Readability": 4.5,
+   "Interface": 6,
+   "Effects": 5,
+   "World": 3,
+   "Characters": 4
+  }
+ }
+]

@@ -1,0 +1,46 @@
+{
+  "game": "Five Blades",
+  "port": 8977,
+  "repo": "..",
+  "gitPaths": [
+    ".",
+    ":(exclude)workbench",
+    ":(exclude)vibestack"
+  ],
+  "buildFile": "../apps/app/src/game/sim.ts",
+  "shotDirs": [
+    "../shots/latest"
+  ],
+  "clipDir": "clips",
+  "catalogDir": "catalog",
+  "running": "",
+  "site": "https://ledge-brawler.vercel.app",
+  "theme": {
+    "scheme": "light",
+    "gold": "#c4261b",
+    "goldDim": "#e39a94",
+    "bg": "#fbfbf9",
+    "rail": "#f1f1ed",
+    "panel": "#ffffff",
+    "panel2": "#f4f4f0",
+    "line": "#d6d6d2",
+    "text": "#111111",
+    "muted": "#6b6b67",
+    "active": "#111111",
+    "soft": "#4d4d4a",
+    "flavour": "#4d4d4a",
+    "track": "#e3e3df",
+    "well": "#fbfbf9",
+    "sendHover": "#a51f16",
+    "ok": "#2f9e44",
+    "bad": "#d42a1e",
+    "fresh": "#1f6fd1",
+    "r0": "#111111",
+    "r1": "#1f6fd1",
+    "r2": "#7b3fe4",
+    "r3": "#d42a1e",
+    "display": "Chakra Petch",
+    "body": "IBM Plex Mono",
+    "fontUrl": "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+  }
+}

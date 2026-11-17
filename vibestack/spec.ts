@@ -756,7 +756,8 @@ if (isMain()) {
         const declared = JSON.parse(fs.readFileSync(path.join(root, "turbo.json"), "utf8")).remoteCache?.apiUrl;
         env = cacheCredentials(env, args, declared, cache);
       }
-      const child = spawn(bin("turbo", root), ["run", ...args], { cwd: root, env, stdio: "inherit" });
+      // run.ts, "bin": on Windows the shim is a .cmd file, which only a shell runs.
+      const child = spawn(bin("turbo", root), ["run", ...args], { cwd: root, env, stdio: "inherit", shell: process.platform === "win32" });
       child.on("exit", (code, signal) => { process.exitCode = code ?? (signal ? 1 : 0); });
     } else if (command === "gen" && takes([], ["--if-valid"])) {
       // --if-valid is for `pnpm install`: a spec in the middle of an edit must not make installing fail.

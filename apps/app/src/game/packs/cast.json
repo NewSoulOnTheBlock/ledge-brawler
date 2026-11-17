@@ -1,0 +1,330 @@
+{
+ "samurai": {
+  "file": "samurai.png",
+  "w": 64,
+  "h": 64,
+  "cols": 32,
+  "feet": [
+   30,
+   48
+  ],
+  "scale": 3.26,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 8,
+    "fps": 10
+   },
+   "run": {
+    "start": 8,
+    "frames": 8,
+    "fps": 12
+   },
+   "attack": {
+    "start": 16,
+    "frames": 4,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 20,
+    "frames": 3,
+    "fps": 14
+   },
+   "jump": {
+    "start": 23,
+    "frames": 4,
+    "fps": 10
+   },
+   "fall": {
+    "start": 27,
+    "frames": 4,
+    "fps": 10
+   },
+   "hit": {
+    "start": 31,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 33,
+    "frames": 14,
+    "fps": 12
+   }
+  }
+ },
+ "knight": {
+  "file": "knight.png",
+  "w": 86,
+  "h": 49,
+  "cols": 23,
+  "feet": [
+   30,
+   47
+  ],
+  "scale": 2.59,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 8
+   },
+   "attack": {
+    "start": 6,
+    "frames": 7,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 13,
+    "frames": 5,
+    "fps": 12
+   },
+   "run": {
+    "start": 18,
+    "frames": 7,
+    "fps": 10
+   }
+  }
+ },
+ "sickle": {
+  "file": "sickle.png",
+  "w": 128,
+  "h": 64,
+  "cols": 16,
+  "feet": [
+   64,
+   48
+  ],
+  "scale": 2.33,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 10
+   },
+   "run": {
+    "start": 6,
+    "frames": 5,
+    "fps": 10
+   },
+   "jump": {
+    "start": 11,
+    "frames": 5,
+    "fps": 10
+   },
+   "attack": {
+    "start": 16,
+    "frames": 7,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 23,
+    "frames": 4,
+    "fps": 12
+   }
+  }
+ },
+ "hallokin": {
+  "file": "hallokin.png",
+  "w": 192,
+  "h": 128,
+  "cols": 10,
+  "feet": [
+   57,
+   80
+  ],
+  "scale": 3.39,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 10
+   },
+   "run": {
+    "start": 6,
+    "frames": 4,
+    "fps": 10
+   },
+   "jump": {
+    "start": 10,
+    "frames": 3,
+    "fps": 10
+   },
+   "fall": {
+    "start": 13,
+    "frames": 3,
+    "fps": 10
+   },
+   "attack": {
+    "start": 16,
+    "frames": 7,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 23,
+    "frames": 5,
+    "fps": 12
+   },
+   "attackUp": {
+    "start": 28,
+    "frames": 6,
+    "fps": 10
+   },
+   "hit": {
+    "start": 34,
+    "frames": 1,
+    "fps": 10
+   },
+   "death": {
+    "start": 35,
+    "frames": 12,
+    "fps": 12
+   }
+  }
+ },
+ "huntress": {
+  "file": "huntress.png",
+  "w": 240,
+  "h": 128,
+  "cols": 8,
+  "feet": [
+   117,
+   80
+  ],
+  "scale": 2.46,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 12,
+    "fps": 10
+   },
+   "run": {
+    "start": 12,
+    "frames": 8,
+    "fps": 12
+   },
+   "jump": {
+    "start": 20,
+    "frames": 4,
+    "fps": 10
+   },
+   "fall": {
+    "start": 24,
+    "frames": 4,
+    "fps": 10
+   },
+   "dash": {
+    "start": 28,
+    "frames": 4,
+    "fps": 10
+   },
+   "attackUp": {
+    "start": 32,
+    "frames": 4,
+    "fps": 10
+   },
+   "attack": {
+    "start": 36,
+    "frames": 3,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 39,
+    "frames": 5,
+    "fps": 14
+   },
+   "dashAttack": {
+    "start": 44,
+    "frames": 3,
+    "fps": 10
+   },
+   "hit": {
+    "start": 47,
+    "frames": 1,
+    "fps": 10
+   },
+   "death": {
+    "start": 48,
+    "frames": 10,
+    "fps": 10
+   }
+  }
+ },
+ "shadeflit": {
+  "file": "shadeflit.png",
+  "w": 277,
+  "h": 161,
+  "cols": 7,
+  "feet": [
+   64,
+   106
+  ],
+  "scale": 1.95,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 10
+   },
+   "run": {
+    "start": 6,
+    "frames": 6,
+    "fps": 12
+   },
+   "turn": {
+    "start": 12,
+    "frames": 1,
+    "fps": 10
+   }
+  }
+ },
+ "boss": {
+  "file": "boss.png",
+  "w": 247,
+  "h": 87,
+  "cols": 8,
+  "feet": [
+   88,
+   87
+  ],
+  "scale": 2.98,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 14,
+    "fps": 10
+   },
+   "run": {
+    "start": 14,
+    "frames": 14,
+    "fps": 10
+   },
+   "attack": {
+    "start": 28,
+    "frames": 10,
+    "fps": 12
+   },
+   "attack2": {
+    "start": 38,
+    "frames": 9,
+    "fps": 12
+   },
+   "hit": {
+    "start": 47,
+    "frames": 1,
+    "fps": 10
+   },
+   "death": {
+    "start": 48,
+    "frames": 33,
+    "fps": 14
+   }
+  }
+ }
+}

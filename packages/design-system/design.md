@@ -33,33 +33,33 @@ this prose into tokens. To change the design, describe it, and have the change w
 <!-- tokens:start -->
 | Color | Light | Dark |
 | --- | --- | --- |
-| `background` | oklch(0.976 0.001 286.4) | oklch(0.17 0.006 285.7) |
-| `foreground` | oklch(0.21 0.006 285.9) | oklch(0.944 0.005 286.3) |
+| `background` | oklch(0.987 0.003 106) | oklch(0.17 0.006 285.7) |
+| `foreground` | oklch(0.178 0 0) | oklch(0.944 0.005 286.3) |
 | `card` | oklch(1 0 0) | oklch(0.206 0.008 285.7) |
-| `card-foreground` | oklch(0.21 0.006 285.9) | oklch(0.944 0.005 286.3) |
+| `card-foreground` | oklch(0.178 0 0) | oklch(0.944 0.005 286.3) |
 | `popover` | oklch(1 0 0) | oklch(0.206 0.008 285.7) |
-| `popover-foreground` | oklch(0.21 0.006 285.9) | oklch(0.944 0.005 286.3) |
-| `primary` | oklch(0.511 0.23 277) | oklch(0.682 0.173 282.3) |
-| `primary-foreground` | oklch(1 0 0) | oklch(0.17 0.006 285.7) |
+| `popover-foreground` | oklch(0.178 0 0) | oklch(0.944 0.005 286.3) |
+| `primary` | oklch(0.178 0 0) | oklch(0.682 0.173 282.3) |
+| `primary-foreground` | oklch(0.987 0.003 106) | oklch(0.17 0.006 285.7) |
 | `secondary` | oklch(0.959 0.004 286.3) | oklch(0.25 0.011 285.6) |
-| `secondary-foreground` | oklch(0.21 0.006 285.9) | oklch(0.944 0.005 286.3) |
+| `secondary-foreground` | oklch(0.178 0 0) | oklch(0.944 0.005 286.3) |
 | `muted` | oklch(0.959 0.004 286.3) | oklch(0.25 0.011 285.6) |
-| `muted-foreground` | oklch(0.532 0.017 285.8) | oklch(0.709 0.016 286) |
+| `muted-foreground` | oklch(0.5 0.005 106) | oklch(0.709 0.016 286) |
 | `accent` | oklch(0.958 0.02 279.9) | oklch(0.276 0.072 281.7) |
-| `accent-foreground` | oklch(0.21 0.006 285.9) | oklch(0.944 0.005 286.3) |
+| `accent-foreground` | oklch(0.178 0 0) | oklch(0.944 0.005 286.3) |
 | `destructive` | oklch(0.577 0.215 27.3) | oklch(0.711 0.166 22.2) |
 | `destructive-foreground` | oklch(1 0 0) | oklch(0.17 0.006 285.7) |
-| `border` | oklch(0.92 0.004 286.3) | oklch(0.288 0.013 285.6) |
-| `input` | oklch(0.92 0.004 286.3) | oklch(0.288 0.013 285.6) |
-| `ring` | oklch(0.511 0.23 277) | oklch(0.682 0.173 282.3) |
+| `border` | oklch(0.872 0.004 106) | oklch(0.288 0.013 285.6) |
+| `input` | oklch(0.872 0.004 106) | oklch(0.288 0.013 285.6) |
+| `ring` | oklch(0.577 0.215 27.3) | oklch(0.682 0.173 282.3) |
 | `ok` | oklch(0.527 0.137 150.1) | oklch(0.8 0.182 151.7) |
 | `warn` | oklch(0.555 0.146 49) | oklch(0.837 0.164 84.4) |
 
 | Token | Value |
 | --- | --- |
-| `radius` | 0.5rem |
-| `font.sans` | ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif |
-| `font.mono` | ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace |
+| `radius` | 0rem |
+| `font.sans` | "Evil Empire", "Trebuchet MS", sans-serif |
+| `font.mono` | "Evil Empire", "Trebuchet MS", sans-serif |
 | `shadow.sm` | 0 1px 2px oklch(0 0 0 / 0.08) |
 | `shadow.md` | 0 4px 12px oklch(0 0 0 / 0.12) |
 | `shadow.lg` | 0 12px 32px oklch(0 0 0 / 0.18) |

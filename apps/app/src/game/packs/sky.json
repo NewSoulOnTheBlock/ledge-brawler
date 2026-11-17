@@ -1,0 +1,427 @@
+{
+ "dawn": {
+  "pixel": false,
+  "layers": [
+   {
+    "file": "dawn/0.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/1.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/2.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/3.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/4.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/5.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/6.webp",
+    "w": 990,
+    "h": 540
+   },
+   {
+    "file": "dawn/7.webp",
+    "w": 990,
+    "h": 540
+   }
+  ]
+ },
+ "demonwoods": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "demonwoods/0.png",
+    "w": 480,
+    "h": 272
+   },
+   {
+    "file": "demonwoods/1.png",
+    "w": 592,
+    "h": 272
+   },
+   {
+    "file": "demonwoods/2.png",
+    "w": 592,
+    "h": 272
+   },
+   {
+    "file": "demonwoods/3.png",
+    "w": 592,
+    "h": 272
+   }
+  ]
+ },
+ "nightforest": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "nightforest/0.png",
+    "w": 620,
+    "h": 360
+   },
+   {
+    "file": "nightforest/1.png",
+    "w": 620,
+    "h": 360
+   },
+   {
+    "file": "nightforest/2.png",
+    "w": 620,
+    "h": 360
+   },
+   {
+    "file": "nightforest/3.png",
+    "w": 620,
+    "h": 360
+   },
+   {
+    "file": "nightforest/4.png",
+    "w": 620,
+    "h": 360
+   },
+   {
+    "file": "nightforest/5.png",
+    "w": 620,
+    "h": 360
+   }
+  ]
+ },
+ "wastelands": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "wastelands/0.png",
+    "w": 144,
+    "h": 240
+   },
+   {
+    "file": "wastelands/1.png",
+    "w": 336,
+    "h": 240
+   },
+   {
+    "file": "wastelands/2.png",
+    "w": 512,
+    "h": 240
+   }
+  ]
+ },
+ "corridors": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "corridors/0.png",
+    "w": 32,
+    "h": 224
+   },
+   {
+    "file": "corridors/1.png",
+    "w": 32,
+    "h": 224
+   },
+   {
+    "file": "corridors/2.png",
+    "w": 80,
+    "h": 224
+   },
+   {
+    "file": "corridors/3.png",
+    "w": 224,
+    "h": 224
+   }
+  ]
+ },
+ "underwater": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "underwater/0.png",
+    "w": 256,
+    "h": 192
+   },
+   {
+    "file": "underwater/1.png",
+    "w": 256,
+    "h": 192
+   },
+   {
+    "file": "underwater/2.png",
+    "w": 256,
+    "h": 192
+   },
+   {
+    "file": "underwater/3.png",
+    "w": 256,
+    "h": 192
+   }
+  ]
+ },
+ "street": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "street/0.png",
+    "w": 256,
+    "h": 192
+   },
+   {
+    "file": "street/1.png",
+    "w": 256,
+    "h": 192
+   },
+   {
+    "file": "street/2.png",
+    "w": 352,
+    "h": 192
+   }
+  ]
+ },
+ "skyline": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "skyline/0.png",
+    "w": 288,
+    "h": 192
+   },
+   {
+    "file": "skyline/1.png",
+    "w": 288,
+    "h": 192
+   },
+   {
+    "file": "skyline/2.png",
+    "w": 288,
+    "h": 192
+   }
+  ]
+ },
+ "synth": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "synth/0.png",
+    "w": 112,
+    "h": 272
+   },
+   {
+    "file": "synth/1.png",
+    "w": 256,
+    "h": 272
+   },
+   {
+    "file": "synth/2.png",
+    "w": 688,
+    "h": 272
+   }
+  ]
+ },
+ "duskA": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "duskA/0.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskA/1.png",
+    "w": 128,
+    "h": 240
+   },
+   {
+    "file": "duskA/2.png",
+    "w": 160,
+    "h": 240
+   },
+   {
+    "file": "duskA/3.png",
+    "w": 144,
+    "h": 240
+   },
+   {
+    "file": "duskA/4.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskA/5.png",
+    "w": 240,
+    "h": 240
+   }
+  ]
+ },
+ "duskB": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "duskB/0.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskB/1.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskB/2.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskB/3.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskB/4.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskB/5.png",
+    "w": 320,
+    "h": 240
+   }
+  ]
+ },
+ "duskC": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "duskC/0.png",
+    "w": 32,
+    "h": 240
+   },
+   {
+    "file": "duskC/1.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskC/2.png",
+    "w": 208,
+    "h": 240
+   },
+   {
+    "file": "duskC/3.png",
+    "w": 320,
+    "h": 240
+   },
+   {
+    "file": "duskC/4.png",
+    "w": 320,
+    "h": 240
+   }
+  ]
+ },
+ "forest": {
+  "pixel": false,
+  "layers": [
+   {
+    "file": "forest/0.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/1.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/2.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/3.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/4.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/5.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/6.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/7.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/8.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/9.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/10.png",
+    "w": 928,
+    "h": 793
+   },
+   {
+    "file": "forest/11.png",
+    "w": 928,
+    "h": 793
+   }
+  ]
+ },
+ "hills": {
+  "pixel": true,
+  "layers": [
+   {
+    "file": "hills/0.png",
+    "w": 640,
+    "h": 384
+   },
+   {
+    "file": "hills/1.png",
+    "w": 640,
+    "h": 384
+   },
+   {
+    "file": "hills/2.png",
+    "w": 640,
+    "h": 384
+   },
+   {
+    "file": "hills/3.png",
+    "w": 640,
+    "h": 384
+   }
+  ]
+ }
+}

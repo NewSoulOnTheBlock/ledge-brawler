@@ -1,0 +1,232 @@
+FIVE BLADES - IMAGE PROMPTS FOR THE OPENING CUTSCENES
+=====================================================
+
+One image per card of each protagonist's opening (apps/app/src/story/prelude.ts).
+Save each image under the file name given above its prompt, as .webp or .png, in:
+
+    apps/app/src/story/intro/
+
+The cutscene shows an image behind its card when a file of that name is there, and the plain card when it is not, so
+they can be added a few at a time.
+
+Size: 1920 x 1080 (16:9). Keep the lower third quiet and dark: the card's words are set over it.
+
+
+SHARED STYLE - paste this after every prompt
+--------------------------------------------
+High-detail painterly pixel art, dark fantasy, cinematic wide shot, 16:9. Deep shadows, embers and drifting ash,
+warm torchlight against cold night, volumetric light, rich saturated accents on a dark ground. Same look as the
+game's title art: small hooded swordsmen with faces lost in shadow and two glowing eyes, katanas worn across the
+back, long ragged cloaks. Lower third of the frame dark and uncluttered. No text, no letters, no logos, no
+watermark, no UI.
+
+The five hooded swordsmen, by protagonist (keep the colours exact so they read as the same characters):
+  The Forbidden  - black cloak with gold trim, gold eyes, a huge executioner's greatsword
+  The Ember      - crimson cloak, orange-red eyes, a furnace-forged greatsword glowing at the edge
+  The Architect  - deep blue cloak, ice-blue eyes, several enchanted blades floating around him
+  The Exile      - violet cloak, white-violet eyes, two swords (one long, one short), sparks of lightning
+  The Hollow     - green cloak, pale green eyes, a thin ritual blade trailing ghostly light
+
+The Reaper: a tall gaunt hooded figure in a tattered black robe, a long scythe, two small red eyes in the dark of the
+hood, never shown attacking anyone; he watches.
+
+
+=====================================================
+SHARED CARDS (shown before every protagonist's story)
+=====================================================
+
+prelude-vareth.webp
+  "In Vareth, power is never made. It is taken: from blood, from relics, from bargains, and from the dead."
+PROMPT: A vast dark kingdom seen from a cliff at dusk: a black-walled crown city with spires, a mountain range under
+snow to the north, a glowing volcanic reach to the east, drowned marshland in mist to the south. Thin streams of
+pale light rise from graveyards and battlefields across the land and are drawn toward the city's towers like smoke
+into a chimney. A broken crown half buried in the foreground rock. Ominous, epic, quiet.
+
+prelude-reaper-1.webp
+  "A hooded figure will walk beside you. He is the Reaper. He comes for the dead..."
+PROMPT: The Reaper standing alone on an old stone battlefield at night, scythe resting against his shoulder, his
+robe moving in a wind that touches nothing else. Around his feet, faint souls rise from the fallen like lantern
+light and drift into his open hand. Ancient, patient, not threatening. Moonlight, mist, a ruined banner.
+
+prelude-reaper-2.webp
+  "Lately the dead arrive with nothing left in them, or do not arrive at all..."
+PROMPT: The Reaper kneeling over a fallen soldier in a ruined street, reaching for a soul that is not there: the
+body gives off only a thin grey husk of light that crumbles away. Far behind him, a stream of stolen soul-light is
+being pulled into the sky toward an unseen source. His red eyes turned toward it. Unease, mystery, cold blue light.
+
+
+=====================================================
+THE FORBIDDEN - "The Stolen God"   (black and gold)
+=====================================================
+
+prelude-forbidden-1.webp
+  "You are the Crown's executioner. For fourteen years you have ended those whose magic was too dangerous to cage..."
+PROMPT: The Forbidden in the black-and-gold hooded cloak, standing on an execution platform inside a grim stone
+prison courtyard at night, the huge greatsword planted point-down before him, both hands on the hilt. Runes along the
+blade glow faintly gold. Rows of iron cages behind, chained sorcerers glowing faintly inside. Rain, torches,
+Blackspire's black towers above.
+
+prelude-forbidden-2.webp
+  "Lord Commander Veylan is the Crown's chief magical executioner..."
+PROMPT: Lord Commander Veylan: a tall, severe, grey-haired knight in immaculate black Crown plate with a high collar
+and a long black cape, standing at a training yard rail with hands clasped behind his back, watching a young recruit
+in a black-and-gold hood practise sword forms below. Cold dawn light, banners of the Crown, disciplined and austere.
+
+prelude-forbidden-3.webp
+  "Veylan believes one person's freedom is a small price for a civilization that survives..."
+PROMPT: Veylan seen from below on a palace balcony above a vast orderly city at night, every street lit in neat
+lines. He looks down at the city, not at the viewer, with a calm, almost sad expression. In the street far below, a
+tiny figure in a black-and-gold hood looks back up at him. Scale, distance, cold certainty.
+
+prelude-forbidden-4.webp
+  "He came to Blackspire tonight for an old prisoner. He will leave without him, and follow your sword instead."
+PROMPT: Inside a narrow prison cell lit by a single candle: an elderly prisoner in rags with glowing runes on his
+skin sits against the wall. In the doorway stands the Forbidden with the greatsword. In the darkest corner behind
+the old man, half seen, the Reaper waits, his red eyes on the Forbidden's sword, not the prisoner.
+
+prelude-forbidden-5.webp
+  "It begins at Blackspire, with one last sentence."
+PROMPT: Blackspire prison from outside: a black fortress on a crag in a thunderstorm, one high window lit gold. The
+Forbidden stands small on the cliff path in the foreground, cloak streaming, greatsword on his back, looking up at
+the window. Lightning, rain, the moment before everything changes.
+
+
+=====================================================
+THE EMBER - "The Saint of Ash"   (crimson)
+=====================================================
+
+prelude-ember-1.webp
+  "You are from Cinderfall, a town the Crown is about to end..."
+PROMPT: The Ember in the crimson hooded cloak on a rooftop of a soot-black mining town at the foot of a volcano.
+Crown soldiers with torches march into the streets below; townsfolk huddle in doorways. Old painted posters of a
+saint peel off the walls around her. Her greatsword glows red at its edge. Orange sky, smoke, tension.
+
+prelude-ember-2.webp
+  "Under the Ashen Reach lies the Furnace Below. For generations it has fed on the memories of the dead..."
+PROMPT: An enormous cavern deep under a volcano: a living furnace of molten rock and fire with a single vast glowing
+eye-like core at its heart. Faint ghostly figures of the dead drift down from cracks in the ceiling and dissolve into
+the flames, their memories rising as sparks. Awe, heat haze, red and gold.
+
+prelude-ember-3.webp
+  "It does not want to destroy anyone. It wants to know what being alive is like..."
+PROMPT: A burning town at night. Out of a collapsing building comes the Ember, carried on a rising wave of living
+fire shaped like great gentle hands. Her eyes blaze. The flames around her look curious rather than cruel, lit from
+inside like glass. Ruins, embers, a sense of something vast tasting the world through her.
+
+prelude-ember-4.webp
+  "He has been busy in Cinderfall since dusk, and the count is already wrong..."
+PROMPT: The Reaper walking a street of Cinderfall in flames, counting: a row of the fallen on either side, most of
+them giving off no soul-light at all. He holds a long knotted cord, tying knots for the dead, and the cord is too
+short. Fire behind, ash falling like snow, his red eyes troubled.
+
+prelude-ember-5.webp
+  "It begins on the last night Cinderfall stands."
+PROMPT: Cinderfall seen from the volcano's slope at night, the whole town burning beneath a red sky, smoke rising
+into a column lit from below. In the foreground the Ember stands with her back to us, greatsword dragging a line of
+fire in the rock, her crimson cloak torn and smoking.
+
+
+=====================================================
+THE EXILE - "The Nine Bells"   (violet)
+=====================================================
+
+prelude-exile-1.webp
+  "You are the best student of the Nine Bells, the oldest school of the blade in the Pale North..."
+PROMPT: A mountain monastery-school carved into a snowy cliff, nine great bronze bells hanging in a row under a
+wooden gate. In the frozen courtyard the Exile in the violet hooded cloak practises with two swords, one long and one
+short; violet lightning trails his blades. Other hooded students watch in a ring. Snow, pale blue dawn.
+
+prelude-exile-2.webp
+  "The Bellkeeper leads the Nine Bells. He raised you, corrected your stance..."
+PROMPT: The Bellkeeper: an old swordmaster in grey robes with a long white beard and a lantern on a staff, gently
+adjusting the guard of a small violet-hooded child holding a wooden sword. Warm lantern light inside a wooden
+training hall, snow at the window. Tender, fatherly, quietly sad.
+
+prelude-exile-3.webp
+  "He knows the Great Binding that holds the old powers down is failing. Every year he gives his nine best students..."
+PROMPT: A colossal stone seal carved into the face of a mountain, cracked, with chains of light holding something
+vast and dark beneath it. Nine small hooded figures walk single file up a stair toward it through snow, each carrying
+a lit lantern. The Bellkeeper watches from below with his head bowed. Cold, solemn, terrible.
+
+prelude-exile-4.webp
+  "Nine are given to the mountain every year, and none of the nine has ever reached him."
+PROMPT: The Reaper waiting alone at the top of a snowy mountain stair beside the great cracked seal, scythe in hand,
+nine empty places in the snow before him where nine should have arrived. Behind him, nine faint lights are being
+pulled sideways into a crack in the stone instead. Blizzard, isolation, mystery.
+
+prelude-exile-5.webp
+  "It begins with the last examination, and nine bells."
+PROMPT: The nine great bells of the school swinging and ringing in a storm, violet lightning striking the cliff.
+Below them, the Exile stands with both swords drawn, a parchment roll pinned to the gate beside him with nine names
+on it, the last one glowing. Dramatic low angle, snow whipping past.
+
+
+=====================================================
+THE HOLLOW - "The Dead Remember"   (green)
+=====================================================
+
+prelude-hollow-1.webp
+  "You are a healer of the Drowned Wilds. You died among children you could not save..."
+PROMPT: A sunken village in a misty swamp, stilt houses half under black water, glowing marsh lights. The Hollow in
+the green hooded cloak floats upright just above the water, newly risen, her eyes opening with pale green light, a
+thin ritual blade in her hand trailing spectral light. Small ghostly handprints glow on her cloak. Eerie, sorrowful.
+
+prelude-hollow-2.webp
+  "Between memory and death there is the Witness. It is not cruel. It does not know what cruelty is."
+PROMPT: A boundless dim space between life and death filled with floating fragments of memories like shards of glass,
+each showing a small moving scene. At the centre, the Witness: a huge, faceless, gentle presence made of pale light
+and countless watching eyes that look kind rather than menacing, its many hands cradling the shards. Silent, vast.
+
+prelude-hollow-3.webp
+  "It believes memories are the only things that give existence meaning, and it wants every human life kept, for ever..."
+PROMPT: The Hollow kneeling in shallow swamp water, the Witness's enormous pale hand reaching down from the mist to
+touch her forehead; a contract of glowing green script unrolls in the air between them, its lower half too faint to
+read. Reflections in black water, fireflies, a sense of a promise not fully understood.
+
+prelude-hollow-4.webp
+  "He had your hand the night you died. Something took it from him and sent you back..."
+PROMPT: The Reaper standing in the swamp at night holding an empty hand out in front of him, fingers still curled as
+if around another hand that has just been pulled away. Before him, the Hollow's soul-light is being drawn backward
+into her body by threads of pale light from the mist. His red eyes wide, the first time he has been surprised.
+
+prelude-hollow-5.webp
+  "It begins in the marsh where you fell."
+PROMPT: Wide view of the Drowned Wilds at night: endless flooded forest, twisted trees, green marsh lights reflected
+in still black water, a broken healer's house on stilts. The Hollow walks away from us across the water's surface,
+each step leaving a ripple of green light. Quiet, haunting.
+
+
+=====================================================
+THE ARCHITECT - "The Manufactured God"   (deep blue)
+=====================================================
+
+prelude-architect-1.webp
+  "You are a king's son with no claim, kept out of sight all your life..."
+PROMPT: A hidden study high in a noble house, cluttered with brass instruments, relic fragments in glass jars,
+blueprints and diagrams of strange machines. The Architect in the deep blue hooded cloak stands at a drafting table,
+several enchanted blades floating in a slow circle around him, his ice-blue eyes on a diagram. Candlelight, ink, a
+narrow window onto a royal palace he cannot enter.
+
+prelude-architect-2.webp
+  "You will make your enemy yourself: a mind built from fragments of old powers and dead men's memories..."
+PROMPT: A half-built construct on a workshop frame: a tall humanoid figure of dark iron, glass and floating relic
+fragments, its chest an open cage holding swirling captured memory-light. It has no face yet, only a smooth blank
+mask. Cables and runes connect it to the walls. Blue light, sparks, wonder and dread.
+
+prelude-architect-3.webp
+  "It will begin with no name and no self, and grow both. It will not want to serve you..."
+PROMPT: The faceless construct, the Crownless King, sitting alone on a throne-like workbench in a dark workshop,
+head tilted as if thinking, holding up one iron hand and studying it. Through a doorway behind it, the Architect is
+seen small, asleep over his papers. A single blue light, eerie stillness.
+
+prelude-architect-4.webp
+  "He has read your mother's notes over your shoulder..."
+PROMPT: The Architect reading an old leather notebook by candlelight, its pages full of machine diagrams and
+handwritten notes. Directly behind his shoulder, unnoticed, the Reaper leans close and reads too, his red eyes on the
+page. Intimate, quietly unsettling, deep blue shadows.
+
+prelude-architect-5.webp
+  "It begins the night your father's household is sold."
+PROMPT: A noble house being stripped at night: servants and Crown clerks carrying out paintings, furniture and chests
+by lantern light into waiting carts in the rain. The Architect watches from a dark upper window, blades floating
+behind him, blueprints rolled under his arm. Cold rain, blue night, resolve.

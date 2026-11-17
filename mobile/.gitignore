@@ -1,0 +1,9 @@
+# The signing key and its passwords never go into the repository: lose them and the app can never be updated, leak
+# them and anyone can publish an update in its name. Keep them in a password manager and an offline backup.
+*.keystore
+*.jks
+keystore*.txt
+# What the Solana Mobile CLI generates and builds.
+five-blades-android/
+*.apk
+*.aab
