@@ -1,9 +1,11 @@
 // Pro mode's money: entries paid in $BLADES into the pot wallet, and what is paid out of it (schema: server/pro.sql).
-// Used by api/pro.js (players) and api/pro-admin.js (the operator and the daily cron). Nothing here trusts the page:
+// Used by api/pro.js (players), api/pro-arena.js (the arena server, which referees every Versus match) and
+// api/pro-admin.js (the operator and the daily cron). Nothing here trusts the page:
 //   - an entry is a transaction this server builds (pot wallet pays the network fee), the player only signs it, and
 //     the server checks it is the very message it built before adding its own signature and sending it;
 //   - a payout row is unique per (kind, ref), is claimed by one atomic UPDATE before anything is sent, and its
-//     signature is written down before it is broadcast, so a crash can never pay twice.
+//     signature is written down before it is broadcast, so a crash can never pay twice;
+//   - a Versus match's winner is the arena server's word (spec/app/bout.md), never a player's game's.
 // Set on the Vercel project, never in the code:
 //   BLADES_MINT        the $BLADES mint; pro mode is closed while it is unset
 //   POT_SECRET         the pot wallet's secret key (base58, or a JSON byte array)
@@ -160,40 +162,37 @@ async function survivalBoard(sql, c) {
   return { entries, pot: (c.fee * BigInt(entries)).toString(), top: top.map((r) => ({ ...r, id: Number(r.id) })) };
 }
 
-/** Stops new seats in a match once its fight is on (two or more in it). */
-const lock = (sql, matchId) => sql`UPDATE pro_matches SET status = 'fighting', locked_at = now() WHERE id = ${matchId} AND status = 'open' AND seats >= 2`;
-
-/**
- * Takes what one entrant's game says of a match's end, and settles the match when it can: every entrant has said,
- * and all name the same winner among them, so the winner is paid the whole pot. Any disagreement holds the match for
- * the operator.
- */
-async function report(sql, userId, entryId, winner) {
-  const [row] = await sql`UPDATE pro_entries SET report_winner = ${winner}, report_none = ${winner === null}, reported_at = now()
-    WHERE id = ${entryId} AND user_id = ${userId} AND mode = 'versus' AND status = 'paid' AND reported_at IS NULL RETURNING match_id`;
-  if (!row) return { error: "That seat has already reported, or was not paid for." };
-  await lock(sql, row.match_id);
-  return { settled: await settleMatch(sql, row.match_id, false) };
+/** The match a paid Versus entry of `userId`'s plays in, while it is still to be fought or being fought. */
+async function seatOf(sql, userId, entryId) {
+  const [row] = await sql`SELECT e.match_id FROM pro_entries e JOIN pro_matches m ON m.id = e.match_id
+    WHERE e.id = ${entryId} AND e.user_id = ${userId} AND e.mode = 'versus' AND e.status = 'paid' AND m.status IN ('open', 'fighting')`;
+  return row ? { match: Number(row.match_id) } : { error: "That entry has no match to play." };
 }
 
-/** Settles a match if its reports allow: "paid", "held", or null while reports are still to come. `late`: no more are coming. */
-async function settleMatch(sql, matchId, late) {
-  const entrants = await sql`SELECT id, wallet, amount, report_winner, report_none, reported_at FROM pro_entries WHERE match_id = ${matchId} AND status = 'paid'`;
-  const reports = entrants.filter((e) => e.reported_at);
-  if (reports.length < entrants.length && !late) return null;
+/** Stops new seats in a match once the arena has begun its fight. */
+const lock = (sql, matchId) => sql`UPDATE pro_matches SET status = 'fighting', locked_at = now() WHERE id = ${matchId} AND status = 'open'`;
+
+/**
+ * Settles a match as the arena server saw it end: `winner`, an entrant's entry, is paid the whole pot of every paid
+ * entry in it; with no winner (no one left standing) or one who is not an entrant, the match is held for the operator.
+ * The payout row is written before the match is marked settled, so a crash between the two is mended by the arena
+ * telling the result again; telling it after it is settled changes nothing. Answers "paid", "held", or null if the
+ * match was settled already.
+ */
+async function decided(sql, matchId, winner) {
+  const entrants = await sql`SELECT id, wallet, amount FROM pro_entries WHERE match_id = ${matchId} AND status = 'paid'`;
   const pot = entrants.reduce((sum, e) => sum + BigInt(e.amount), 0n);
-  const named = new Set(reports.map((e) => (e.report_none ? "none" : String(e.report_winner))));
-  const winner = named.size === 1 ? entrants.find((e) => String(e.id) === [...named][0]) : undefined;
-  const agreed = winner && entrants.length >= 2 && reports.length === entrants.length;
+  const won = winner === null ? undefined : entrants.find((e) => Number(e.id) === winner);
+  const agreed = !!won && entrants.length >= 2;
+  if (agreed) await sql`INSERT INTO pro_payouts (kind, ref, entry_id, wallet, amount, status)
+    SELECT 'versus', ${String(matchId)}, ${won.id}, ${won.wallet}, ${pot.toString()}, 'approved' WHERE EXISTS (SELECT 1 FROM pro_matches WHERE id = ${matchId} AND status IN ('open', 'fighting'))
+    ON CONFLICT (kind, ref) DO NOTHING`;
   const [claimed] = await sql`UPDATE pro_matches SET status = ${agreed ? "settled" : "held"}, settled_at = now(),
-      note = ${agreed ? null : `reports ${reports.length}/${entrants.length}: ${[...named].join(", ") || "none"}`}
+      note = ${agreed ? "won at the arena" : winner === null ? "arena: no one left standing" : `arena named ${winner}, who is not in this match`}
     WHERE id = ${matchId} AND status IN ('open', 'fighting') RETURNING id`;
-  if (!claimed) return null;
-  if (!agreed) return "held";
-  const [payout] = await sql`INSERT INTO pro_payouts (kind, ref, entry_id, wallet, amount, status) VALUES ('versus', ${String(matchId)}, ${winner.id}, ${winner.wallet}, ${pot.toString()}, 'approved')
-    ON CONFLICT (kind, ref) DO NOTHING RETURNING id`;
+  const [payout] = agreed ? await sql`SELECT id FROM pro_payouts WHERE kind = 'versus' AND ref = ${String(matchId)} AND status = 'approved'` : [];
   if (payout) await send(sql, payout.id);
-  return "paid";
+  return claimed ? (agreed ? "paid" : "held") : null;
 }
 
 /** Gives a lone entrant their fee back, if nobody else has taken a seat in their match. */
@@ -261,8 +260,8 @@ async function retry(sql, payoutId) {
 
 /**
  * The daily work (api/pro-admin.js, by Vercel cron): each Survival day past its grace gets its winner, held for the
- * operator to approve; a match nobody else joined in an hour is refunded; a fight with reports missing after an hour
- * is held.
+ * operator to approve; a match nobody else joined in an hour is refunded; a match the arena has not settled in an
+ * hour is held.
  */
 async function daily(sql) {
   const done = [];
@@ -278,9 +277,9 @@ async function daily(sql) {
   }
   const alone = await sql`UPDATE pro_matches SET status = 'settled', settled_at = now(), note = 'nobody came' WHERE status = 'open' AND seats = 1 AND created_at < now() - interval '1 hour' RETURNING id`;
   for (const { id } of alone) { const [e] = await sql`SELECT id FROM pro_entries WHERE match_id = ${id} AND status = 'paid'`; if (e) await refund(sql, e.id); }
-  const stale = await sql`SELECT id FROM pro_matches WHERE status IN ('open', 'fighting') AND seats >= 2 AND created_at < now() - interval '1 hour'`;
-  for (const { id } of stale) await settleMatch(sql, id, true);
+  const stale = await sql`UPDATE pro_matches SET status = 'held', settled_at = now(), note = 'no result from the arena'
+    WHERE status IN ('open', 'fighting') AND seats >= 2 AND created_at < now() - interval '1 hour' RETURNING id`;
   return { days: done, refunded: alone.length, held: stale.length };
 }
 
-module.exports = { enabled, chain, quote, enter, recheck, result, survivalBoard, lock, report, settleMatch, withdraw, refund, send, retry, daily, FEE_TOKENS, SEATS };
+module.exports = { enabled, chain, quote, enter, recheck, result, survivalBoard, seatOf, lock, decided, withdraw, refund, send, retry, daily, FEE_TOKENS, SEATS };

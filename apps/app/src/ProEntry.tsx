@@ -15,7 +15,7 @@ const RULES: Record<ProMode, string[]> = {
   ],
   versus: [
     "Up to five paid seats per match. Last one standing takes the whole pot.",
-    "It's paid out once every player's game agrees on the winner. If they don't agree, the match is reviewed.",
+    "The arena server referees the match and pays the pot to whoever it sees left standing, the moment it ends.",
     "Nobody else joins? Leave the match and your fee comes back.",
   ],
 };

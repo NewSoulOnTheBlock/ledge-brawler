@@ -1,9 +1,18 @@
 // The arena of src/game/sim.ts against the match it reports to: what the spec cannot see is whether the physics
 // says what happened. Stepped without a canvas, a sixtieth of a second at a time.
+import { createServer } from "node:http";
+import { Effect, Redacted } from "effect";
 import * as KeyValueStore from "effect/persistence/KeyValueStore";
+import { FetchHttpClient } from "effect/http";
 import Matter from "matter-js";
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { type Room, Refused, joinArena } from "../src/arena/link.ts";
+import { pot } from "../src/arena/pot.vibe";
+import type { BoutWord } from "../src/arena/protocol.ts";
+import type { Pro } from "../src/arena/arena.ts";
+import { serve } from "../src/arena/serve.ts";
 import { DUEL, allLevels } from "../src/game/levels.ts";
+import { type Standing, type Versus, joinVersus } from "../src/versus.ts";
 import { within } from "../src/story/within.ts";
 import { type Sfx, type Ui, createGame } from "../src/game/sim.ts";
 import { runtimeOn } from "../src/runtime.ts";
@@ -306,4 +315,257 @@ it("Fight other players: a rival stands in, a blow from another player lands, th
   // spec/app/index.md, "A duel can be fought again from the start, at any moment of it"
   rules.send({ type: "rematch" }); game.begin(DUEL);
   expect([rules.get().alive, rules.get().lives]).toEqual([true, 3]);
+});
+
+// ---------- the arena server (src/arena/) ----------
+// Its journeys run the real server on a free port and meet it as the game does, through src/arena/link.ts over real
+// WebSockets. Its clock runs on, and a test moves it ahead, so rounds and returns to the fight come when a test says.
+
+const servers: { close(): Promise<void> }[] = [];
+afterEach(async () => { await Promise.all(servers.splice(0).map((s) => s.close())); vi.unstubAllEnvs(); });
+
+/** Polls `seen` until it holds, for up to two seconds. */
+async function until<T>(seen: () => T, what: string): Promise<NonNullable<T>> {
+  for (let t = 0; t < 200; t++) { const v = seen(); if (v) return v; await new Promise((done) => setTimeout(done, 10)); }
+  throw new Error(`never: ${what}`);
+}
+
+/** An arena on its own clock, and players who sit down at it as the game would. */
+async function arenaServer(pro?: Pro) {
+  const clock = { ahead: 0 }, now = () => Date.now() + clock.ahead;
+  const serving = await serve(0, { now, pro });
+  servers.push(serving);
+  const url = `ws://localhost:${serving.port}/play`;
+  /** A player's seat, and the bout as the server last told it. */
+  async function player(name: string, seek: Partial<Parameters<typeof joinArena>[0]> = {}) {
+    const room = await joinArena({ kind: "duel", name, fighter: 0, vigor: 0, ...seek }, url);
+    const seen = { bout: null as BoutWord | null, hits: [] as { from: string; dmg: number }[] };
+    room.onBout((bout) => { seen.bout = bout; });
+    room.on("hit", (data: { dmg: number }, from) => { seen.hits.push({ from, dmg: data.dmg }); });
+    servers.push({ close: () => room.leave() });
+    return { room, seen, mine: () => seen.bout?.fighters[room.sessionId] };
+  }
+  /** Where a fighter says it is, packed as versus.ts packs it: in the middle of a jab, or of a special, or guarding. */
+  const at = (room: Room, x: number, how: { special?: boolean; guard?: boolean } = {}) =>
+    room.me.set({ s: [x, 600, 0, 0, 1, 100, 3, 1, 0, how.guard ? 1 : 0, 1, 0, "m:jab:3", 0, how.special ? "0:5::" : "", now()].join(",") });
+  return { url, player, at, later: (ms: number) => { clock.ahead += ms; } };
+}
+
+// spec/app/lobby.md, "Story: Find a match"
+it("Find a match: players looking for a duel or a group are put together, invitations reach their table, and a full table is full", async () => {
+  const { player, url } = await arenaServer();
+  // spec/app/lobby.md, "A player looking for a match sits at an open table of that kind with a free seat, or, only when there is none, opens a new one"
+  const ada = await player("Ada"), bo = await player("Bo");
+  expect(bo.room.code).toBe(ada.room.code);
+  // Looking for a group is another kind of table.
+  const cy = await player("Cy", { kind: "group" }), di = await player("Di", { kind: "group" });
+  expect([cy.room.code === ada.room.code, di.room.code]).toEqual([false, cy.room.code]);
+  // spec/app/lobby.md, "A player with an invitation opens a private table, or sits at the table it names while it has a free seat"
+  const host = await player("Host", { code: "friends" });
+  expect(host.room.code).toBe("friends");
+  const stranger = await player("Stranger");
+  expect(stranger.room.code).toBe(ada.room.code);
+  for (const name of ["F2", "F3", "F4", "F5"]) expect((await player(name, { code: "friends" })).room.code).toBe("friends");
+  await expect(joinArena({ kind: "duel", name: "F6", fighter: 0, vigor: 0, code: "friends" }, url)).rejects.toMatchObject({ why: "full" });
+  // A pro match's table is reached only by paying for it.
+  await expect(joinArena({ kind: "duel", name: "Sneak", fighter: 0, vigor: 0, code: "pro7" }, url)).rejects.toBeInstanceOf(Refused);
+  // Two more fill the open duel table, and the next one looking opens another.
+  await player("E1"); await player("E2");
+  expect((await player("E3")).room.code).not.toBe(ada.room.code);
+});
+
+// spec/app/bout.md, "Story: Fight for the pot"
+it("Fight for the pot: the server begins rounds, lands only blows that could have landed, keeps health and lives, and names the winner", async () => {
+  const { player, at, later } = await arenaServer();
+  // Trained health counts, up to what training can give (spec/app/index.md, "A fighter can be trained for up to 50 more health, on the select screen").
+  const ada = await player("Ada", { fighter: 1, vigor: 20 }), bo = await player("Bo", { fighter: 2, vigor: 500 });
+  await until(() => ada.mine() && bo.mine(), "both seated");
+  expect([ada.mine()!.most, bo.mine()!.most]).toEqual([145, 140]);
+  at(ada.room, 500); at(bo.room, 560);
+  const blow = (from: typeof ada, to: typeof bo, dmg: number, n: number, round = 1) => from.room.send("hit", { to: to.room.sessionId, n, round, dmg, kx: 4, ky: -2 });
+
+  // spec/app/bout.md, "A round begins between two or more, when no round is being fought, and gives everyone full health and three lives"
+  // No blow counts before the round begins.
+  blow(ada, bo, 30, 1, 0);
+  await until(() => typeof ada.seen.bout?.next === "number", "the round coming");
+  later(3_000);
+  await until(() => ada.seen.bout?.fighting && ada.seen.bout.round === 1, "round 1");
+  expect(bo.mine()!.hp).toBe(140);
+  at(ada.room, 500); at(bo.room, 560);
+
+  // spec/app/bout.md, "A blow lands only between two different fighters who are both standing, in a round that is not over, and does from 1 to 60"
+  blow(ada, bo, 999, 2);
+  await until(() => bo.mine()!.hp === 80, "a blow, held to 60");
+  // Its game is told the health the server took, not what the striker's game claimed.
+  expect(bo.seen.hits).toEqual([{ from: ada.room.sessionId, dmg: 60 }]);
+  // Told twice, from the round before, or from across the arena, it does nothing.
+  blow(ada, bo, 10, 2); blow(ada, bo, 10, 3, 0);
+  at(ada.room, 4000); await until(() => true, ""); blow(ada, bo, 10, 4);
+  at(ada.room, 500); at(bo.room, 560, { special: true });
+  // In the middle of a special the fighter cannot be touched.
+  await new Promise((done) => setTimeout(done, 60)); blow(ada, bo, 10, 5);
+  at(bo.room, 560, { guard: true });
+  // A held guard lets a fifth through.
+  await new Promise((done) => setTimeout(done, 60)); blow(ada, bo, 20, 6);
+  await until(() => bo.mine()!.hp === 76, "the guarded blow");
+  expect(bo.seen.hits.length).toBe(2);
+
+  // spec/app/bout.md, "A fall off the islands costs a standing fighter 25 health, and may knock it out, with no knockout scored"
+  at(bo.room, 560);
+  bo.room.fell();
+  await until(() => bo.mine()!.hp === 51, "the fall");
+  // spec/app/bout.md, "A blow that takes the last health knocks its fighter out: a life is lost, and the striker scores a knockout"
+  blow(ada, bo, 60, 7);
+  await until(() => bo.mine()!.lives === 2, "a knockout");
+  expect([bo.mine()!.hp, ada.mine()!.kos]).toEqual([0, 1]);
+  // spec/app/bout.md, "A knocked-out fighter with lives left comes back with its most health"
+  blow(ada, bo, 10, 8);
+  later(2_000);
+  await until(() => bo.mine()!.hp === 140, "back on its feet");
+  expect(bo.mine()!.lives).toBe(2);
+
+  // spec/app/bout.md, "A round is over when at most one fighter has lives left"
+  let n = 9;
+  for (const lives of [1, 0]) {
+    // The striker's game says where it is many times a second; here, before each blow.
+    for (let hp = 140; hp > 0; hp -= 60) { later(1_000); at(ada.room, 500); blow(ada, bo, 60, n++); await until(() => bo.mine()!.hp === Math.max(0, hp - 60), "a blow"); }
+    expect(bo.mine()!.lives).toBe(lives);
+    later(2_000); await until(() => lives === 0 || bo.mine()!.hp === 140, "back up");
+  }
+  await until(() => ada.seen.bout?.over, "the round over");
+  expect([ada.seen.bout!.winner, ada.mine()!.kos]).toEqual([ada.room.sessionId, 3]);
+  // spec/app/bout.md, "Once a round is over, nothing changes how it ended until the next one begins"
+  blow(bo, ada, 30, 1);
+  // The next round comes by itself, and everyone starts it whole.
+  await until(() => typeof ada.seen.bout?.next === "number", "the next round coming");
+  later(6_000);
+  await until(() => ada.seen.bout?.round === 2 && ada.seen.bout.fighting, "round 2");
+  expect([ada.mine(), bo.mine()]).toEqual([{ hp: 145, most: 145, lives: 3, kos: 0 }, { hp: 140, most: 140, lives: 3, kos: 0 }]);
+  // A round between two is over the moment one of them goes.
+  await bo.room.leave();
+  await until(() => ada.seen.bout?.over, "the other gone");
+  expect(ada.seen.bout!.winner).toBe(ada.room.sessionId);
+});
+
+// spec/app/bout.md, "Story: Fight for the pot"
+it("Fight for the pot: a pro match seats only paid entries, locks once its fight begins, and its winner's entry is told to the site", async () => {
+  // The site's pot (server/api/pro-arena.js) at its network boundary: what the arena asks, answered as the site would.
+  const asked: Record<string, unknown>[] = [];
+  const site = createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      const said = JSON.parse(body) as Record<string, unknown>;
+      asked.push({ ...said, authorization: req.headers.authorization });
+      const answer = said.action !== "seat" ? { ok: true } : said.token === "good" && (said.entry === 11 || said.entry === 12) ? { match: 7 } : { error: "That entry has no match to play." };
+      res.writeHead("error" in answer ? 400 : 200, { "content-type": "application/json" }).end(JSON.stringify(answer));
+    });
+  });
+  await new Promise<void>((done) => site.listen(0, done));
+  servers.push({ close: () => new Promise((done) => site.close(() => done())) });
+  const address = site.address();
+  const pro = await Effect.runPromise(Effect.provide(pot(`http://localhost:${typeof address === "object" && address ? address.port : 0}`, Redacted.make("arena-secret")), FetchHttpClient.layer));
+  const { player, at, later, url } = await arenaServer(pro);
+
+  // A seat only for an entry the site says is paid and the player's own.
+  await expect(joinArena({ kind: "duel", name: "Thief", fighter: 0, vigor: 0, pro: { entry: 13, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
+  const ada = await player("Ada", { pro: { entry: 11, token: "good" } }), bo = await player("Bo", { pro: { entry: 12, token: "good" } });
+  expect([ada.room.code, bo.room.code, ada.room.pro]).toEqual(["pro7", "pro7", true]);
+  // The same entry cannot sit twice.
+  await expect(joinArena({ kind: "duel", name: "Ada again", fighter: 0, vigor: 0, pro: { entry: 11, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
+  at(ada.room, 500); at(bo.room, 560);
+  // A pro round waits longer, for every paid seat to arrive; when it begins the match takes no more entries.
+  await until(() => typeof ada.seen.bout?.next === "number", "the round coming");
+  later(3_000); await new Promise((done) => setTimeout(done, 80));
+  expect(ada.seen.bout?.fighting).toBe(false);
+  later(12_000);
+  await until(() => ada.seen.bout?.fighting, "the pro round");
+  await until(() => asked.some((a) => a.action === "fight"), "the match locked");
+  let n = 1;
+  for (let lives = 3; lives > 0; lives--) {
+    for (let hp = 100; hp > 0; hp -= 60) { later(1_000); at(ada.room, 500); ada.room.send("hit", { to: bo.room.sessionId, n: n++, round: 1, dmg: 60 }); await until(() => bo.mine()!.hp === Math.max(0, hp - 60), "a blow"); }
+    later(2_000); await until(() => lives === 1 || bo.mine()!.hp === 100, "back up");
+  }
+  await until(() => ada.seen.bout?.over, "the match won");
+  // spec/app/bout.md, "A round is over when at most one fighter has lives left"
+  const result = await until(() => asked.find((a) => a.action === "result"), "the result told");
+  expect(result).toEqual({ action: "result", match: 7, winner: 11, authorization: "Bearer arena-secret" });
+  // One round only: a pot is fought for once.
+  later(10_000); await new Promise((done) => setTimeout(done, 80));
+  expect([ada.seen.bout?.round, ada.seen.bout?.next]).toEqual([1, null]);
+});
+
+// spec/app/lobby.md, "Story: Find a match"
+it("Find a match: a dropped connection gets its seat back, and what a game sends that makes no sense is ignored", async () => {
+  const { url } = await arenaServer();
+  const open = () => new Promise<WebSocket & { heard: Record<string, unknown>[] }>((done) => {
+    const socket = Object.assign(new WebSocket(url), { heard: [] as Record<string, unknown>[] });
+    socket.onmessage = (event) => socket.heard.push(JSON.parse(String(event.data)) as Record<string, unknown>);
+    socket.onopen = () => done(socket);
+  });
+  const first = await open();
+  for (const junk of ["not json", "[]", JSON.stringify({ t: "seek", kind: "arena" }), JSON.stringify({ t: "set", f: "x" }), JSON.stringify({ t: "say", type: "x".repeat(40) })]) first.send(junk);
+  first.send(JSON.stringify({ t: "seek", kind: "duel", name: "Ada", fighter: 3, vigor: 0 }));
+  const seat = await until(() => first.heard.find((w) => w.t === "seated"), "a seat") as { id: string; key: string; code: string };
+  first.close();
+  await new Promise((done) => setTimeout(done, 50));
+  const second = await open();
+  // A wrong key is no way back into the seat.
+  second.send(JSON.stringify({ t: "seek", kind: "duel", name: "Ada", fighter: 3, vigor: 0, resume: { id: seat.id, key: "guess" } }));
+  const other = await until(() => second.heard.find((w) => w.t === "seated"), "a seat") as { id: string };
+  expect(other.id).not.toBe(seat.id);
+  const third = await open();
+  third.send(JSON.stringify({ t: "seek", kind: "duel", name: "Ada", fighter: 3, vigor: 0, resume: { id: seat.id, key: seat.key } }));
+  expect(await until(() => third.heard.find((w) => w.t === "seated"), "the seat back")).toMatchObject({ id: seat.id, code: seat.code });
+  second.close(); third.close();
+});
+
+// spec/app/index.md, "Story: Fight other players"; spec/app/bout.md, "Story: Fight for the pot"
+// Two players' games, each its own arena of sim.ts stepped a sixtieth of a second at a time, at one table of the
+// arena server through versus.ts: the round the server begins starts in both, a punch thrown in one lands in the other
+// by way of the server, and a fall costs what the server takes.
+it("Fight other players: two games at the arena start the server's round together, a punch lands through the server, and a fall costs what it takes", async () => {
+  const { url, later } = await arenaServer();
+  vi.stubEnv("VITE_ARENA_URL", url);
+  async function duelist(name: string) {
+    const rules = rulesOf(runtimeOn(KeyValueStore.layerMemory));
+    let net: Versus | null = null;
+    const ui: Ui = { sfx: silent, banner: () => undefined, callout: () => undefined, strike: (to, blow) => net?.strike(to, blow), shot: (orb) => net?.shot(orb), fx: (sprite) => net?.fx(sprite), fell: () => net?.fell() };
+    const game = createGame(rules, ui);
+    rules.send({ type: "enter" }); rules.send({ type: "duel" }); game.begin(DUEL);
+    const seen = { standing: { rivals: [], status: "joining" } as Standing };
+    net = await joinVersus(undefined, name, DUEL, game, rules, (standing) => { seen.standing = standing; });
+    const playing = net;
+    servers.push({ close: () => Promise.resolve(playing.leave()) });
+    return { rules, game, net: playing, seen, hero: () => game.scene.hero! };
+  }
+  const ada = await duelist("Ada"), bo = await duelist("Bo");
+  expect(bo.net.code).toBe(ada.net.code);
+  /** Both games, frame by frame as the page plays them, until `done` holds. */
+  async function play(done: () => boolean, what: string, most = 600) {
+    for (let i = 0; i < most; i++) {
+      for (const p of [ada, bo]) { p.net.tick(); p.game.frame(1000 / 60); }
+      if (done()) return;
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    throw new Error(`never: ${what} (${JSON.stringify([ada.seen.standing, bo.seen.standing])})`);
+  }
+  // spec/app/bout.md, "A round begins between two or more, when no round is being fought, and gives everyone full health and three lives"
+  await play(() => ada.seen.standing.status === "starting" && bo.seen.standing.status === "starting", "the round announced");
+  later(3_000);
+  await play(() => ada.seen.standing.status === "fighting" && bo.seen.standing.status === "fighting" && ada.seen.standing.rivals.length === 2, "the round begun");
+  // Face to face on the middle ledge, Bo standing still.
+  const stand = (p: typeof ada, x: number, facing: number) => { Matter.Body.setPosition(p.hero().body, { x, y: 600 }); Matter.Body.setVelocity(p.hero().body, { x: 0, y: 0 }); p.hero().facing = facing; };
+  const full = bo.rules.get().hp;
+  await play(() => { stand(bo, 560, -1); stand(ada, 500, 1); return ada.game.scene.enemies.some((E) => E.peer && Math.abs(E.body.position.x - 560) < 2); }, "Bo seen where Bo is");
+  // spec/app/bout.md, "A blow lands only between two different fighters who are both standing, in a round that is not over, and does from 1 to 60"
+  await play(() => { stand(bo, 560, -1); ada.game.press("punch"); ada.game.release("punch"); return bo.rules.get().hp < full; }, "a punch landing", 300);
+  const punched = bo.rules.get().hp;
+  expect(punched).toBeGreaterThan(full - 60);
+  // spec/app/bout.md, "A fall off the islands costs a standing fighter 25 health, and may knock it out, with no knockout scored"
+  Matter.Body.setPosition(bo.hero().body, { x: 560, y: 1750 });
+  await play(() => bo.rules.get().hp <= punched - 25, "the fall");
+  // The server took the same: its word does not lower Bo's health further.
+  await play(() => false, "", 30).catch(() => undefined);
+  expect(bo.rules.get().hp).toBe(punched - 25);
 });

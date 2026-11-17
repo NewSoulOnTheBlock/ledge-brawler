@@ -70,8 +70,8 @@ export interface Ui {
   fx?(sprite: Omit<Sprite, "age">): void;
   /** In a duel: the fighter has let a projectile go, for the other players to see. */
   shot?(orb: Shot): void;
-  /** In a duel: the fighter has been knocked out, by the player `by` if a blow of theirs was the last. */
-  downed?(by: string | null): void;
+  /** In a duel: the fighter has fallen off the islands, which the arena server takes from its health (versus.ts). */
+  fell?(): void;
 }
 /** A blow: its damage, the push it gives, and how it stuns. */
 export interface Hurt { dmg: number; kx: number; ky: number; stun?: number; heavy?: boolean; float?: boolean; from?: number }
@@ -275,6 +275,8 @@ export interface Game {
   peers(list: Peer[]): void;
   /** In a duel: a blow another player's game says has landed on this fighter. */
   struck(by: string, blow: Hurt): void;
+  /** In a duel: the health the arena server says this fighter has. */
+  heldTo(hp: number): void;
   /** In a duel: an effect that played in another player's game. */
   fx(sprite: Omit<Sprite, "age">): void;
   /** In a duel: a projectile another player has let go. */
@@ -2281,7 +2283,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
     const vel = { x: o.kx * 1.5, y: o.ky * 1.2 - 4 };
     if (T.isPlayer) {
       sfx.hurt();
-      if (!T.alive) { knockOutHero(vel); if (S.match.duel) ui.downed?.(stepCount - lastBlow.at < 300 ? lastBlow.by : null); }
+      if (!T.alive) knockOutHero(vel);
       return;
     }
     // spec/app/index.md, "Every hit on an enemy is counted, and hits that follow closely build a combo"
@@ -2817,7 +2819,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
     if (H.alive && H.body.position.y > S.voidY && send({ type: "plunge" })) {
       H.special = null;
-      if (!H.alive) { Composite.remove(world, H.body); heroInWorld = false; heroDeadTimer = 120; fallen(); sfx.ko(); if (S.match.duel) ui.downed?.(stepCount - lastBlow.at < 300 ? lastBlow.by : null); }
+      if (S.match.duel) ui.fell?.();
+      if (!H.alive) { Composite.remove(world, H.body); heroInWorld = false; heroDeadTimer = 120; fallen(); sfx.ko(); }
       else { Body.setPosition(H.body, S.lastSafe); Body.setVelocity(H.body, { x: 0, y: 0 }); H.trail = []; }
     }
     for (const E of enemies.slice()) {
@@ -3066,14 +3069,22 @@ export function createGame(rules: Rules, ui: Ui): Game {
       Body.setPosition(E.body, { x: p.x, y: p.y }); Body.setVelocity(E.body, { x: p.vx, y: p.vy });
     }
   }
-  let lastBlow: { by: string | null; at: number } = { by: null, at: -999 };
-  function struck(by: string, blow: Hurt) {
+  function struck(_by: string, blow: Hurt) {
     const H = S.hero;
     // A fighter in the middle of a special cannot be hit, here as against the waves.
     if (!H || !H.alive || H.special || !(S.match.duel || S.coop)) return;
-    lastBlow = { by, at: stepCount };
     hurt(H, blow);
     sfx.hit(!!blow.heavy);
+  }
+  // spec/app/bout.md, "Story: Fight for the pot"
+  /** The arena server keeps a duel's health: a standing fighter's is brought to what it says, as a blow without a push
+   *  where it says less (a fighter it says is down goes down), or as healing where it says more. */
+  function heldTo(hp: number) {
+    const H = S.hero;
+    if (!H || !H.alive || !S.match.duel || hp === S.match.hp) return;
+    if (hp > S.match.hp) { send({ type: "heal", amount: Math.min(100, hp - S.match.hp) }); return; }
+    send({ type: "suffer", damage: S.match.hp - Math.max(0, hp), heavy: false });
+    if (!S.match.alive) knockOutHero({ x: 0, y: -6 });
   }
   const fx = (sprite: Omit<Sprite, "age">) => { sprites.push({ ...sprite, age: 0 }); };
   function shot(o: Shot) {
@@ -3216,5 +3227,5 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (on && S.hero) { S.hero.squash = 0; S.hero.squashV = 0; }
   };
 
-  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
+  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, heldTo, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
 }

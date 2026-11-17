@@ -1,5 +1,7 @@
 // Pro mode: Survival and Versus for an entry fee in $BLADES, paid from the player's Privy wallet (server/api/pro.js).
-// The page only signs what the server builds and says how its fights ended; pots are decided and paid by the server.
+// The page only signs what the server builds. A Versus match is fought at the arena server, which says who won and
+// has the pot paid (spec/app/bout.md, "Story: Fight for the pot"); a Survival run's end is told by the page.
+import type { ProSeat } from "./arena/protocol.ts";
 import { authHeaders, SITE } from "./scores.ts";
 
 export type ProMode = "survival" | "versus";
@@ -43,7 +45,8 @@ export async function payEntry(mode: ProMode, wallet: string, sign: (tx: Uint8Ar
 }
 
 export const proResult = (entry: number, run: { wave: number; kos: number; fighter: number; name: string }) => call({ action: "result", entry, ...run });
-export const proFight = (entry: number) => call({ action: "fight", entry });
-/** What this seat's game saw at the end of its match: the winner's entry, or null if no one was left. */
-export const proReport = (entry: number, winner: number | null) => call<{ settled: "paid" | "held" | null }>({ action: "report", entry, winner });
 export const proWithdraw = (entry: number) => call({ action: "withdraw", entry });
+/** A paid Versus seat as the arena server takes it: the entry, and the sign-in that shows it is this player's. */
+export async function proSeat(entry: Entry): Promise<ProSeat> {
+  return { entry: entry.id, token: (await authHeaders()).Authorization?.slice("Bearer ".length) ?? "" };
+}

@@ -6,7 +6,7 @@ import { chaptersDone } from "../gen/app__saga.ts";
 import { KitButton, KitWord } from "./kit.tsx";
 import { CampaignScreen, ChapterClear, Ending, GuideTalk, Prelude } from "./Campaign.tsx";
 import { CoopParty, CoopTable, Wiped } from "./Coop.tsx";
-import { type Table, type TalkWord, type Together, joinTogether } from "./coop.ts";
+import { type Table, type TalkWord, type Together, joinTogether } from "./together.ts";
 import { unend } from "./story/endings.ts";
 import { DILEMMAS, PARLEY, keepRank, rankOf, repliesOf, type Stance, stand, choose, echoOf, forget, give, memoryOf, reckoning, remember, specialsOf } from "./story/parley.ts";
 import { buildOf, canPay, heroOf, pay, unbuild } from "./story/build.ts";
@@ -38,8 +38,8 @@ import { type Board, type ConflictInfo, type DailyBoard, dailyBoard, keep, keepD
 import { track } from "./track.ts";
 import { unlock } from "./achievements.ts";
 import { useSaga } from "./useSaga.ts";
-import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor, roomCode, spectateRoom, stageFor } from "./versus.ts";
-import { type Entry, proFight, proReport, proResult, proWithdraw } from "./pro.ts";
+import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor, roomCode, stageFor } from "./versus.ts";
+import { type Entry, proResult, proSeat, proWithdraw } from "./pro.ts";
 import { ProEntry } from "./ProEntry.tsx";
 
 const KEYMAP: Record<string, Button> = {
@@ -173,12 +173,12 @@ function Arena({ game, before }: { game: Game; before: () => void }) {
 }
 
 const STATUS: Record<Standing["status"], string> = {
-  joining: "Joining the room…", alone: "No one else is here yet. Fight the CPU, or send someone the link.", fighting: "Up to five fight. Last one standing wins.",
-  over: "The match is over.", reconnecting: "Reconnecting…", offline: "The multiplayer service could not be reached. You are fighting the CPU.",
-  full: "This room already has five fighters. You are fighting the CPU; leave and pick another match.",
+  joining: "Finding a match…", alone: "Waiting for another fighter. Fight the CPU meanwhile.", starting: "Next round in", waiting: "A round is under way: you fight in the next.", fighting: "Last one standing wins.",
+  over: "The round is over.", reconnecting: "Reconnecting…", offline: "The arena could not be reached. You are fighting the CPU.",
+  full: "This table already has five fighters. You are fighting the CPU; leave and pick another match.",
 };
 
-/** Which match to enter, chosen beside the fighter: the open room anyone may be in, a new room of one's own, or a friend's by its code. */
+/** Which match to enter, chosen beside the fighter: a quick match with whoever is waiting, a new table of one's own, or a friend's by its code. */
 function MatchPicker() {
   const [code, setCode] = useState(roomCode()), [typed, setTyped] = useState("");
   const go = (next: string) => { history.replaceState(null, "", next === "open" ? location.pathname : `?room=${next}`); setCode(roomCode()); };
@@ -187,15 +187,15 @@ function MatchPicker() {
     <fieldset aria-label="Match" className="grid gap-2 border-2 border-foreground bg-card px-4.5 py-3 text-[12.5px]">
       <legend className="px-1 font-sans text-[11px] font-bold tracking-[0.14em] uppercase">Match</legend>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" aria-pressed={code === "open"} className={cn(choice, code === "open" ? "bg-primary text-primary-foreground" : "bg-card")} onClick={() => go("open")}>Open room</button>
-        <button type="button" aria-pressed={code !== "open"} className={cn(choice, code !== "open" ? "bg-primary text-primary-foreground" : "bg-card")} onClick={() => go(Math.random().toString(36).slice(2, 8))}>New private room</button>
+        <button type="button" aria-pressed={code === "open"} className={cn(choice, code === "open" ? "bg-primary text-primary-foreground" : "bg-card")} onClick={() => go("open")}>Quick match</button>
+        <button type="button" aria-pressed={code !== "open"} className={cn(choice, code !== "open" ? "bg-primary text-primary-foreground" : "bg-card")} onClick={() => go(Math.random().toString(36).slice(2, 8))}>Private table</button>
         <form className="flex items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (typed.trim()) go(typed.trim()); setTyped(""); }}>
-          <input aria-label="Room code" value={typed} onChange={(event) => setTyped(event.target.value)} onKeyDown={(event) => event.stopPropagation()} placeholder="room code" className="w-28 border-2 border-foreground bg-background px-2 py-1 font-mono text-xs" />
+          <input aria-label="Table code" value={typed} onChange={(event) => setTyped(event.target.value)} onKeyDown={(event) => event.stopPropagation()} placeholder="table code" className="w-28 border-2 border-foreground bg-background px-2 py-1 font-mono text-xs" />
           <button type="submit" className={cn(choice, "bg-card")}>Join</button>
         </form>
       </div>
       <p className="text-muted-foreground">
-        {code === "open" ? "Anyone who presses Versus lands here, five to a room." : <>Room <b className="font-mono text-foreground">{code}</b>. Send this link: <span className="font-mono text-foreground select-all">{inviteLink(code)}</span></>}
+        {code === "open" ? "Up to five to a table. Rounds start by themselves." : <>Table <b className="font-mono text-foreground">{code}</b>: <span className="font-mono text-foreground select-all">{inviteLink(code)}</span></>}
       </p>
     </fieldset>
   );
@@ -412,7 +412,7 @@ function Signal({ rival }: { rival: Rival }) {
 }
 
 /** A duel's room: who is in it, with their lives and knockouts, and the link that brings someone else to it. */
-function VersusPanel({ standing, onInvite, onLeave, code = roomCode(), pro = false }: { standing: Standing; onInvite: () => string; onLeave: () => void; code?: string; /** A paid match (pro.ts): nobody is invited to it, and leaving it alone gives the fee back. */ pro?: boolean }) {
+function VersusPanel({ standing, onInvite, onLeave, code, pro = false }: { standing: Standing; onInvite: () => string; onLeave: () => void; code: string; /** A paid match (pro.ts): nobody is invited to it, and leaving it alone gives the fee back. */ pro?: boolean }) {
   // The link is shown as well as copied: a browser may refuse the copy, and then it can be taken by hand.
   const [link, setLink] = useState(""), [copied, setCopied] = useState(false);
   const copy = () => {
@@ -424,15 +424,15 @@ function VersusPanel({ standing, onInvite, onLeave, code = roomCode(), pro = fal
   const [open, setOpen] = useState(false), phone = matchMedia("(pointer: coarse)").matches;
   if (phone && !open && standing.status !== "over") return (
     <button type="button" aria-label="Versus" onClick={() => setOpen(true)} className="pointer-events-auto absolute top-2 left-1/2 -translate-x-1/2 border-2 border-foreground bg-card/90 px-3 py-1 text-[11px] tabular-nums">
-      Room {code} · {standing.rivals.length || 1} of 5 · {standing.rivals.map((rival) => "●".repeat(rival.lives)).join(" ")}
+      {code || "…"} · {standing.rivals.length || 1} of 5 · {standing.rivals.map((rival) => "●".repeat(rival.lives)).join(" ")}
     </button>
   );
   return (
     <aside aria-label="Versus" onClick={phone ? (event) => { if (event.target === event.currentTarget) setOpen(false); } : undefined} className="absolute top-28 left-4 grid w-[min(92vw,330px)] gap-1 border-2 border-foreground bg-card/90 px-3 py-2 text-xs pointer-coarse:top-2 pointer-coarse:left-1/2 pointer-coarse:z-20 pointer-coarse:-translate-x-1/2">
-      <p role="status" className="font-sans font-bold tracking-[0.12em] uppercase">{standing.status === "over" ? (standing.winner ? `${standing.winner} wins` : "No one is left standing") : `Room ${code}`}</p>
+      <p role="status" className="font-sans font-bold tracking-[0.12em] uppercase">{standing.status === "over" ? (standing.winner ? `${standing.winner} wins` : "No one is left standing") : `Table ${code || "…"}`}</p>
       <ul className="grid gap-0.5 tabular-nums">
         {standing.rivals.map((rival) => (
-          <li key={rival.id} className={cn("grid grid-cols-[1fr_auto_auto_3.6rem] items-center gap-3", !rival.alive && rival.lives <= 1 && "text-muted-foreground line-through")}>
+          <li key={rival.id} className={cn("grid grid-cols-[1fr_auto_auto_3.6rem] items-center gap-3", rival.lives === 0 && "text-muted-foreground line-through")}>
             <b className="font-medium" style={{ color: CHARS[rival.fighter].color }}>{rival.name}{rival.me && " (you)"}</b>
             <span className="text-destructive">{"●".repeat(rival.lives)}</span>
             <span>{rival.kos} K.O.</span>
@@ -440,8 +440,9 @@ function VersusPanel({ standing, onInvite, onLeave, code = roomCode(), pro = fal
           </li>
         ))}
       </ul>
-      <p className="text-muted-foreground">{pro && standing.status === "alone" ? "Waiting for another paid fighter. Leave now and your fee comes back." : STATUS[standing.status]}</p>
-      {!pro && <SmallButton className="pointer-events-auto justify-self-start" onClick={copy}>{copied ? "Link copied" : code === "open" ? "Make a private room and copy its link" : "Copy invite link"}</SmallButton>}
+      <p className="text-muted-foreground">{pro && standing.status === "alone" ? "Waiting for another paid fighter. Leave now and your fee comes back."
+        : standing.status === "starting" ? <>{STATUS.starting} <b className="text-foreground tabular-nums">{Math.ceil((standing.startsIn ?? 0) / 1000)}</b></> : STATUS[standing.status]}</p>
+      {!pro && code && <SmallButton className="pointer-events-auto justify-self-start" onClick={copy}>{copied ? "Link copied" : "Copy invite link"}</SmallButton>}
       <SmallButton className="pointer-events-auto justify-self-start" onClick={onLeave}>Leave match</SmallButton>
       {phone && <SmallButton className="pointer-events-auto justify-self-start" onClick={() => setOpen(false)}>Close</SmallButton>}
       {link && <input readOnly aria-label="Invite link" value={link} onFocus={(event) => event.currentTarget.select()} className="pointer-events-auto w-full border border-foreground bg-background px-1.5 py-1 font-mono text-[11px]" />}
@@ -477,7 +478,6 @@ export function App({ runtime }: { runtime: Runtime }) {
   const [showProfile, setShowProfile] = useState(false);
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
   const [dailyFighter, setDailyFighter] = useState<number | null>(null);
-  const spectating = useRef<{ leave: () => void } | null>(null);
   // Which way in was taken, and the level of the campaign in play: the page's own, not the match's.
   const [campaign, setCampaign] = useState(false);
   const [level, setLevel] = useState<Level | null>(null);
@@ -511,12 +511,12 @@ export function App({ runtime }: { runtime: Runtime }) {
     if (!ready.current) { afterPay.current = () => start(go); setPaying(true); return; }
     paidIn.current = ready.current; ready.current = null; setProNote(""); go();
   };
-  /** The room of the duel in play: a pro seat's match, or the one the page's address names. */
-  const duelCode = () => (paidIn.current?.mode === "versus" ? `pro${paidIn.current.match}` : roomCode());
+  /** The table of the duel in play, once seated: the arena's code for it, which an invitation carries. */
+  const [duelTable, setDuelTable] = useState("");
   const [standing, setStanding] = useState<Standing>({ rivals: [], status: "joining" });
   const net = useRef<Versus | null>(null), inVersus = useRef(false), quiet = useRef(false);
   useEffect(() => { inVersus.current = versus; quiet.current = muted; }, [versus, muted]);
-  // Co-op (docs/coop-plan.md, coop.ts): the group's table, whether the level in play is played with it and this game
+  // Co-op (docs/coop-plan.md, together.ts): the group's table, whether the level in play is played with it and this game
   // hosts it, how the group stands in it, and the host's guide's words as told.
   const together = useRef<Together | null>(null), mySeat = useRef<Hero | null>(null);
   const [coopOpen, setCoopOpen] = useState(false), [table, setTable] = useState<Table | null>(null), [coopError, setCoopError] = useState("");
@@ -535,7 +535,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     };
     let made: ReturnType<typeof createGame> | null = null;
     const ui: Ui = {
-      strike: (to, blow) => (net.current ?? together.current?.versus)?.strike(to, blow), shot: (orb) => (net.current ?? together.current?.versus)?.shot(orb), downed: (by) => net.current?.downed(by),
+      strike: (to, blow) => (net.current ?? together.current?.versus)?.strike(to, blow), shot: (orb) => (net.current ?? together.current?.versus)?.shot(orb), fell: () => net.current?.fell(),
       fx: (sprite) => (net.current ?? together.current?.versus)?.fx(sprite),
       foeHit: (uid, blow) => together.current?.foeHit(uid, blow), share: (event) => together.current?.share(event),
       wiped: () => setWiped(true), teamClear: () => setTeamCleared(true),
@@ -585,11 +585,15 @@ export function App({ runtime }: { runtime: Runtime }) {
     return [specialsOf(hero, fighter), build] as const;
   }, [rules, send, saga, granted]);
   const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(null, ...mine); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter]);
-  /** Joins the room the page's address names, for the duel in play. */
+  // spec/app/lobby.md, "Story: Find a match"
+  /** Takes a seat for the duel in play: a pro seat's match, the table the page's address names, or, for the open
+   *  room, wherever matchmaking finds one. */
   const connect = useCallback(() => {
-    setStanding({ rivals: [], status: "joining" });
-    joinVersus(duelCode(), nameFor(rules.get().fighter), DUEL, game, rules, setStanding, paidIn.current?.mode === "versus" ? paidIn.current.id : undefined)
-      .then((room) => { if (rules.get().duel && !net.current) net.current = room; else room.leave(); })
+    setStanding({ rivals: [], status: "joining" }); setDuelTable("");
+    const paid = paidIn.current?.mode === "versus" ? paidIn.current : null;
+    void (paid ? proSeat(paid) : Promise.resolve(undefined))
+      .then((seat) => joinVersus(seat ? undefined : roomCode(), lastName() || nameFor(rules.get().fighter), DUEL, game, rules, setStanding, seat))
+      .then((room) => { if (rules.get().duel && !net.current) { net.current = room; setDuelTable(room.code); } else room.leave(); })
       .catch((error: unknown) => { console.warn("versus:", error); setStanding({ rivals: [], status: error instanceof Error && error.message === "full" ? "full" : "offline" }); });
   }, [game, rules]);
   // spec/app/index.md, "A duel starts from the select screen like a fight, with three lives and no waves"
@@ -597,20 +601,12 @@ export function App({ runtime }: { runtime: Runtime }) {
     const mine = built();
     if (!send({ type: "duel" })) return;
     setLevel(null);
-    game.begin(stageFor(DUEL, duelCode(), 0), ...mine); began.current = performance.now();
-    track("versus_start", { fighter: rules.get().fighter, pro: proOn.current, room: duelCode() });
+    game.begin(stageFor(DUEL, roomCode(), 0), ...mine); began.current = performance.now();
+    track("versus_start", { fighter: rules.get().fighter, pro: proOn.current, room: roomCode() });
     connect(); sideways();
   }, [send, game, connect, rules]);
-  // An invitation is to the room the inviter is in. From the open room, that means leaving it for a private one
-  // first: a link to a room nobody is in brings a friend to an empty place.
-  const invite = useCallback(() => {
-    if (roomCode() === "open") {
-      history.replaceState(null, "", `?room=${Math.random().toString(36).slice(2, 8)}`);
-      net.current?.leave(); net.current = null;
-      connect();
-    }
-    return inviteLink(roomCode());
-  }, [connect]);
+  // An invitation is to the table the inviter is at, matched or private: its code brings a friend to it while it has a seat.
+  const invite = useCallback(() => inviteLink(net.current?.code ?? roomCode()), []);
   // The room is left with the duel: for the select screen, the title, or the page going away.
   const dueling = match?.screen === "Play" && match.duel;
   useEffect(() => { if (!dueling) { net.current?.leave(); net.current = null; } }, [dueling]);
@@ -619,18 +615,11 @@ export function App({ runtime }: { runtime: Runtime }) {
     sound("over");
     track("versus_end", { winner: standing.winner ?? null, won: standing.winner === nameFor(rules.get().fighter), players: standing.rivals.length, seconds: Math.round((performance.now() - began.current) / 1000) });
   }, [standing.status, sound]);
-  // A pro seat: the fight starting closes its match to new seats, and its end is reported once, for the pot.
-  const reported = useRef(0);
+  // spec/app/bout.md, "Story: Fight for the pot"
+  // A pro seat's match is settled by the arena server, which has the pot paid to the one it saw left standing.
   useEffect(() => {
-    const paid = paidIn.current;
-    if (paid?.mode !== "versus") return;
-    if (standing.status === "fighting") void proFight(paid.id).catch(() => undefined);
-    if (standing.status !== "over" || reported.current === paid.id) return;
-    reported.current = paid.id;
-    void proReport(paid.id, standing.winnerEntry ?? null).then(
-      ({ settled }) => setProNote(settled === "paid" ? "The pot has been paid to the winner." : settled === "held" ? "The games did not agree on the winner, so this match will be reviewed before the pot is paid." : "Waiting for the other players' games to confirm the winner."),
-      (error: unknown) => setProNote(error instanceof Error ? error.message : "The result could not be sent."));
-  }, [standing.status, standing.winnerEntry]);
+    if (paidIn.current?.mode === "versus" && standing.status === "over") setProNote(standing.winner ? `The pot is on its way to ${standing.winner}.` : "No one was left standing: the match goes to review.");
+  }, [standing.status, standing.winner]);
   // The last life of a quest gone: its sound, each time it goes.
   const spent = match?.screen === "Play" && match.quest && !match.alive && match.lives === 1;
   useEffect(() => { if (spent) { sound("lost"); track("game_over", { level: playing.current?.id }); } }, [spent, sound]);
@@ -693,12 +682,12 @@ export function App({ runtime }: { runtime: Runtime }) {
   useEffect(() => { if (group && !group.host) game.talk(!!heardTalk); }, [heardTalk, group, game]);
   const embarkNow = useRef(embark);
   useEffect(() => { embarkNow.current = embark; }, [embark]);
-  /** Sits down at the table `code`, or a new one: what it says comes to the page. */
+  /** Sits down at the table `code`, or wherever matchmaking finds a group: what it says comes to the page. */
   const sit = useCallback(async (code?: string) => {
     setCoopError("");
     together.current?.leave(); together.current = null; setTable(null);
     try {
-      together.current = await joinTogether(code ?? Math.random().toString(36).slice(2, 8), lastName() || `Blade-${100 + Math.floor(Math.random() * 900)}`, game, rules, {
+      together.current = await joinTogether(code, lastName() || `Blade-${100 + Math.floor(Math.random() * 900)}`, game, rules, {
         table: setTable,
         start: (id, host) => {
           const made = levelById(id), hero = mySeat.current;
@@ -985,7 +974,7 @@ export function App({ runtime }: { runtime: Runtime }) {
           {group && <CoopParty standing={party} revivesLeft={Math.max(0, match.lives - 1 + (match.spared ? 0 : 1))} />}
           {wiped && <Wiped onTable={() => { send({ type: "openMoves" }); select("change"); backToTable(); }} />}
           {heardTalk && !talk && match.quest && !match.paused && <GuideTalk who={heardTalk.voice && heardTalk.at + 1 === heardTalk.lines.length ? heardTalk.voice : heardTalk.who} watching={heardTalk.choices?.length ? "The host is choosing…" : "The host reads on…"} line={heardTalk.lines[heardTalk.at]} at={heardTalk.at} of={heardTalk.lines.length} onNext={() => undefined} onSkip={() => undefined} />}
-          {match.duel && <VersusPanel standing={standing} onInvite={invite} onLeave={leaveMatch} code={duelCode()} pro={paidIn.current?.mode === "versus"} />}
+          {match.duel && <VersusPanel standing={standing} onInvite={invite} onLeave={leaveMatch} code={duelTable} pro={paidIn.current?.mode === "versus"} />}
           {match.duel && standing.status === "over" && <MatchOver standing={standing} onAgain={pro ? leaveMatch : () => net.current?.again()} onLeave={leaveMatch} again={pro ? "New pro match" : undefined} note={pro ? proNote : undefined} />}
           <p role="status" className={cn(said, "top-[22%] text-[clamp(18px,3.4vw,30px)] tracking-[0.22em]", !callout.on && "opacity-0")} style={{ color: shown }}>
             {callout.text}

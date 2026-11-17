@@ -1,11 +1,11 @@
-// spec/app/index.md, "Story: Play a level of a campaign"
-// Co-op's screens (docs/coop-plan.md, coop.ts): the table where the group gathers, takes its five protagonists and
+// spec/app/index.md, "Story: Play a level of a campaign"; spec/app/lobby.md, "Story: Find a match"
+// Co-op's screens (docs/coop-plan.md, together.ts): the table where the group gathers, takes its five protagonists and
 // starts a chapter; the group as it stands while a level is played; and the end of a level that every fighter of
 // the group went down in.
 import { cn } from "@repo/ui";
 import { useState } from "react";
 import { type Saga, chaptersDone } from "../gen/app__saga.ts";
-import type { Table } from "./coop.ts";
+import type { Table } from "./together.ts";
 import { CHARS } from "./game/data.ts";
 import { chapterById, chapterOf } from "./game/levels.ts";
 import { KitButton, KitPanel } from "./kit.tsx";
@@ -25,7 +25,7 @@ export function chaptersFor(hero: Hero, saga: Saga | undefined) {
 export function CoopTable({ table, saga, error, onSeat, onReady, onChoose, onStart, onLeave, onJoin }: {
   table: Table | null; saga: Saga | undefined; error: string;
   onSeat: (hero: Hero | null) => void; onReady: (on: boolean) => void; onChoose: (level: string) => void; onStart: () => void; onLeave: () => void;
-  /** Joins another table by its code, or a new one without. */
+  /** Sits at the table `code`, or, without one, at whichever open table matchmaking finds room at. */
   onJoin: (code?: string) => void;
 }) {
   const [code, setCode] = useState(""), [copied, setCopied] = useState(false);
@@ -34,7 +34,10 @@ export function CoopTable({ table, saga, error, onSeat, onReady, onChoose, onSta
       <KitPanel aria-label="Play together" className="grid w-full max-w-[460px] gap-3 px-5 py-4">
         <h2 className={cn(display, "text-2xl tracking-[0.14em]")}>Play together</h2>
         <p className="text-[12.5px] leading-normal text-muted-foreground">Up to five, each one of the five blades. The host chooses a chapter of their own campaign; it counts for everyone who clears it.</p>
-        <KitButton onClick={() => onJoin()} className="justify-self-start px-4 py-2">Open a new table</KitButton>
+        <div className="flex flex-wrap gap-2">
+          <KitButton onClick={() => onJoin()} className="px-4 py-2">Find a group</KitButton>
+          <KitButton onClick={() => onJoin(Math.random().toString(36).slice(2, 8))} className="px-4 py-2">Private table</KitButton>
+        </div>
         <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (code.trim()) onJoin(code.trim()); }}>
           <input aria-label="Table code" value={code} onChange={(event) => setCode(event.target.value.replace(/[^a-z0-9]/gi, "").slice(0, 12).toLowerCase())} placeholder="Code" className="w-32 border border-[#e0b84a]/40 bg-black/50 px-2 py-1 font-mono text-sm" />
           <KitButton type="submit" disabled={!code} className="px-3 py-1 disabled:opacity-40">Join</KitButton>

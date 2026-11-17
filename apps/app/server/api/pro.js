@@ -4,27 +4,13 @@
 //   POST /api/pro {action: "enter",  mode, wallet, tx, token, lastValid}   the signed transaction: sent, and the entry kept
 //   POST /api/pro {action: "check",  entry}              an entry left pending, looked at again
 //   POST /api/pro {action: "result", entry, wave, kos, fighter, name}     a paid Survival run's end, once
-//   POST /api/pro {action: "fight",  entry}              a Versus match's fight has started: no more seats
-//   POST /api/pro {action: "report", entry, winner}      who this seat's game says won (an entry id, or null)
 //   POST /api/pro {action: "withdraw", entry}            a lone seat's fee back, while nobody else has joined
+// A Versus match's fight and its end are the arena server's to tell (pro-arena.js), not a player's game's.
 // Every POST needs Authorization: Bearer <privy-token>.
 const { neon } = require("@neondatabase/serverless");
 const pro = require("./_pro.js");
 const { named } = require("./_names.js");
-
-let privy = null;
-const getPrivy = async () => {
-  if (!privy && process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET) {
-    try { const { PrivyClient } = await import("@privy-io/node"); privy = new PrivyClient({ appId: process.env.PRIVY_APP_ID, appSecret: process.env.PRIVY_APP_SECRET }); }
-    catch (error) { console.error(error); }
-  }
-  return privy;
-};
-async function userOf(req) {
-  const header = req.headers.authorization, client = await getPrivy();
-  if (!header?.startsWith("Bearer ") || !client) return null;
-  try { return (await client.utils().auth().verifyAccessToken(header.slice(7))).user_id; } catch { return null; }
-}
+const { userIdOf } = require("./_privy.js");
 
 const MODES = new Set(["survival", "versus"]);
 const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -44,7 +30,7 @@ module.exports = async (req, res) => {
     const c = await pro.chain();
     if (req.method === "GET") return res.status(200).json({ open: true, fee: pro.FEE_TOKENS.toString(), mint: c.mint.toBase58(), decimals: c.decimals, pot: c.pot.publicKey.toBase58(), survival: await pro.survivalBoard(sql, c) });
     if (req.method !== "POST") return res.status(405).json({ error: "Only GET and POST." });
-    const userId = await userOf(req);
+    const userId = await userIdOf(req);
     if (!userId) return res.status(401).json({ error: "Sign in first." });
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body ?? {};
     const answer = (out) => res.status(out.error ? 400 : 200).json(out);
@@ -65,13 +51,6 @@ module.exports = async (req, res) => {
       }
       case "result":
         return answer(await pro.result(sql, userId, id(body.entry), { wave: body.wave, kos: body.kos, fighter: Number.isInteger(body.fighter) ? body.fighter : null, name: named(body.name) || "Player" }));
-      case "fight": {
-        const [row] = await sql`SELECT match_id FROM pro_entries WHERE id = ${id(body.entry)} AND user_id = ${userId} AND mode = 'versus' AND status = 'paid'`;
-        if (row) await pro.lock(sql, row.match_id);
-        return answer({ ok: !!row });
-      }
-      case "report":
-        return answer(await pro.report(sql, userId, id(body.entry), body.winner === null ? null : id(body.winner)));
       case "withdraw":
         return answer(await pro.withdraw(sql, userId, id(body.entry)));
       default:

@@ -1,11 +1,11 @@
 -- Pro mode: paid entries in $BLADES, the pots they make and what is paid out of them (api/_pro.js).
 -- Additive only; safe to run more than once against the "five-blades" Neon database.
 
--- A pro Versus match: one relay room (`ledge-brawl-pro<id>`), up to five paid seats.
+-- A pro Versus match: one table of the arena server (`pro<id>`), up to five paid seats.
 --   open      taking entrants
---   fighting  two or more are in and the fight has started: no more are seated
+--   fighting  the arena has begun the fight: no more are seated
 --   settled   paid out (or refunded), see pro_payouts
---   held      the reports disagree or are missing: waits for the operator (api/pro-admin.js)
+--   held      the arena saw no one left standing, or said nothing within the hour: waits for the operator (api/pro-admin.js)
 CREATE TABLE IF NOT EXISTS pro_matches (
   id          bigserial PRIMARY KEY,
   status      text NOT NULL DEFAULT 'open',
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS pro_entries (
   wave           int,
   kos            int,
   result_at      timestamptz,
-  -- Versus: who this entrant's game says won (an entry id), or that no one did.
+  -- No longer written: what entrants' games said of a match's end, before the arena refereed it.
   report_winner  bigint,
   report_none    boolean,
   reported_at    timestamptz

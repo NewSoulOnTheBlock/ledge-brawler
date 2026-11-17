@@ -1,0 +1,22 @@
+// spec/app/bout.md, "Story: Fight for the pot"; spec/app/lobby.md, "Story: Find a match"
+// The arena server (apps/app/arena/README.md): its sockets on PORT (serve.ts), and the pot of every pro match kept by
+// the site at SITE, which it asks with ARENA_SECRET (pot.vibe). Without ARENA_SECRET pro matches are refused and
+// everything else is played as usual.
+import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
+import * as NodeServices from "@effect/platform-node/NodeServices"
+import type { Pro } from "./arena.ts"
+import { pot } from "./pot.vibe"
+import { serve } from "./serve.ts"
+
+export effect function main() {
+  const port = try Config.withDefault(Config.Int("PORT"), 8787)
+  const site = try Config.withDefault(Config.String("SITE"), "https://ledge-brawler.vercel.app")
+  const secret = try Config.option(Config.Redacted("ARENA_SECRET"))
+  let pro: Pro | undefined
+  if (Option.isSome(secret)) { provide FetchHttpClient.layer { pro = try pot(site, secret.value) } }
+  const serving = try promise(() => serve(port, { pro }))
+  try Console.log(`arena on :${serving.port}${pro ? `, pro matches settled by ${site}` : ", pro matches off"}`)
+  try never
+}
+
+NodeRuntime.runMain(Effect.provide(main(), NodeServices.layer))

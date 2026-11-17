@@ -243,7 +243,7 @@ export function chapterById(id: string) {
   const brief = BRIEFS.find((each) => each.id === id);
   return brief && chapterOf(brief.hero, brief.chapter);
 }
-/** The level a co-op group has been told to play, by its id (coop.ts). */
+/** The level a co-op group has been told to play, by its id (together.ts). */
 export function levelById(id: string) {
   const brief = BRIEFS.find((each) => each.id === id);
   return brief && levelOf(brief.hero, brief.chapter);

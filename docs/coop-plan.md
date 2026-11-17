@@ -47,7 +47,7 @@ they do now; co-op is a separate path, switched on only inside a co-op room.
 | 5 | Hardening: host leaves (hand over to next player), reconnect, difficulty scaling, 5-browser + lag test (`netlab.mjs`) | ready to deploy |
 
 ## Status (2026-11-16) — built locally, not deployed
-All phases 0–5 are in. Code: `apps/app/src/coop.ts` (table, host election by seat time + 1 s heartbeat / 5 s silence,
+All phases 0–5 are in. Code: `apps/app/src/together.ts` (table, host election by seat time + 1 s heartbeat / 5 s silence,
 `go`/`world`/`foe`/`lvl`/`talk`/`hb` messages), `src/Coop.tsx` (table, party list, wiped panel), `versus.ts`
 (`RoomLink`: co-op rooms `ledge-coop-<code>`, level number in place of a duel's round), `game/sim.ts` (`sides`,
 `allies`, stand-ins `remote`/`uid`/`shown`, `world`/`heardWorld`/`hitFoe`/`shared`, `stepDown`/`riseHere`, `crowd`,
@@ -60,3 +60,11 @@ seeded keys), `render.ts` (teammates, downed markers, minimap), App.tsx (`sit`, 
   + ≤12.5 blow batches + ≤20 effects + 1 beat (relay drops past 60).
 - Not done: joining mid-level (a late arrival waits at the table for the next level); the Reaper's bargain panel is
   replaced by teammate revives; story choices (boss replies, heeding) are the host's, guests watch them.
+
+## Status (2026-11-17) — on the arena server
+Tables are now the arena server's (`apps/app/src/arena/`, `spec/app/lobby.md`), not the Multiplayer Agent relay's:
+"Find a group" seats a player at any open co-op table with a free seat, a private table is reached by its code, and a
+table stops taking players from matchmaking while its group plays a level. The level itself is still run by the
+host's game as above. Next: the arena runs it instead (a headless `createGame` with every player's fighter a
+stand-in), so that no player's game decides what the enemies do; the same world, with one player, makes a paid
+Survival run's result the server's, which the daily pot can then pay without the operator.

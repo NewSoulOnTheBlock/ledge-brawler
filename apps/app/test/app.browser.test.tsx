@@ -22,6 +22,8 @@ it("Choose a fighter, start the fight, and open the move list", async () => {
   await act(() => Promise.resolve(root.render(<App runtime={runtime} />)));
   const match = () => rulesOf(runtime).get();
   await act(() => userEvent.click(page.getByRole("button", { name: "Survival" })));
+  // Survival is played Casual, for nothing, or Pro, for an entry fee (ProEntry.tsx).
+  await act(() => userEvent.click(page.getByRole("button", { name: /^Casual/ })));
   await act(() => userEvent.keyboard("{ArrowRight}"));
   // spec/app/index.md, "Only on the select screen can a fighter be focused, and only one of the five"
   await expect.poll(() => [match().screen, match().fighter]).toEqual(["Select", 1]);

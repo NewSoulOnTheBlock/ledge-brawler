@@ -1,5 +1,5 @@
-// spec/app/index.md, "Story: Play a level of a campaign"
-// Co-op (docs/coop-plan.md): up to five play one campaign chapter together, over the same relay rooms as a duel
+// spec/app/index.md, "Story: Play a level of a campaign"; spec/app/lobby.md, "Story: Find a match"
+// Co-op (docs/coop-plan.md): up to five play one campaign chapter together, at the arena server's tables like a duel
 // (versus.ts, which keeps every fighter where its game says). At the table each takes one of the five protagonists, no
 // two the same, and the host (whoever has sat longest) chooses a chapter of their own campaign and starts it. In the
 // level the host's game runs the enemies and everything the level does, and tells the others twelve times a second
@@ -8,7 +8,9 @@
 // talk (`talk`). If the host goes, whoever has sat longest after them takes the level over.
 import type { Hero } from "./story/canon.ts";
 import type { Game, Hurt, Rules, Shared, World } from "./game/sim.ts";
-import { type Fields, joinVersus, type Room, type Standing, type Versus } from "./versus.ts";
+import type { Room } from "./arena/link.ts";
+import type { Fields } from "./arena/protocol.ts";
+import { joinVersus, type Standing, type Versus } from "./versus.ts";
 
 /** One of the group at the table. */
 export interface Seat { id: string; name: string; hero: Hero | null; ready: boolean; host: boolean; me: boolean; playing: boolean }
@@ -51,11 +53,9 @@ const BEAT_EVERY = 1000, SILENT = 5000;
 const WORLD_EVERY = 66, FOE_EVERY = 80;
 /** What a blow told of by a teammate may be at most (as in versus.ts), and how many a teammate may land in a second. */
 const BLOW = { dmg: 80, push: 30, stun: 150, perSecond: 40 };
-/** How many sit at a table: one for each of the five. */
-export const TABLE = 5;
 
-/** Sits down at the table `code` as `name`. */
-export async function joinTogether(code: string, name: string, game: Game, rules: Rules, on: TogetherEvents): Promise<Together> {
+/** Sits down as `name` at the table `code`, or, without one, at whichever open table matchmaking finds room at. */
+export async function joinTogether(code: string | undefined, name: string, game: Game, rules: Rules, on: TogetherEvents): Promise<Together> {
   let room: Room | null = null, me = "";
   /** When this player sat down, by the wall clock: the longest seated is the host. */
   const sat = Date.now();
@@ -101,7 +101,7 @@ export async function joinTogether(code: string, name: string, game: Game, rules
       if (first.id !== s.id) s.hero = null;
     }
     const hostPick = players().find(([id]) => id === host)?.[1].L;
-    return { code, seats: seats.sort((a, b) => (by.get(a.id) ?? sat) - (by.get(b.id) ?? sat)), host: host === me, pick: typeof hostPick === "string" && hostPick ? hostPick : pick, playing: epoch, status: "open" };
+    return { code: room?.code ?? code ?? "", seats: seats.sort((a, b) => (by.get(a.id) ?? sat) - (by.get(b.id) ?? sat)), host: host === me, pick: typeof hostPick === "string" && hostPick ? hostPick : pick, playing: epoch, status: "open" };
   }
 
   const link = {
@@ -148,7 +148,7 @@ export async function joinTogether(code: string, name: string, game: Game, rules
     epoch: () => epoch,
   };
 
-  const versus = await joinVersus(code, name, null, game, rules, on.standing, undefined, link);
+  const versus = await joinVersus(code, name, null, game, rules, (standing) => on.standing(standing), undefined, link);
 
   return {
     versus,
