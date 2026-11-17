@@ -53,7 +53,7 @@ All phases 0–5 are in. Code: `apps/app/src/together.ts` (table, host election 
 `allies`, stand-ins `remote`/`uid`/`shown`, `world`/`heardWorld`/`hitFoe`/`shared`, `stepDown`/`riseHere`, `crowd`,
 seeded keys), `render.ts` (teammates, downed markers, minimap), App.tsx (`sit`, `embark(made, together)`,
 `backToTable`, `?together=<code>`).
-- Test: `node workbench/capture/coop.mjs [players 2-5] [address] [lag] [jitter]` — passes with 5 players at 120±60 ms:
+- Test (2026-11-16, over the relay): `node workbench/capture/coop.mjs [players 2-5] [address] [lag] [jitter]` — passed with 5 players at 120±60 ms:
   same level, 4 teammates each, enemy stand-ins in step, guest blows land, keys shared, revive, host leaves → next
   takes over every enemy, way out clears for all.
 - Message budget per second: host ≈ 20 words + 15 world (shots/effects/warnings batched inside) + 1 beat; guest ≈ 20 words

@@ -1,6 +1,6 @@
-// Two browsers in Versus on the running game (http://localhost:5199, or the address given): the first enters the open
-// room and makes an invitation; the second opens that link. Both should then be in one room, see each other, and a
-// blow from one should cost the other health. Saves what each sees.
+// Two browsers in Versus on the running game (http://localhost:5199, or the address given), with the arena server
+// running beside it (apps/app/arena/README.md): both press Versus and Quick match, and the arena should seat them at one
+// table without a link, begin a round for both, and land a blow from one on the other. Saves what each sees.
 import { chromium } from "playwright";
 const out = new URL("../../shots/latest/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const base = process.argv[2] ?? "http://localhost:5199/";
@@ -15,22 +15,20 @@ async function open(url) {
   return page;
 }
 const roster = (page) => page.getByRole("complementary", { name: "Versus" }).innerText();
-// The inviter: Versus, a fighter, then the invitation, which moves them out of the open room.
-const a = await open(base);
-await a.getByRole("button", { name: "Versus" }).click();
-// Casual or Pro is asked first (ProEntry.tsx): casual.
-await a.getByRole("button", { name: /^Casual/i }).click();
-await a.keyboard.press("ArrowRight"); await a.keyboard.press("Enter");
-await a.waitForTimeout(2500);
-await a.getByRole("button", { name: /private room/ }).click();
-const link = await a.getByLabel("Invite link").inputValue();
-await a.waitForTimeout(2500);
-// The invited: the link alone brings them to the fighter select.
-const b = await open(link);
-await b.getByRole("heading", { name: /Choose your fighter/i }).waitFor();
-await b.keyboard.press("ArrowRight"); await b.keyboard.press("ArrowRight"); await b.keyboard.press("Enter");
-await b.waitForTimeout(4000);
-console.log("link:", link.replace(/room=.*/, "room=…"));
+/** Versus, Casual, a fighter, and the quick match the fighter select offers first. */
+async function quick(page, right) {
+  await page.getByRole("button", { name: "Versus" }).click();
+  await page.getByRole("button", { name: /^Casual/i }).click();
+  for (let i = 0; i < right; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+}
+const a = await open(base), b = await open(base);
+await quick(a, 1);
+await a.waitForTimeout(1000);
+await quick(b, 2);
+// Matched, the round counted down and begun.
+await a.waitForTimeout(6000);
+const table = (text) => text.match(/table (\w+)/i)?.[1] ?? null;
 console.log("A sees:", JSON.stringify(await roster(a)));
 console.log("B sees:", JSON.stringify(await roster(b)));
 const hp = (page) => page.getByRole("meter", { name: "HP" }).getAttribute("aria-valuenow");
@@ -52,5 +50,6 @@ for (const slot of [1, 2, 3]) {
 }
 await a.screenshot({ path: out + "versus-a.png" }); await b.screenshot({ path: out + "versus-b.png" });
 const names = (text) => text.split("\n").filter((line) => /-\d{3}/.test(line)).length;
-console.log(JSON.stringify({ together: names(await roster(a)) === 2 && names(await roster(b)) === 2, before, after: [await hp(a), await hp(b)], errors }));
+const [ra, rb] = [await roster(a), await roster(b)];
+console.log(JSON.stringify({ sameTable: table(ra) !== null && table(ra) === table(rb), together: names(ra) === 2 && names(rb) === 2, before, after: [await hp(a), await hp(b)], errors }));
 await browser.close();
