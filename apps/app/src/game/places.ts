@@ -2,23 +2,28 @@
 // What a level's place is drawn with: the tile pieces, plants and gate from the art packs (art/packs/README.md),
 // cut by art/packs/build.py and listed in packs/places.json and packs/plants.json. Where things are is levels.ts's.
 type Ctx = CanvasRenderingContext2D;
-interface Piece { file: string; w: number; h: number }
+/** A piece of art: its file, and where in it the piece sits when the file is an atlas of many (art/scenery/make.cjs). */
+interface Piece { file: string; w: number; h: number; x?: number; y?: number }
 interface Plant { file: string; w: number; h: number; cols: number; frames: number; fps: number; root: [number, number] }
 export type ThemeId = "shadow" | "mossy" | "fields" | "cove" | "village" | "duel" | "cavern" | "frost" | "shrine" | "ruin" | "fungal" | "ember";
 
 const PLACES = Object.values(import.meta.glob<Record<string, Record<string, Piece>>>("./packs/places.json", { eager: true, import: "default" }))[0];
 const PLANTS = Object.values(import.meta.glob<Record<string, Plant>>("./packs/plants.json", { eager: true, import: "default" }))[0];
-const urls = import.meta.glob<string>("./packs/{mossy,shadow,fields,gate,plants,cove,village,cavern,frost,shrine,ruin,fungal,ember}/*.{png,webp}", { eager: true, query: "?url", import: "default" });
+/** The scenery of the campaign themes, drawn in code for this game (art/scenery/make.cjs): each piece with how it is drawn and lit. */
+export interface SceneryMeta extends Piece { k: number; light?: [dx: number, dy: number, r: number, rgb: string]; flicker?: boolean; sway?: boolean; under?: boolean; wall?: boolean; fg?: boolean; far?: number; alpha?: number; frames?: number; tile?: boolean; shaft?: string; smoke?: boolean; drip?: boolean }
+export const SCENERY = Object.values(import.meta.glob<Record<string, SceneryMeta>>("./packs/scenery/scenery.json", { eager: true, import: "default" }))[0];
+PLACES.scenery = SCENERY;
+const urls = import.meta.glob<string>("./packs/{mossy,shadow,fields,gate,plants,cove,village,cavern,frost,shrine,ruin,fungal,ember,scenery}/*.{png,webp}", { eager: true, query: "?url", import: "default" });
 const images = new Map<string, HTMLImageElement>();
 
-function image(path: string) {
+export function image(path: string) {
   let made = images.get(path);
   if (!made) { made = new Image(); made.src = urls[`./packs/${path}`]; images.set(path, made); }
   return made.complete && made.naturalWidth > 0 ? made : null;
 }
-/** Loads every piece and plant. */
-export function loadPlaces(): Promise<unknown> {
-  return Promise.all(Object.keys(urls).map((key) => {
+/** Loads the pieces of the sets named (the folders under packs/), or of every set; the rest load when first drawn. */
+export function loadPlaces(sets?: string[]): Promise<unknown> {
+  return Promise.all(Object.keys(urls).filter((key) => !sets || sets.some((set) => key.startsWith(`./packs/${set}/`))).map((key) => {
     const path = key.slice("./packs/".length);
     image(path);
     return images.get(path)!.decode().catch(() => undefined);
@@ -80,20 +85,20 @@ export function drawFrame(ctx: Ctx, set: string, name: string, frame: number, fr
   const p = pieceOf(set, name), img = p && image(p.file);
   if (!p || !img) return;
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(img, (Math.floor(frame) % frames) * (p.w / frames), 0, p.w / frames, p.h, x, y, w, h);
+  ctx.drawImage(img, (p.x ?? 0) + (Math.floor(frame) % frames) * (p.w / frames), p.y ?? 0, p.w / frames, p.h, x, y, w, h);
   ctx.imageSmoothingEnabled = true;
 }
 
 export const pieceOf = (set: string, name: string): Piece | undefined => PLACES[set]?.[name];
 
-/** Draws a piece `k` times its size with its bottom middle at (x, y). */
-export function drawPiece(ctx: Ctx, set: string, name: string, x: number, y: number, k: number, pixel: boolean, flip = false, alpha = 1) {
+/** Draws a piece `k` times its size with its bottom middle at (x, y); `skew` leans its top sideways (wind, a passing fighter). */
+export function drawPiece(ctx: Ctx, set: string, name: string, x: number, y: number, k: number, pixel: boolean, flip = false, alpha = 1, skew = 0) {
   const p = pieceOf(set, name), img = p && image(p.file);
   if (!p || !img) return;
   ctx.save();
   ctx.imageSmoothingEnabled = !pixel; ctx.globalAlpha = alpha;
-  ctx.translate(x, y); ctx.scale(flip ? -k : k, k);
-  ctx.drawImage(img, -p.w / 2, -p.h);
+  ctx.translate(x, y); if (skew) ctx.transform(1, 0, skew, 1, 0, 0); ctx.scale(flip ? -k : k, k);
+  ctx.drawImage(img, p.x ?? 0, p.y ?? 0, p.w, p.h, -p.w / 2, -p.h, p.w, p.h);
   ctx.restore();
 }
 

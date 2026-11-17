@@ -6,7 +6,8 @@
 import type { CastId } from "./cast.ts";
 import type { Vec } from "./data.ts";
 import type { Decor, Level, Slab } from "./levels.ts";
-import { CRUSH_H, type Traps } from "./traps.ts";
+import { shape } from "./shape.ts";
+import { CRUSH_H, LIFT_MAX, type Traps } from "./traps.ts";
 
 /** A cell is 64 across; a room is 26 cells by 14, its outer ring wall. A fighter stands two cells tall. */
 export const CELL = 64, COLS = 26, ROWS = 14;
@@ -18,7 +19,19 @@ const IN_W = COLS - 2, IN_H = ROWS - 2;
 // A hand-drawn level (Brief.map) may also have traps (traps.ts):  ~ a ledge that crumbles   ! spikes that rise and
 //   sink   o where a blade's chain hangs   > < a slot in the rock that shoots that way   T a block that falls
 //   f a grate that blasts fire   [ ] a bookcase in the wall that rams right or left   = the track of a wagon
-//   _ a seam in the ground that opens by itself
+//   _ a seam in the ground that opens by itself   { } a nozzle in the rock that blasts its hero's element right or left
+//   Q a bell that tolls   ( ) a vent in the rock that blows its row right or left
+//   * ice on the ground under it   Z z a soldier frozen in ice, facing right or left
+//   a b paths of the dead, in two sets that take turns to be solid   E an eye in the rock that sends wisps
+//   h a grave in the ground whose dead grab whoever lingers on it   t a tide pool that floods three cells deep and drains
+//   G a grave-lantern that wakes a shade to follow whoever passes it   | a lift of floating blades that rises as far as
+//     there is room, up to ten cells (the proof reads it as a plant, which throws eight)
+//   k j floor that the engine drives right or left, carrying whoever stands on it   M a mortar that lobs shells
+//   w floorboards a fire runs along, the way it runs set by where in the level they lie
+//   Y a rune anchor in the rock: two in a row, with open air between, pull a binding thread taut across it
+//   % a false floor: rock to look at, it gives way under a fighter   & a false wall: rock to look at, air to pass
+//   $ a cache in a hidden chamber   : the air of a hidden chamber   ; a warning post   (shape.ts puts these in)
+//   1-9 a gate: the two cells of a digit are twins, and stepping into one brings you out of the other
 type Kind = "start" | "hall" | "up" | "down" | "shaft" | "end" | "nook";
 /** The inside of a room, 24\u00d712, without its ring of wall. All templates faithfully converted from
  *  Strawberry Jam 2021 Celeste community mod map geometry at 2:1 tile scale, tuned for Five Blades' jump arc
@@ -1644,7 +1657,19 @@ export function moves(g: Grid) {
     }
     out.set(id(x, y), to);
   }
+  // A gate joins the cells of its digit, both ways.
+  for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+    const twin = /[1-9]/.test(g.cells[y][x]) && stands(g, x, y) ? twinOf(g, x, y) : null;
+    if (twin && stands(g, twin[0], twin[1])) out.get(id(x, y))?.push(id(twin[0], twin[1]));
+  }
   return out;
+}
+
+/** The other cell of a gate's digit, if the map has it. */
+export function twinOf(g: Grid, x: number, y: number): [number, number] | null {
+  const ch = g.cells[y][x];
+  for (let ty = 0; ty < g.h; ty++) for (let tx = 0; tx < g.w; tx++) if ((tx !== x || ty !== y) && g.cells[ty][tx] === ch) return [tx, ty];
+  return null;
 }
 
 /** What is wrong with a level, if anything: a thing that cannot be got to, or somewhere there is no leaving. */
@@ -1677,6 +1702,8 @@ export interface Brief {
   turn?: number;
   /** The whole level drawn by hand, `w` rooms by `h` of text, in place of rooms from the seed (maps.ts). */
   map?: string[];
+  /** What a hidden chamber of the level tells whoever finds the first of them. */
+  secret?: string;
   /** Its enemies, weakest first, and the one that waits by the way out. */
   foes: CastId[]; boss: CastId;
   /** What there is to find, one to a nook for as long as both last. */
@@ -1698,7 +1725,71 @@ const DRESS: Record<string, [string, number, number?][]> = {
   fungal: [["block", 3, 2.4], ["rock", 4, 2.4]],
   ember: [["block", 3, 2.4], ["rock", 4, 2.4]],
 };
+/** The six campaign themes are dressed from the scenery pack (art/scenery/make.cjs): what stands on the ground (weighted),
+ * hangs from rock, stands against the back wall, stands in front of the fighters, and marks each room. */
+type Pick = [name: string, weight: number];
+const SCENE: Record<string, { top: Pick[]; under: string[]; wall: Pick[]; fg: string[]; mark: string[] }> = {
+  cavern: { top: [["rock-cavern", 3], ["rockB-cavern", 2], ["rubble-cavern", 2], ["stalagmite", 3], ["crystal", 2], ["urn-cavern", 1]], under: ["stalactite", "stalactiteS", "stalactite", "hangMoss-cavern"], wall: [["torch", 3], ["barred", 2], ["poster", 1]], fg: ["fgRock-cavern", "fgTuft-cavern"], mark: ["portcullis", "crystal"] },
+  frost: { top: [["snowRock", 3], ["pineS", 3], ["pine", 2], ["rock-frost", 2], ["rubble-frost", 1], ["urn-frost", 1]], under: ["icicle", "icicleL", "icicle"], wall: [["torch", 1]], fg: ["fgRock-frost", "fgTuft-frost"], mark: ["pine", "pine"] },
+  shrine: { top: [["candles", 3], ["candelabra", 2], ["urn-shrine", 2], ["rock-shrine", 2], ["rubble-shrine", 1]], under: ["censer", "chain"], wall: [["banner", 3], ["stained", 2], ["torch", 1], ["painting", 1]], fg: ["fgRock-shrine", "fgTuft-shrine"], mark: ["candelabra", "stained"] },
+  ruin: { top: [["columnStub", 2], ["rubble-ruin", 3], ["rock-ruin", 2], ["columnBroken", 1], ["urn-ruin", 1], ["fallenStatue", 1]], under: ["ivy", "chain", "ivy"], wall: [["torch", 2], ["barred", 1]], fg: ["fgRock-ruin", "fgTuft-ruin"], mark: ["arch", "column", "fallenStatue"] },
+  fungal: { top: [["shroomS", 4], ["shroomM", 2], ["reeds", 3], ["reedsB", 2], ["rock-fungal", 2], ["grave", 1], ["urn-fungal", 1]], under: ["hangMoss-fungal", "glowVine"], wall: [], fg: ["fgRock-fungal", "fgTuft-fungal"], mark: ["shroomL", "idol"] },
+  ember: { top: [["emberRock", 3], ["stump", 2], ["charTreeS", 2], ["rock-ember", 2], ["rubble-ember", 2], ["urn-ember", 1]], under: ["chain"], wall: [["torch", 2]], fg: ["fgRock-ember", "fgTuft-ember"], mark: ["charTree", "charTree"] },
+};
+/** What a level's story puts in it, over its theme's dressing: [piece, how many, where (top, under or wall), set]. */
+const STORY: Record<string, [name: string, count: number, where: "top" | "under" | "wall", set?: string][]> = {
+  "forbidden-1": [["poster", 3, "wall"], ["barred", 3, "wall"]],
+  "forbidden-2": [["poster", 8, "wall"]],
+  "forbidden-3": [["names", 6, "wall"]],
+  "forbidden-4": [["names", 3, "wall"], ["cage", 3, "under"]],
+  "forbidden-5": [["chain", 6, "under"], ["cage", 5, "under"]],
+  "ember-1": [["lantern", 6, "top", "fields"], ["lanternLong", 4, "top", "fields"], ["charTree", 4, "top"]],
+  "ember-2": [["chain", 6, "under"]],
+  "ember-3": [["banner", 5, "wall"]],
+  "ember-4": [["candlesLean", 8, "top"], ["painting", 6, "wall"]],
+  "ember-5": [["bannerTorn", 6, "wall"], ["chain", 4, "under"]],
+  "exile-1": [["bell", 5, "under"]],
+  "exile-2": [["pine", 8, "top"]],
+  "exile-5": [["bell", 3, "under"], ["names", 2, "wall"]],
+  "hollow-2": [["grave", 6, "top"]],
+  "hollow-3": [["idol", 3, "top"], ["grave", 4, "top"]],
+  "hollow-4": [["reedsB", 6, "top"]],
+  "hollow-5": [["idol", 2, "top"], ["grave", 3, "top"]],
+  "architect-2": [["stained", 4, "wall"]],
+  "architect-4": [["bannerTorn", 4, "wall"]],
+};
 const PLANTS = ["plant1", "plant2", "plant3", "plant4", "plant5", "plant6", "plant7", "plantwind1", "blueflower1", "blueflower2"];
+
+const pick = (list: Pick[], rnd: () => number) => { let r = rnd() * list.reduce((sum, each) => sum + each[1], 0); for (const [name, w] of list) if ((r -= w) <= 0) return name; return list[0][0]; };
+/** A campaign theme's hangers under rock, pieces on the back wall, a landmark in each room and the story's own things;
+ * then nothing in front of the fighters stands over a hazard, a spring, the start or the way out. */
+function dressRooms(b: Brief, g: Grid, rnd: () => number, tops: NonNullable<Level["tops"]>, decor: Decor[], keepClear: number[]) {
+  const scene = b.theme ? SCENE[b.theme] : undefined;
+  if (!scene) return;
+  const at = (x: number, y: number) => g.cells[y]?.[x];
+  // Hangers: under rock with air below, every few cells.
+  const ceilings: [number, number][] = [];
+  for (let y = 0; y < g.h - 2; y++) for (let x = 1; x < g.w - 1; x++) if (at(x, y) === "#" && at(x, y + 1) === "." && at(x, y + 2) === ".") ceilings.push([x, y + 1]);
+  for (const [x, y] of ceilings) if (scene.under.length && rnd() < 0.14) decor.push({ piece: scene.under[Math.floor(rnd() * scene.under.length)], set: "scenery", x: (x + 0.5) * CELL, y: y * CELL - 2, flip: rnd() < 0.5 });
+  // On the rock: faces of solid rock beside open air, at standing height, where a torch, a window or a notice is hung.
+  const faces: [number, number][] = [];
+  for (let y = 1; y < g.h - 1; y++) for (let x = 1; x < g.w - 1; x++) if (at(x, y) === "#" && at(x, y - 1) === "#" && at(x, y + 1) === "#" && (at(x - 1, y) === "." || at(x + 1, y) === ".")) faces.push([x, y]);
+  const onFace = (name: string) => { const f = faces.splice(Math.floor(rnd() * faces.length), 1)[0]; if (f) decor.push({ piece: name, set: "scenery", x: (f[0] + 0.5) * CELL, y: (f[1] + 0.85) * CELL }); };
+  if (scene.wall.length) for (let k = Math.floor(faces.length * 0.12); k > 0; k--) onFace(pick(scene.wall, rnd));
+  // A landmark in each room: on the widest run of ground that starts in it.
+  const rooms = new Map<string, [number, number, number]>();
+  for (const t of tops) { const key = Math.floor(t[0] / (COLS * CELL)) + "," + Math.floor(t[1] / (ROWS * CELL)), had = rooms.get(key); if (t[2] >= 4 * CELL && (!had || t[2] > had[2])) rooms.set(key, t); }
+  for (const [x, y, w] of rooms.values()) decor.push({ piece: scene.mark[Math.floor(rnd() * scene.mark.length)], set: "scenery", x: x + w * (0.3 + rnd() * 0.4), y: y + 2, flip: rnd() < 0.5 });
+  // What the story puts here.
+  for (const [name, count, where, set] of STORY[b.id] ?? []) for (let k = 0; k < count; k++) {
+    if (where === "under") { const c = ceilings[Math.floor(rnd() * ceilings.length)]; if (c) decor.push({ piece: name, set: "scenery", x: (c[0] + 0.5) * CELL, y: c[1] * CELL - 2 }); continue; }
+    if (where === "wall") { onFace(name); continue; }
+    const t = tops[Math.floor(rnd() * tops.length)]; if (!t || t[2] < 2 * CELL) continue;
+    decor.push({ piece: name, set: set ?? "scenery", x: t[0] + CELL * 0.6 + rnd() * (t[2] - CELL * 1.2), y: t[1] + 2, ...(set ? { k: 4 } : {}) });
+  }
+  // Clear of what a fighter must see: nothing within two cells of a hazard, spring, start or exit, in front or standing tall.
+  for (let i = decor.length - 1; i >= 0; i--) { const d = decor[i]; if ("piece" in d && d.set === "scenery" && keepClear.some((x) => Math.abs(x - d.x) < (d.front ? 3 : 1) * CELL) && (d.front || scene.mark.includes(d.piece))) decor.splice(i, 1); }
+}
 
 /** The level a brief describes: its rooms laid out, proved crossable, and turned into ground, enemies and things to find. */
 export function level(b: Brief): Level & { grid: Grid; turn: number } {
@@ -1706,9 +1797,20 @@ export function level(b: Brief): Level & { grid: Grid; turn: number } {
   let g: Grid | undefined, why: string | null = "";
   let turn = b.turn ?? 0;
   if (b.map) {
-    const drawn: Grid = { w: b.w * COLS, h: b.h * ROWS, cells: b.map.map((row) => [...row]) };
-    const wrong = drawn.cells.findIndex((row) => row.length !== drawn.w);
-    if (drawn.cells.length !== drawn.h || wrong >= 0) throw new Error(`${b.id}: its map is not ${b.w} rooms by ${b.h} (row ${wrong})`);
+    const wrong = b.map.findIndex((row) => row.length !== b.w * COLS);
+    if (b.map.length !== b.h * ROWS || wrong >= 0) throw new Error(`${b.id}: its map is not ${b.w} rooms by ${b.h} (row ${wrong})`);
+    // Shaped (shape.ts), then proved; a room whose shaping keeps the level from being crossed goes back to how it was
+    // drawn, and if no one room does it, the whole level does.
+    const crossable = (rows: string[]) => !reach(as({ w: b.w * COLS, h: b.h * ROWS, cells: rows.map((row) => [...row]) }, WALK));
+    let rows = shape(b.map, b.w, b.h, seeded(b.seed * 7919 + 13), b.hero);
+    while (!crossable(rows)) {
+      const back = (rx: number, ry: number) => rows.map((row, y) => (Math.floor(y / ROWS) === ry ? row.slice(0, rx * COLS) + b.map![y].slice(rx * COLS, (rx + 1) * COLS) + row.slice((rx + 1) * COLS) : row));
+      let fixed: string[] | null = null;
+      for (let i = 0; i < b.w * b.h && !fixed; i++) { const t = back(i % b.w, Math.floor(i / b.w)); if (crossable(t)) fixed = t; }
+      rows = fixed ?? b.map;
+      if (!fixed) break;
+    }
+    const drawn: Grid = { w: b.w * COLS, h: b.h * ROWS, cells: rows.map((row) => [...row]) };
     why = reach(as(drawn, WALK)) ?? (drawn.cells.flat().filter((ch) => ch === "C").length < b.clues.length ? "too few places for what there is to find" : null);
     return made(b, drawn, why, 0);
   }
@@ -1725,20 +1827,26 @@ export function level(b: Brief): Level & { grid: Grid; turn: number } {
 /** How the traps of a map read to a fighter crossing it (a crumbling ledge holds until stood on, a slot is rock) and
  *  to the ground that is built from it (a crumbling ledge is built apart, in sim.ts). */
 // A wagon's track reads as a ledge to a fighter: the wagon comes to wherever on it the fighter waits.
-const WALK: Record<string, string> = { "~": "-", "=": "-", _: "-", ">": "#", "<": "#", "[": "#", "]": "#", "!": ".", f: ".", o: ".", T: "." };
-const ROCK: Record<string, string> = { ...WALK, "~": ".", "=": ".", _: "." };
+const WALK: Record<string, string> = { "~": "-", "=": "-", _: "-", a: "-", b: "-", ">": "#", "<": "#", "[": "#", "]": "#", "{": "#", "}": "#", "(": "#", ")": "#", Q: ".", "*": ".", Z: ".", z: ".", E: "#", h: ".", t: ".", G: ".", "|": "S", k: "#", j: "#", M: "#", w: "#", Y: "#", "%": ".", "&": ".", $: ".", ":": ".", ";": ".", "!": ".", f: ".", o: ".", T: "." };
+const ROCK: Record<string, string> = { ...WALK, "~": ".", "=": ".", _: ".", a: ".", b: ".", "|": "." };
 const as = (g: Grid, by: Record<string, string>): Grid => ({ ...g, cells: g.cells.map((row) => row.map((ch) => by[ch] ?? ch)) });
 
 /** The traps of a map, in the units of the level (traps.ts). */
 function trapsOf(raw: Grid, walk: Grid): Traps {
-  const out: Traps = { crumbles: [], spikes: [], blades: [], bolts: [], crushers: [], flames: [], rams: [], wagons: [], seams: [] };
+  const out: Traps = { crumbles: [], spikes: [], blades: [], bolts: [], crushers: [], flames: [], rams: [], wagons: [], seams: [], jets: [], bells: [], gusts: [], ice: [], frozen: [], gates: [], spirits: [], eyes: [], graves: [], tides: [], lanterns: [], lifts: [], belts: [], mortars: [], planks: [], threads: [], veils: [], caches: [], signs: [], hollows: [] };
   const at = (x: number, y: number) => raw.cells[y]?.[x], firm = (x: number, y: number) => floor(walk.cells[y]?.[x]);
   // The first floor under a cell: a cell's top for rock or a ledge, its bottom for spikes standing in it.
   const under = (x: number, y: number) => { for (let cy = y + 1; cy < raw.h; cy++) { if (firm(x, cy)) return cy * CELL; if (at(x, cy) === "^" || at(x, cy) === "!" || at(x, cy) === "f") return (cy + 1) * CELL; } return raw.h * CELL; };
+  const gateAt = new Set<string>();
   for (let y = 0; y < raw.h; y++) for (let x = 0; x < raw.w; x++) {
     const ch = at(x, y), px = (x + 0.5) * CELL;
     const run = () => { let x1 = x; while (at(x1 + 1, y) === ch) x1++; return x1; };
     if (ch === "~" && at(x - 1, y) !== "~") { const x1 = run(); out.crumbles.push([((x + x1 + 1) / 2) * CELL, y * CELL, (x1 - x + 1) * CELL]); }
+    if (ch === "%" && at(x - 1, y) !== "%") { const x1 = run(); out.crumbles.push([((x + x1 + 1) / 2) * CELL, y * CELL, (x1 - x + 1) * CELL, true]); }
+    if (ch === "&") out.veils.push({ x: x * CELL, y: y * CELL });
+    if (ch === "$") out.caches.push({ x: px, y: (y + 1) * CELL });
+    if (ch === ":" || ch === "$") out.hollows.push({ x: x * CELL, y: y * CELL, on: at(x, y + 1) === "#" });
+    if (ch === ";") out.signs.push({ x: px, y: (y + 1) * CELL });
     // Rows of spikes rise one after another, so a wave of them can be followed across.
     if (ch === "!" && at(x - 1, y) !== "!") { const x1 = run(); out.spikes.push({ x: ((x + x1 + 1) / 2) * CELL, y: (y + 1) * CELL, w: (x1 - x + 1) * CELL - 12, phase: -out.spikes.length * 0.55 }); }
     // A blade swings down to a fighter's chest over the nearest floor about it.
@@ -1758,6 +1866,43 @@ function trapsOf(raw: Grid, walk: Grid): Traps {
     }
     // A wagon two cells wide on each run of track, running its length.
     if (ch === "=" && at(x - 1, y) !== "=") { const x1 = run(); out.wagons.push({ from: (x + 1) * CELL, to: x1 * CELL, y: y * CELL, w: 2 * CELL, phase: out.wagons.length * 1.3 }); }
+    // A jet blasts across to the far wall, five cells at most; those of a level blast one after another.
+    if (ch === "{" || ch === "}") {
+      const dir = ch === "{" ? 1 : -1;
+      let n = 0; while (n < 5 && !solid(walk.cells[y]?.[x + dir * (n + 1)])) n++;
+      out.jets.push({ x: (dir > 0 ? x + 1 : x) * CELL, y: (y + 0.5) * CELL, dir, reach: n * CELL, phase: -out.jets.length * 0.9 });
+    }
+    // A gust blows its row and the one above it (a fighter's height) across to the far wall, eight cells at most.
+    if (ch === "(" || ch === ")") {
+      const dir = ch === "(" ? 1 : -1;
+      let n = 0; while (n < 8 && !solid(walk.cells[y]?.[x + dir * (n + 1)]) && !solid(walk.cells[y - 1]?.[x + dir * (n + 1)])) n++;
+      out.gusts.push({ x: (dir > 0 ? x + 1 : x) * CELL, y: y * CELL, dir, reach: n * CELL, phase: -out.gusts.length * 0.9 });
+    }
+    if (/[1-9]/.test(ch ?? "") && !gateAt.has(ch!)) { const twin = twinOf(raw, x, y); if (twin) { gateAt.add(ch!); out.gates.push({ a: { x: px, y: (y + 1) * CELL }, b: { x: (twin[0] + 0.5) * CELL, y: (twin[1] + 1) * CELL } }); } }
+    if (ch === "t" && at(x - 1, y) !== "t") { const x1 = run(); out.tides.push({ x0: x * CELL, x1: (x1 + 1) * CELL, y: (y + 1) * CELL }); }
+    if (ch === "h" && at(x - 1, y) !== "h") { const x1 = run(); out.graves.push({ x: ((x + x1 + 1) / 2) * CELL, y: (y + 1) * CELL, w: (x1 - x + 1) * CELL }); }
+    if (ch === "|" && at(x - 1, y) !== "|") {
+      const x1 = run();
+      let open = 0;
+      while (y - open >= 0 && [x, x1].every((cx) => walk.cells[y - open]?.[cx] !== "#")) open++;
+      out.lifts.push({ x: ((x + x1 + 1) / 2) * CELL, y: (y + 1) * CELL, w: (x1 - x + 1) * CELL, rise: Math.min(LIFT_MAX, (open - 2) * CELL), phase: out.lifts.length * 1.1 });
+    }
+    if ((ch === "k" || ch === "j") && at(x - 1, y) !== ch) { const x1 = run(); out.belts.push({ x0: x * CELL, x1: (x1 + 1) * CELL, y: y * CELL, dir: ch === "k" ? 1 : -1 }); }
+    if (ch === "w" && at(x - 1, y) !== "w") { const x1 = run(); out.planks.push({ x0: x * CELL, x1: (x1 + 1) * CELL, y: y * CELL, dir: out.planks.length % 2 ? -1 : 1, phase: out.planks.length * 210 }); }
+    if (ch === "Y") {
+      let x2 = x + 1;
+      while (x2 < raw.w && walk.cells[y][x2] !== "#") x2++;
+      if (x2 > x + 1 && at(x2, y) === "Y") out.threads.push({ x0: (x + 1) * CELL, x1: x2 * CELL, y: (y + 0.5) * CELL, phase: out.threads.length * 0.8 });
+    }
+    if (ch === "M") out.mortars.push({ x: px, y: y * CELL });
+    if (ch === "G") out.lanterns.push({ x: px, y: (y + 1) * CELL });
+    if (ch === "E") out.eyes.push({ x: px, y: (y + 0.5) * CELL });
+    if (ch === "Z" || ch === "z") out.frozen.push({ x: px, y: (y + 1) * CELL, dir: ch === "Z" ? 1 : -1 });
+    // Ice glazes the ground under a run of `*`.
+    if (ch === "*" && at(x - 1, y) !== "*") { const x1 = run(); out.ice.push([x * CELL, (y + 1) * CELL, (x1 + 1) * CELL]); }
+    // A bell's ring reaches four cells; those of a level toll one after another.
+    if (ch === "Q") out.bells.push({ x: px, y: (y + 0.5) * CELL, reach: 4 * CELL, phase: -out.bells.length * 1.1 });
+    if ((ch === "a" || ch === "b") && at(x - 1, y) !== ch) { const x1 = run(); out.spirits.push({ x: ((x + x1 + 1) / 2) * CELL, y: y * CELL, w: (x1 - x + 1) * CELL, set: ch === "a" ? 0 : 1 }); }
     // Seams along a row open one after another.
     if (ch === "_" && at(x - 1, y) !== "_") { const x1 = run(); out.seams.push({ x: ((x + x1 + 1) / 2) * CELL, y: y * CELL, w: (x1 - x + 1) * CELL, phase: -out.seams.length * 0.6 }); }
     if (ch === "T") { let cy = y - 1; while (cy > 0 && !solid(walk.cells[cy]?.[x])) cy--; out.crushers.push({ x: px, y: y * CELL, w: 1.5 * CELL, drop: under(x, y) - y * CELL - CRUSH_H, hang: (cy + 1) * CELL }); }
@@ -1769,7 +1914,8 @@ function trapsOf(raw: Grid, walk: Grid): Traps {
 function made(b: Brief, laid: Grid | undefined, why: string | null, turn: number): Level & { grid: Grid; turn: number } {
   if (!laid || why !== null) throw new Error(`${b.id}: ${why}`);
   const raw = laid, g = as(raw, ROCK), traps = trapsOf(raw, as(raw, WALK));
-  const rnd = seeded(b.seed * 31 + 5), at = (x: number, y: number) => g.cells[y]?.[x];
+  // Dressing draws from its own stream, so that what a level looks like never changes where its enemies are.
+  const rnd = seeded(b.seed * 31 + 5), drnd = seeded(b.seed * 31 + 9), at = (x: number, y: number) => g.cells[y]?.[x];
   const slabs: Slab[] = [], tops: Level["tops"] = [], crates: Level["crates"] = [], hazards: NonNullable<Level["hazards"]> = [], springs: Vec[] = [], decor: Decor[] = [];
   const clues: Level["clues"] = [], ambushes: Level["ambushes"] = [];
   let spawn: Vec = { x: 0, y: 0 }, exit: Vec = { x: 0, y: 0 };
@@ -1790,12 +1936,25 @@ function made(b: Brief, laid: Grid | undefined, why: string | null, turn: number
     if (top(x) && !top(x - 1)) {
       let x1 = x; while (top(x1 + 1)) x1++;
       tops.push([x * CELL, y * CELL, (x1 - x + 1) * CELL]);
-      // What stands on it: something every few cells, where there is room and nothing else.
+      // What stands on it: something every few cells, where there is room and nothing else. A campaign theme dresses in
+      // clusters of one to three, never the same piece twice running, and leaves a cell clear at each end of the run.
+      const scene = b.theme ? SCENE[b.theme] : undefined;
+      if (scene) { let last = "";
+        for (let cx = x + 1; cx < x1; cx++) {
+          if (at(cx, y - 1) !== "." || drnd() > 0.2) continue;
+          const n = 1 + Math.floor(drnd() * 3);
+          for (let k = 0; k < n && cx < x1; k++, cx++) { if (at(cx, y - 1) !== ".") break; let name = pick(scene.top, drnd); if (name === last) name = pick(scene.top, drnd); last = name;
+            decor.push({ piece: name, set: "scenery", x: (cx + 0.2 + drnd() * 0.6) * CELL, y: y * CELL + 2, flip: drnd() < 0.5 }); }
+          cx += 2;
+        }
+        if (x1 - x >= 4 && drnd() < 0.18) decor.push({ piece: scene.fg[Math.floor(drnd() * scene.fg.length)], set: "scenery", x: (x + 1 + drnd() * (x1 - x - 1)) * CELL, y: y * CELL + 26, flip: drnd() < 0.5, front: true });
+      }
       for (let cx = x; cx <= x1; cx++) {
         if (at(cx, y - 1) !== "." || rnd() > 0.16) continue;
         const list = DRESS[b.theme] ?? [], total = list.reduce((sum, each) => sum + each[1], 0);
         let pick = rnd() * total, chosen = list[0];
         for (const each of list) { pick -= each[1]; if (pick <= 0) { chosen = each; break; } }
+        if (scene) { rnd(); continue; } // the draw the flip below would make, so the stream stays as it was
         if (b.theme === "mossy" && rnd() < 0.45) decor.push({ plant: PLANTS[Math.floor(rnd() * PLANTS.length)], x: (cx + 0.5) * CELL, y: y * CELL, flip: rnd() < 0.5, k: 0.8 });
         else if (chosen) decor.push({ piece: chosen[0], x: (cx + 0.5) * CELL, y: y * CELL + 4, flip: rnd() < 0.5, ...(chosen[2] ? { k: chosen[2] } : {}) });
       }
@@ -1806,6 +1965,9 @@ function made(b: Brief, laid: Grid | undefined, why: string | null, turn: number
     if (ch === "P") spawn = { x: px, y: ground - 44 };
     if (ch === "X") exit = { x: px, y: ground - 40 };
   }
+  dressRooms(b, g, drnd, tops, decor, [...hazards.map((h) => h.x), ...springs.map((p) => p.x), spawn.x, exit.x]);
+  // Nothing dresses a hidden chamber: it would show through the rock that hides it.
+  for (let i = decor.length - 1; i >= 0; i--) if (traps.hollows.some((c) => decor[i].x > c.x - CELL && decor[i].x < c.x + 2 * CELL && decor[i].y > c.y - CELL && decor[i].y < c.y + 2 * CELL)) decor.splice(i, 1);
   // Each room's enemies come when the fighter enters it; the nooks hold what there is to find.
   const kinds = (n: number) => Array.from({ length: n }, () => b.foes[Math.min(b.foes.length - 1, Math.floor(rnd() * rnd() * (b.foes.length + b.chapter * 0.5)))]);
   let found = 0, last: Level["ambushes"][number] | undefined;
@@ -1829,6 +1991,6 @@ function made(b: Brief, laid: Grid | undefined, why: string | null, turn: number
     id: b.id, hero: b.hero, chapter: b.chapter, name: b.name, region: b.region, theme: b.theme, sky: b.sky, talk: b.talk, brief: b.brief, guarded: last !== undefined,
     spawn, exit, span: [-CELL * 2, (g.w + 2) * CELL], bounds: { top: -CELL * 2, bottom: g.h * CELL }, rooms: [b.w, b.h],
     slabs, tops, crates, ambushes, clues, hazards, springs, decor, effects: b.effects, grid: as(raw, WALK), turn,
-    ...(b.map ? { traps } : {}),
+    ...(b.map ? { traps, secret: b.secret } : {}),
   };
 }

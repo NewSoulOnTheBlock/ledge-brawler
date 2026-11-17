@@ -23,8 +23,21 @@ const layerImage = (file: string) => {
 /** Loads every layer of the sky `id`. */
 export const loadSky = (id: SkyId): Promise<unknown> => Promise.all(SKIES[id].layers.map((layer) => layerImage(layer.file).decode().catch(() => undefined)));
 
+/** Where a sky is drawn first: at half the size of the view, then scaled up whole. Its art is several times larger than
+ * a screen pixel already, so nothing is lost, and its many full-view layers cost a quarter as much. */
+let half: HTMLCanvasElement | null = null;
 /** Draws the sky `id` over the whole view, for a view whose left edge is `camX` and top `camY` in the level, at `scale`. */
 export function drawSky(ctx: Ctx, id: SkyId, camX: number, camY: number, scale: number, viewW: number, viewH: number) {
+  const R = 2, w = Math.ceil(viewW / R), h = Math.ceil(viewH / R);
+  half ??= document.createElement("canvas");
+  if (half.width !== w || half.height !== h) { half.width = w; half.height = h; }
+  const hctx = half.getContext("2d");
+  if (!hctx) return;
+  hctx.clearRect(0, 0, w, h);
+  layers(hctx, id, camX, camY, scale / R, w, h);
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(half, 0, 0, w * R, h * R); ctx.imageSmoothingEnabled = true;
+}
+function layers(ctx: Ctx, id: SkyId, camX: number, camY: number, scale: number, viewW: number, viewH: number) {
   const sky = SKIES[id];
   ctx.imageSmoothingEnabled = !sky.pixel;
   sky.layers.forEach((layer, i) => {

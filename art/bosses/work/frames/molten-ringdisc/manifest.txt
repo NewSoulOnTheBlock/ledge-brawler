@@ -1,0 +1,8 @@
+ringDisc ringDisc_00.png 60
+ringDisc ringDisc_01.png 60
+ringDisc ringDisc_02.png 60
+ringDisc ringDisc_03.png 60
+ringDisc ringDisc_04.png 60
+ringDisc ringDisc_05.png 60
+ringDisc ringDisc_06.png 60
+ringDisc ringDisc_07.png 60

@@ -1,0 +1,237 @@
+{
+ "molten-eye": {
+  "file": "molten-eye.png",
+  "w": 192,
+  "h": 192,
+  "cols": 10,
+  "feet": [
+   96,
+   98
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "intro": {
+    "start": 0,
+    "frames": 22,
+    "fps": 11.1
+   },
+   "idle": {
+    "start": 22,
+    "frames": 16,
+    "fps": 10
+   },
+   "look": {
+    "start": 38,
+    "frames": 14,
+    "fps": 9.1
+   },
+   "blink": {
+    "start": 52,
+    "frames": 7,
+    "fps": 14.3
+   },
+   "beamCharge": {
+    "start": 59,
+    "frames": 14,
+    "fps": 12.5
+   },
+   "beamFire": {
+    "start": 73,
+    "frames": 14,
+    "fps": 14.3
+   },
+   "beamEnd": {
+    "start": 87,
+    "frames": 10,
+    "fps": 10
+   },
+   "roar": {
+    "start": 97,
+    "frames": 14,
+    "fps": 12.5
+   },
+   "ringSpin": {
+    "start": 111,
+    "frames": 14,
+    "fps": 12.5
+   },
+   "shardVolley": {
+    "start": 125,
+    "frames": 16,
+    "fps": 14.3
+   },
+   "meteorCall": {
+    "start": 141,
+    "frames": 16,
+    "fps": 11.1
+   },
+   "lavaRain": {
+    "start": 157,
+    "frames": 14,
+    "fps": 12.5
+   },
+   "slam": {
+    "start": 171,
+    "frames": 14,
+    "fps": 11
+   },
+   "sink": {
+    "start": 185,
+    "frames": 12,
+    "fps": 12.5
+   },
+   "emerge": {
+    "start": 197,
+    "frames": 12,
+    "fps": 12.5
+   },
+   "hurt": {
+    "start": 209,
+    "frames": 4,
+    "fps": 10.5
+   },
+   "stagger": {
+    "start": 213,
+    "frames": 14,
+    "fps": 11.1
+   },
+   "stunned": {
+    "start": 227,
+    "frames": 16,
+    "fps": 8.3
+   },
+   "phaseShift": {
+    "start": 243,
+    "frames": 22,
+    "fps": 11.1
+   },
+   "enraged": {
+    "start": 265,
+    "frames": 16,
+    "fps": 12.5
+   },
+   "death": {
+    "start": 281,
+    "frames": 26,
+    "fps": 10
+   }
+  }
+ },
+ "molten-claw": {
+  "file": "molten-claw.png",
+  "w": 128,
+  "h": 128,
+  "cols": 10,
+  "feet": [
+   64,
+   108
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "clawIdle": {
+    "start": 0,
+    "frames": 12,
+    "fps": 9.1
+   },
+   "clawSlam": {
+    "start": 12,
+    "frames": 13,
+    "fps": 11.2
+   },
+   "clawSwipe": {
+    "start": 25,
+    "frames": 11,
+    "fps": 11.8
+   },
+   "clawGrab": {
+    "start": 36,
+    "frames": 13,
+    "fps": 11.1
+   },
+   "clawFireball": {
+    "start": 49,
+    "frames": 14,
+    "fps": 12.5
+   },
+   "clawShatter": {
+    "start": 63,
+    "frames": 16,
+    "fps": 11.1
+   }
+  }
+ },
+ "molten-ringdisc": {
+  "file": "molten-ringdisc.png",
+  "w": 96,
+  "h": 40,
+  "cols": 4,
+  "feet": [
+   48,
+   20
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "ringDisc": {
+    "start": 0,
+    "frames": 8,
+    "fps": 16.7
+   }
+  }
+ },
+ "molten-meteor": {
+  "file": "molten-meteor.png",
+  "w": 48,
+  "h": 64,
+  "cols": 6,
+  "feet": [
+   24,
+   63
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "meteorFall": {
+    "start": 0,
+    "frames": 4,
+    "fps": 14.3
+   },
+   "meteorImpact": {
+    "start": 4,
+    "frames": 8,
+    "fps": 14.3
+   }
+  }
+ },
+ "molten-pool": {
+  "file": "molten-pool.png",
+  "w": 80,
+  "h": 20,
+  "cols": 6,
+  "feet": [
+   40,
+   19
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "poolSpread": {
+    "start": 0,
+    "frames": 5,
+    "fps": 12.5
+   },
+   "poolLoop": {
+    "start": 5,
+    "frames": 8,
+    "fps": 8.3
+   },
+   "poolFade": {
+    "start": 13,
+    "frames": 5,
+    "fps": 9.1
+   }
+  }
+ }
+}

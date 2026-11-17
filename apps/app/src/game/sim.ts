@@ -11,7 +11,7 @@ import {
 } from "./data.ts";
 import { OUTFITS, RELICS, RELIC_KINDS, type RelicKind, collect, earned, isFound, outfitOf, skinOf } from "./relics.ts";
 import type { Level } from "./levels.ts";
-import { BLADE_R, CRUMBLE_BACK, CRUMBLE_HOLD, CRUSH_H, type Crumble, type Crusher, SPIKE_H, boltAt, bladeAt, flameAt, ramAt, seamAt, spikeAt, wagonAt } from "./traps.ts";
+import { BLADE_R, CRUMBLE_BACK, CRUMBLE_HOLD, CRUSH_H, type Crumble, type Crusher, SPIKE_H, boltAt, bladeAt, flameAt, EYE_SIGHT, FROZEN_REACH, GRAVE_GRASP, GRAVE_REST, GRAVE_STIR, type Grave, TIDE_BREATH, TIDE_DRAG, TIDE_H, tideAt, liftAt, BELT_SPEED, fireAt, threadAt, MORTAR_EVERY, MORTAR_RANGE, SHELL_BURST, SHELL_FLIGHT, type Shell, LANTERN_SLEEP, SHADE_LAG, SHADE_LIFE, type Shade, FROZEN_SIGHT, WISP_LIFE, WISP_SPEED, WISP_TURN, type Wisp, eyeAt, spiritAt, GUST_PUSH, ICE_GRIP, type Thaw, bellAt, gustAt, jetAt, ramAt, seamAt, spikeAt, wagonAt } from "./traps.ts";
 import { ARTS, artCount, artPower, type CastId, castFrame, FOES } from "./cast.ts";
 import type { Frame } from "./figure.ts";
 import { SKY_IDS, type SkyId } from "./sky.ts";
@@ -91,6 +91,8 @@ export const STEP = 1000 / 60;
 export const GROUND_TOP = 680, FOG_Y = 900, VOID_Y = 1700;
 const CAT = { world: 1, player: 2, prop: 4, enemy: 8, rag: 16, boss: 32 };
 const SPAWN = { x: 560, y: 600 };
+/** What a hidden chamber's cache holds, in turn: the better things for the bag. */
+const CACHED: ItemId[] = ["ward", "draught", "scroll", "haste", "vial", "bomb"];
 
 interface Overrides { vx?: number; vy?: number; dvx?: number; dvy?: number; hang?: boolean }
 interface Attack { name: string; def: MoveDef; t: number; hit: Set<unknown>; hopped?: boolean; fired?: boolean; done?: boolean; ph?: number }
@@ -200,7 +202,7 @@ export interface Scene {
   /** The way out of a guarded level is still shut. */
   sealed: boolean;
   /** How the level's crumbling ledges and falling blocks stand, and the last bolt of each slot that struck (traps.ts). */
-  traps: { crumbles: Crumble[]; crushers: Crusher[]; struck: number[] };
+  traps: { crumbles: Crumble[]; crushers: Crusher[]; struck: number[]; frozen: Thaw[]; wisps: Wisp[]; graves: Grave[]; unveiled: boolean[]; told: boolean; opened: boolean[]; shells: Shell[]; booms: { x: number; y: number; t: number }[]; shades: Shade[]; trail: Vec[]; step: number; lanternAt: number[] };
   /** The place is the black room a fighter tries a new power in (`Game.trial`): nothing is drawn of it but its floor, and what stands in it only stands. */
   dark: boolean;
   /** The pieces of the key hidden in a level, and the room they open: its boss's, shut (`locked`) until all are found and again while the boss stands. */
@@ -325,7 +327,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   const S: Scene = {
     statics: [], props: [], enemies: [], ragdolls: [], orbs: [], effects: [], particles: [], bursts: [], floaters: [], rings: [], sprites: [],
     bag: [], chosen: 0, drops: [], warded: 0, hasted: 0, nextSky: null, relics: [], fairy: false, sparkle: false,
-    hero: null, match: rules.get(), lastSafe: { ...SPAWN }, level: null, cluesFound: [], sprung: [], sealed: false, traps: { crumbles: [], crushers: [], struck: [] }, dark: false, keys: [], bossRoom: null, locked: false, fade: 0, sky: null, guide: null, talking: false, voidY: VOID_Y, guard: 0, shake: 0, slowMs: 0, flashT: 0, time: 0, worldMin: -500, worldMax: 2000, punch: 0, red: 0, deathMs: 0, camX: 0, camY: 0, fights: 0,
+    hero: null, match: rules.get(), lastSafe: { ...SPAWN }, level: null, cluesFound: [], sprung: [], sealed: false, traps: { crumbles: [], crushers: [], struck: [], frozen: [], wisps: [], graves: [], unveiled: [], told: false, opened: [], shells: [], booms: [], shades: [], trail: [], step: 0, lanternAt: [] }, dark: false, keys: [], bossRoom: null, locked: false, fade: 0, sky: null, guide: null, talking: false, voidY: VOID_Y, guard: 0, shake: 0, slowMs: 0, flashT: 0, time: 0, worldMin: -500, worldMax: 2000, punch: 0, red: 0, deathMs: 0, camX: 0, camY: 0, fights: 0,
     allies: [], coop: null, down: null,
   };
   const { statics, props, enemies, ragdolls, orbs, effects, particles, bursts, floaters, rings, sprites, drops, allies } = S;
@@ -353,12 +355,20 @@ export function createGame(rules: Rules, ui: Ui): Game {
   let crumbling: B[] = [];
   /** The bodies of the level's wagons, and where the middle of each was on the last step. */
   let wagons: B[] = [], wagonX: number[] = [];
-  /** The bodies of the level's seams, and which of them are open. */
-  let seams: B[] = [], seamOpen: boolean[] = [];
+  /** The bodies of the level's blade-lifts, and where the top of each was on the last step. */
+  let lifts: B[] = [], liftY: number[] = [];
+  /** The bodies of the level's seams, and which of them are open; the same for its paths of the dead (which are solid). */
+  let seams: B[] = [], seamOpen: boolean[] = [], spirits: B[] = [], spiritSolid: boolean[] = [];
   /** The ground that moves or breaks: the crumbling ledges that stand now, the wagons, and the seams that are shut. */
-  const standing = () => crumbling.filter((_, i) => !S.traps.crumbles[i]?.gone).concat(wagons, seams.filter((_, i) => !seamOpen[i]));
-  /** The last bolt each slot loosed, for its sound. */
-  const loosed: number[] = [];
+  const standing = () => crumbling.filter((_, i) => !S.traps.crumbles[i]?.gone).concat(wagons, lifts, seams.filter((_, i) => !seamOpen[i]), spirits.filter((_, i) => spiritSolid[i]));
+  /** The last sending of each of the level's eyes; how long the fighter has been under a tide. */
+  let sentBy: number[] = [], under = 0, firedAt: number[] = [];
+  /** The end of a gate the fighter has just come out of: it will not take them back until they step clear of it. */
+  let gateHeld: Vec | null = null;
+  /** The player's fighter stands on ice (found by stepTraps, used by stepFighter on the next step). */
+  let icy = false;
+  /** The last bolt each slot loosed, for its sound; the last toll each bell rang. */
+  const loosed: number[] = [], tolling: number[] = [];
   let hazardCool = 0, rivalWait = 180, guardLeft = 40, guardCool = 0, dark = 0;
   /** How much damage a guard takes before it breaks. */
   const GUARD = 40;
@@ -459,6 +469,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   /** Clears the world and builds `level`, or with none, the arena. */
   function buildWorld(level: Level | null) {
     Composite.remove(world, statics); Composite.remove(world, props); Composite.remove(world, crumbling);
+    icy = false; gateHeld = null;
     statics.length = props.length = 0; respawnQueue.length = 0;
     S.level = level;
     S.voidY = level?.bounds ? level.bounds.bottom + 400 : VOID_Y;
@@ -479,6 +490,15 @@ export function createGame(rules: Rules, ui: Ui): Game {
     });
     wagonX = (traps?.wagons ?? []).map((w) => w.from);
     Composite.add(world, wagons);
+    // A blade-lift is a ledge of its own, moved up and down each step (stepTraps).
+    Composite.remove(world, lifts);
+    lifts = (traps?.lifts ?? []).map((l) => {
+      const b = Bodies.rectangle(l.x, l.y + 11, l.w, 22, { isStatic: true, label: "ledge", friction: 0.8 });
+      b.collisionFilter = { category: CAT.world, mask: 0xffff, group: 0 };
+      return b;
+    });
+    liftY = (traps?.lifts ?? []).map((l) => l.y);
+    Composite.add(world, lifts);
     // A seam is a ledge of its own, taken out of the world while it is open (stepTraps).
     Composite.remove(world, seams);
     seams = (traps?.seams ?? []).map((s) => {
@@ -488,7 +508,20 @@ export function createGame(rules: Rules, ui: Ui): Game {
     });
     seamOpen = seams.map(() => false);
     Composite.add(world, seams);
-    S.traps = { crumbles: crumbling.map(() => ({ t: -1, gone: 0 })), crushers: (traps?.crushers ?? []).map(() => ({ mode: 0, t: 0, y: 0, v: 0 })), struck: (traps?.bolts ?? []).map(() => -1) };
+    // The paths of the dead are ledges too, put into the world and taken out as their set comes and goes (stepTraps).
+    Composite.remove(world, spirits);
+    spirits = (traps?.spirits ?? []).map((p) => {
+      const b = Bodies.rectangle(p.x, p.y + 11, p.w, 22, { isStatic: true, label: "ledge", friction: 0.8 });
+      b.collisionFilter = { category: CAT.world, mask: 0xffff, group: 0 };
+      return b;
+    });
+    spiritSolid = spirits.map(() => false);
+    S.traps = { crumbles: crumbling.map(() => ({ t: -1, gone: 0 })), crushers: (traps?.crushers ?? []).map(() => ({ mode: 0, t: 0, y: 0, v: 0 })), struck: (traps?.bolts ?? []).map(() => -1), frozen: (traps?.frozen ?? []).map(() => ({ mode: 0, t: 0 })), wisps: [], graves: (traps?.graves ?? []).map(() => ({ mode: 0, t: 0 })), shells: [], booms: [], shades: [], trail: [], step: 0, lanternAt: (traps?.lanterns ?? []).map(() => -LANTERN_SLEEP), unveiled: (traps?.veils ?? []).map(() => false), told: false, opened: (traps?.hollows ?? []).map(() => false) };
+    // A cache lies in its hidden chamber until it is taken: the better things for the bag, a different one in each.
+    for (let i = drops.length - 1; i >= 0; i--) if (drops[i].life === Infinity) drops.splice(i, 1);
+    (traps?.caches ?? []).forEach((c, i) => drops.push({ x: c.x, y: c.y - 30, vy: 0, item: CACHED[(i + (level?.chapter ?? 0) * 2) % CACHED.length], life: Infinity }));
+    sentBy = (traps?.eyes ?? []).map(() => -2);
+    firedAt = (traps?.mortars ?? []).map((_, i) => i * 0.9 - MORTAR_EVERY + 1.5);
     if (level) {
       for (const [cx, cy, w, h, kind] of level.slabs) addSlab(cx, cy, w, h, kind);
       for (const [x, y, size] of level.crates) makeCrate(x, y, size);
@@ -1277,12 +1310,13 @@ export function createGame(rules: Rules, ui: Ui): Game {
       if (F.atk && F.grounded) target *= 0.2;
       if (Math.abs(v.x) > maxSpd && Math.sign(v.x) === I.dir && !F.atk) {
         // Faster than a run, and still holding that way: the speed of a dash or a wall jump bleeds off slowly.
-        vx = v.x - Math.sign(v.x) * (F.grounded ? 0.18 : 0.06);
+        vx = v.x - Math.sign(v.x) * (F.grounded ? 0.18 * (F.isPlayer && icy ? ICE_GRIP : 1) : 0.06);
       } else {
         // Six steps to full speed and five to a stop on the ground; in the air the fighter turns a little slower and
         // keeps its momentum far longer.
         const gaining = target !== 0 && Math.abs(target) > Math.abs(v.x) && Math.sign(target) === Math.sign(v.x || target);
-        const rate = gaining ? (maxSpd / 6) * (F.grounded ? 1 : 0.69) : F.grounded ? maxSpd / 5 : maxSpd / 22;
+        const grip = F.isPlayer && icy && F.grounded ? ICE_GRIP : 1;
+        const rate = (gaining ? (maxSpd / 6) * (F.grounded ? 1 : 0.69) : F.grounded ? maxSpd / 5 : maxSpd / 22) * grip;
         vx = v.x + Math.max(-rate, Math.min(rate, target - v.x));
       }
       if (I.dir && !F.atk && !F.charging) F.facing = I.dir;
@@ -2587,7 +2621,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     }
     if (S.match.quest) { stepQuest(); return; }
     // spec/app/index.md, "A duel starts from the select screen like a fight, with three lives and no waves"
-    if (S.match.duel) { stepRival(); return; }
+    if (S.match.duel) { stepRival(); stepPlace(S.hero); return; }
+    stepPlace(S.hero);
     // A wave cleared: the place goes dark, and the next wave comes under another sky.
     // Not while a special that cleared the wave is still playing out: its end is the best of it.
     if (S.match.foes === 0 && S.match.waiting === 0 && waveWait === 0 && !hero().special && !effects.some((e) => e.kind === "timed")) { waveWait = 100; if (S.match.wave >= 1) dark = 100; }
@@ -2713,25 +2748,39 @@ export function createGame(rules: Rules, ui: Ui): Game {
       play("ring", clue.x, clue.y + 40, toneOf(H), 0.5);
       ui.clue?.(clue.fact, clue.text);
     });
-    // A spring throws a fighter that lands on it; a hazard hurts one that touches it, then lets it get clear.
+    stepPlace(H);
+    stepTraps(H);
+    S.sealed =!!L.guarded && (!ambushed.has(L.ambushes.length - 1) || S.match.waiting > 0 || enemies.some((E) => E.final));
+    if (!S.sealed && Math.hypot(L.exit.x - at.x, L.exit.y - at.y) < 64 && send({ type: "clear" })) { ui.banner("Chapter clear", "gold"); sfx.power(); ui.share?.({ e: "clear" }); }
+  }
+
+  /** Whatever the place is, in every mode: a spring throws a fighter that lands on it; a hazard hurts one that touches
+   *  it, then lets it get clear. Outside a campaign, a foe knocked into a hazard is hurt by it too. */
+  function stepPlace(H: Fighter | null) {
+    const L = S.level;
+    if (!L || !H?.alive) return;
+    const at = H.body.position;
     (L.springs ?? []).forEach((spring, i) => {
       if (Math.abs(spring.x - at.x) > 34 || Math.abs(spring.y - H.body.bounds.max.y) > 26 || H.body.velocity.y < -2) return;
       Body.setVelocity(H.body, { x: H.body.velocity.x, y: -27 });
       H.airJumps = H.airJumpsMax; H.squash = 0.35; S.sprung[i] = S.time;
       sfx.jump(); dust(spring.x, spring.y, 6, 0);
     });
+    const into = (F: Fighter) => (L.hazards ?? []).find((hz) => overlaps(hurtBox(F), box(hz.x - hz.w / 2, hz.y - hz.h, hz.x + hz.w / 2, hz.y)));
     if (hazardCool > 0) hazardCool--;
-    else for (const hz of L.hazards ?? []) {
-      if (!overlaps(hurtBox(H), box(hz.x - hz.w / 2, hz.y - hz.h, hz.x + hz.w / 2, hz.y))) continue;
-      const away = Math.sign(at.x - hz.x) || 1;
-      hurt(H, { dmg: hz.dmg, kx: away * 7, ky: -9, from: -away });
-      hazardCool = 50;
-      break;
+    else {
+      const hz = into(H);
+      if (hz) { const away = Math.sign(at.x - hz.x) || 1; hurt(H, { dmg: hz.dmg, kx: away * 7, ky: -9, from: -away }); hazardCool = 50; }
     }
-    stepTraps(H);
-    S.sealed =!!L.guarded && (!ambushed.has(L.ambushes.length - 1) || S.match.waiting > 0 || enemies.some((E) => E.final));
-    if (!S.sealed && Math.hypot(L.exit.x - at.x, L.exit.y - at.y) < 64 && send({ type: "clear" })) { ui.banner("Chapter clear", "gold"); sfx.power(); ui.share?.({ e: "clear" }); }
+    if (S.match.quest) return;
+    for (const E of enemies) {
+      if (E.peer || E.remote || !E.alive || (spiked.get(E) ?? 0) > stepCount) continue;
+      const hz = into(E);
+      if (hz) { const away = Math.sign(E.body.position.x - hz.x) || 1; hurt(E, { dmg: hz.dmg, kx: away * 7, ky: -9, from: -away }); spiked.set(E, stepCount + 50); }
+    }
   }
+  /** When each foe can next be hurt by a hazard. */
+  const spiked = new WeakMap<Fighter, number>();
 
   // The traps of a hand-drawn level (traps.ts): only the player's own fighter meets them, in its own game.
   function stepTraps(H: Fighter) {
@@ -2739,11 +2788,85 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (!T) return;
     const me = hurtBox(H), at = H.body.position, feet = H.body.bounds.max.y, near = (x: number, y: number) => Math.abs(x - at.x) < 1100 && Math.abs(y - at.y) < 700;
     const strike = (dmg: number, kx: number, ky: number) => { hurt(H, { dmg, kx, ky, from: -Math.sign(kx) || 1 }); hazardCool = 50; };
+    // Ice under the fighter's feet: its grip on the ground is mostly gone (stepFighter).
+    icy = H.grounded && T.ice.some(([x0, top, x1]) => Math.abs(feet - top) < 8 && at.x > x0 - 10 && at.x < x1 + 10);
+    // A gate brings whoever steps into it out of its twin, still moving; the twin waits until they have stepped clear of it.
+    if (gateHeld && Math.hypot(at.x - gateHeld.x, feet - gateHeld.y) > 80) gateHeld = null;
+    if (!gateHeld) for (const gate of T.gates) {
+      const into = [gate.a, gate.b].find((end) => Math.abs(at.x - end.x) < 26 && Math.abs(feet - end.y) < 40);
+      if (!into) continue;
+      const out = into === gate.a ? gate.b : gate.a;
+      dust(at.x, feet, 8, 0); Body.setPosition(H.body, { x: out.x, y: out.y - (feet - at.y) - 2 }); dust(out.x, out.y, 8, 0);
+      sfx.vanish(); gateHeld = out;
+      break;
+    }
+    // An eye that sees the fighter as it opens sends a wisp, which turns after them until it touches them or fades.
+    const mid = { x: at.x, y: (me.min.y + me.max.y) / 2 };
+    T.eyes.forEach((eye, i) => {
+      const { sent } = eyeAt(S.time, i);
+      if (sent === sentBy[i]) return;
+      const first = sentBy[i] === -2;
+      sentBy[i] = sent;
+      if (first) return;
+      if (Math.hypot(mid.x - eye.x, mid.y - eye.y) < EYE_SIGHT && S.traps.wisps.length < 12) { S.traps.wisps.push({ x: eye.x, y: eye.y, vx: 0, vy: 0, life: WISP_LIFE }); if (near(eye.x, eye.y)) sfx.vanish(); }
+    });
+    S.traps.wisps = S.traps.wisps.filter((w) => {
+      const dx = mid.x - w.x, dy = mid.y - w.y, d = Math.hypot(dx, dy) || 1;
+      w.vx += (dx / d) * WISP_TURN; w.vy += (dy / d) * WISP_TURN;
+      const sp = Math.hypot(w.vx, w.vy);
+      if (sp > WISP_SPEED) { w.vx *= WISP_SPEED / sp; w.vy *= WISP_SPEED / sp; }
+      w.x += w.vx; w.y += w.vy;
+      if (d < 30 && hazardCool === 0) { strike(9, Math.sign(w.vx || 1) * 8, -6); return false; }
+      return --w.life > 0;
+    });
+    // A gust pushes whoever is in its rows toward the way it blows, on the ground or in the air.
+    for (const g of T.gusts) {
+      const blow = gustAt(S.time, g.phase).blow;
+      if (blow > 0 && overlaps(me, box(Math.min(g.x, g.x + g.dir * g.reach), g.y - 64, Math.max(g.x, g.x + g.dir * g.reach), g.y + 64))) Body.translate(H.body, { x: g.dir * GUST_PUSH * blow, y: 0 });
+    }
+    // A mortar that can see the fighter lobs a shell at where they stand; it bursts where it lands, on whoever is there.
+    T.mortars.forEach((m, i) => {
+      if (S.time - firedAt[i] < MORTAR_EVERY || Math.abs(at.x - m.x) > MORTAR_RANGE || Math.abs(feet - m.y) > 6 * 64 || !H.grounded) return;
+      firedAt[i] = S.time; S.traps.shells.push({ x0: m.x, y0: m.y - 50, x1: at.x, y1: feet, t: 0, T: SHELL_FLIGHT }); if (near(m.x, m.y)) sfx.hit(true);
+    });
+    S.traps.shells = S.traps.shells.filter((s) => {
+      if (++s.t < s.T) return true;
+      S.traps.booms.push({ x: s.x1, y: s.y1, t: 0 }); if (near(s.x1, s.y1)) { sfx.zap(); shake(4); } dust(s.x1, s.y1, 14, 0);
+      if (hazardCool === 0 && Math.abs(at.x - s.x1) < SHELL_BURST && Math.abs(feet - s.y1) < SHELL_BURST) { hurt(H, { dmg: 12, kx: Math.sign(at.x - s.x1 || 1) * 9, ky: -9, from: Math.sign(at.x - s.x1 || 1) }); hazardCool = 50; }
+      return false;
+    });
+    S.traps.booms = S.traps.booms.filter((b) => ++b.t < 24);
+    // A taut binding thread cuts whoever is across it.
+    if (hazardCool === 0) for (const t of T.threads) {
+      if (!threadAt(S.time, t.phase).taut || !overlaps(me, box(t.x0, t.y - 8, t.x1, t.y + 8))) continue;
+      hurt(H, { dmg: 10, kx: 0, ky: at.y < t.y ? -7 : 4, from: 1 }); hazardCool = 50; if (near(at.x, at.y)) sfx.zap(); break;
+    }
+    // Burning boards hurt whoever stands where the fire is.
+    if (hazardCool === 0 && H.grounded) for (const p of T.planks) {
+      const f = Math.abs(feet - p.y) < 8 && fireAt(S.time, p);
+      if (f && at.x > f.x0 - 10 && at.x < f.x1 + 10) { hurt(H, { dmg: 10, kx: p.dir * 6, ky: -9, from: p.dir }); hazardCool = 50; if (near(at.x, at.y)) sfx.zap(); break; }
+    }
+    // A belt carries whoever stands on it the way it runs.
+    const belt = H.grounded && T.belts.find((b) => Math.abs(feet - b.y) < 8 && at.x > b.x0 && at.x < b.x1);
+    if (belt) Body.translate(H.body, { x: belt.dir * BELT_SPEED, y: 0 });
+    // A blade-lift rises and sinks; a fighter standing on it goes with it.
+    T.lifts.forEach((l, i) => {
+      const y = liftAt(S.time, l), moved = y - liftY[i];
+      if (Math.abs(feet - liftY[i]) < 8 && Math.abs(at.x - l.x) < l.w / 2 + 10 && H.body.velocity.y >= -1) Body.translate(H.body, { x: 0, y: moved });
+      Body.setPosition(lifts[i], { x: l.x, y: y + 11 }); liftY[i] = y;
+    });
     // A wagon runs its track; a fighter standing on it is carried the way it went.
     T.wagons.forEach((w, i) => {
       const x = wagonAt(S.time, w), moved = x - wagonX[i];
       if (H.grounded && Math.abs(feet - w.y) < 8 && Math.abs(at.x - wagonX[i]) < w.w / 2 + 10) Body.translate(H.body, { x: moved, y: 0 });
       Body.setPosition(wagons[i], { x, y: w.y + 11 }); wagonX[i] = x;
+    });
+    // A path of the dead is solid while its set is, and comes back only when nobody is inside it.
+    T.spirits.forEach((p, i) => {
+      const solid = spiritAt(S.time, p.set).solid;
+      if (solid === spiritSolid[i] || (solid && overlaps(me, box(p.x - p.w / 2, p.y - 4, p.x + p.w / 2, p.y + 26)))) return;
+      spiritSolid[i] = solid;
+      if (solid) Composite.add(world, spirits[i]); else Composite.remove(world, spirits[i]);
     });
     // A seam opens and shuts on its own; it shuts only when nobody is in it, so it never closes on a fighter.
     T.seams.forEach((s, i) => {
@@ -2753,7 +2876,16 @@ export function createGame(rules: Rules, ui: Ui): Game {
       if (open) { Composite.remove(world, seams[i]); if (near(s.x, s.y)) sfx.land(); for (let x = s.x - s.w / 2 + 32; x < s.x + s.w / 2; x += 64) dust(x, s.y + 11, 2, 0); }
       else Composite.add(world, seams[i]);
     });
+    // A hidden chamber, found: through a false wall, down through a false floor, or at its cache. The first of a level
+    // tells what the level's secret is.
+    T.veils.forEach((v, i) => { if (!S.traps.unveiled[i] && overlaps(me, box(v.x, v.y, v.x + 64, v.y + 64))) { S.traps.unveiled[i] = true; sfx.vanish(); } });
+    // Inside a hidden chamber, all of it shows: every hidden cell near the one the fighter is in.
+    const inside = T.hollows.find((c) => at.x > c.x && at.x < c.x + 64 && mid.y > c.y && mid.y < c.y + 64);
+    if (inside) T.hollows.forEach((c, i) => { if (Math.abs(c.x - inside.x) < 8 * 64 && Math.abs(c.y - inside.y) < 3 * 64) S.traps.opened[i] = true; });
+    const found = !!inside || S.traps.unveiled.some(Boolean) || T.caches.some((c) => Math.hypot(c.x - at.x, c.y - feet) < 110) || T.crumbles.some(([cx, top, w, hidden]) => hidden && feet > top + 70 && Math.abs(at.x - cx) < w / 2 + 64);
+    if (found && !S.traps.told) { S.traps.told = true; ui.callout("A hidden chamber", S.level?.secret ?? "Someone hid this here, and meant it to be found."); }
     // A crumbling ledge holds for half a second once stood on, falls, and grows back when nobody is under it.
+    T.crumbles.forEach((c, i) => { if (S.traps.crumbles[i].t >= 0) S.traps.crumbles[i].seen = true; });
     T.crumbles.forEach(([cx, top, w], i) => {
       const st = S.traps.crumbles[i];
       if (st.gone > 0) {
@@ -2786,15 +2918,71 @@ export function createGame(rules: Rules, ui: Ui): Game {
       } else if ((st.y -= 2.4) <= 0) { st.y = 0; st.mode = 0; st.t = 40; }
       if (st.mode === 2 && hazardCool === 0 && overlaps(me, box(c.x - c.w / 2, c.y + st.y, c.x + c.w / 2, bottom))) strike(22, (Math.sign(at.x - c.x) || 1) * 12, -6);
     });
+    // A bell is heard as it tolls.
+    T.bells.forEach((b, i) => { const r = bellAt(S.time, b).ring, tolled = r !== null && r < 12; if (tolled && tolling[i] !== Math.floor(S.time / 4) && near(b.x, b.y)) { tolling[i] = Math.floor(S.time / 4); ui.sample?.("shieldHit"); shake(3); } });
     // A slot sounds as it looses, so a bolt from off the screen is heard before it is seen.
     T.bolts.forEach((b, i) => { const { shot } = boltAt(S.time, b); if (loosed[i] !== shot) { if (loosed[i] !== undefined && near(b.x, b.y)) sfx.zap(); loosed[i] = shot; } });
+    // A frozen soldier cracks free when a fighter is in front of it, slashes, and settles back into the ice.
+    T.frozen.forEach((f, i) => {
+      const st = S.traps.frozen[i], ahead = box(Math.min(f.x, f.x + f.dir * FROZEN_SIGHT), f.y - 140, Math.max(f.x, f.x + f.dir * FROZEN_SIGHT), f.y);
+      if (st.mode === 0) { if (overlaps(me, ahead)) { st.mode = 1; st.t = 20; if (near(f.x, f.y)) sfx.hit(false); } return; }
+      if (--st.t > 0) return;
+      if (st.mode === 1) { st.mode = 2; st.t = 10; if (near(f.x, f.y)) sfx.zap(); }
+      else if (st.mode === 2) { st.mode = 3; st.t = 80; }
+      else st.mode = 0;
+    });
+    // A lantern passed wakes a shade, which walks the fighter's own path SHADE_LAG steps behind and strikes if it reaches them.
+    const L = S.traps, now = ++L.step;
+    L.trail.push({ x: at.x, y: mid.y }); if (L.trail.length > SHADE_LAG + 2) L.trail.shift();
+    T.lanterns.forEach((l, i) => {
+      if (now - L.lanternAt[i] < LANTERN_SLEEP || Math.abs(at.x - l.x) > 40 || Math.abs(feet - l.y) > 70) return;
+      L.lanternAt[i] = now; L.shades.push({ born: now, from: i }); sfx.vanish();
+    });
+    L.shades = L.shades.filter((s) => {
+      const age = now - s.born;
+      if (age < SHADE_LAG) return true;
+      const p = L.trail[0];
+      if (p && hazardCool === 0 && Math.hypot(p.x - at.x, p.y - mid.y) < 34) { hurt(H, { dmg: 9, kx: Math.sign(at.x - p.x || 1) * 7, ky: -5, from: Math.sign(at.x - p.x || 1) }); hazardCool = 50; dust(p.x, p.y, 10, 0); return false; }
+      return age < SHADE_LAG + SHADE_LIFE;
+    });
+    // A tide pool slows whoever wades in it, and hurts them now and then while it is over their head.
+    const tide = T.tides.find((p) => at.x > p.x0 && at.x < p.x1 && me.max.y > p.y - TIDE_H * tideAt(S.time, p.x0).level && me.max.y < p.y + 12);
+    if (tide) Body.setVelocity(H.body, { x: H.body.velocity.x * TIDE_DRAG, y: Math.min(H.body.velocity.y, 7) });
+    under = tide && me.min.y > tide.y - TIDE_H * tideAt(S.time, tide.x0).level ? under + 1 : 0;
+    if (under >= TIDE_BREATH) { under = 0; hurt(H, { dmg: 5, kx: 0, ky: -3, from: 1 }); if (near(at.x, at.y)) sfx.vanish(); }
+    // A grave stirs when someone stands on it; the hands come up after a moment, grab whoever is still there, then sink.
+    const onGrave = (g: { x: number; y: number; w: number }) => Math.abs(feet - g.y) < 10 && at.x > g.x - g.w / 2 - 8 && at.x < g.x + g.w / 2 + 8;
+    T.graves.forEach((g, i) => {
+      const st = S.traps.graves[i];
+      if (st.mode === 0) { if (onGrave(g)) { st.mode = 1; st.t = GRAVE_STIR; if (near(g.x, g.y)) sfx.hit(false); } return; }
+      if (--st.t > 0) return;
+      if (st.mode === 1) {
+        st.mode = 2; st.t = GRAVE_GRASP;
+        if (near(g.x, g.y)) { sfx.vanish(); dust(g.x, g.y, 10, 0); }
+        if (onGrave(g) && hazardCool === 0) { hurt(H, { dmg: 7, kx: 0, ky: 0, stun: GRAVE_GRASP, from: 1 }); Body.setVelocity(H.body, { x: 0, y: 0 }); hazardCool = GRAVE_GRASP + 20; }
+      } else if (st.mode === 2) { st.mode = 3; st.t = GRAVE_REST; }
+      else st.mode = 0;
+    });
     if (hazardCool > 0) return;
+    for (const [i, f] of T.frozen.entries()) {
+      if (S.traps.frozen[i].mode === 2 && overlaps(me, box(Math.min(f.x, f.x + f.dir * FROZEN_REACH), f.y - 120, Math.max(f.x, f.x + f.dir * FROZEN_REACH), f.y))) return strike(16, f.dir * 12, -7);
+    }
     for (const sp of T.spikes) {
       if (spikeAt(S.time, sp.phase).up >= 0.6 && overlaps(me, box(sp.x - sp.w / 2, sp.y - SPIKE_H, sp.x + sp.w / 2, sp.y))) return strike(12, (Math.sign(at.x - sp.x) || 1) * 5, -10);
     }
     for (const fl of T.flames) {
       const { up } = flameAt(S.time, fl.phase);
       if (up >= 0.5 && overlaps(me, box(fl.x - fl.w / 2, fl.y - fl.h * up, fl.x + fl.w / 2, fl.y))) return strike(14, (Math.sign(at.x - fl.x) || 1) * 7, -8);
+    }
+    // A bell's ring knocks whoever it passes through away from the bell.
+    for (const b of T.bells) {
+      const r = bellAt(S.time, b).ring;
+      if (r === null) continue;
+      const mid = { x: (me.min.x + me.max.x) / 2, y: (me.min.y + me.max.y) / 2 }, d = Math.hypot(mid.x - b.x, mid.y - b.y);
+      if (Math.abs(d - r) < 26) { const ux = (mid.x - b.x) / (d || 1), uy = (mid.y - b.y) / (d || 1); return strike(10, ux * 15, Math.min(-6, uy * 12)); }
+    }
+    for (const j of T.jets) {
+      if (jetAt(S.time, j.phase).on && overlaps(me, box(Math.min(j.x, j.x + j.dir * j.reach), j.y - 24, Math.max(j.x, j.x + j.dir * j.reach), j.y + 24))) return strike(14, j.dir * 11, -6);
     }
     for (const r of T.rams) {
       const out = ramAt(S.time, r.phase).out * r.reach;
@@ -2890,8 +3078,10 @@ export function createGame(rules: Rules, ui: Ui): Game {
     S.bag.length = 0; S.chosen = 0; drops.length = 0; S.warded = 0; S.hasted = 0; shown.clear();
     S.down = null; wipeT = 0; heardWorlds.length = 0; worldGaps.length = 0; outbox.orbs.length = outbox.fx.length = outbox.warns.length = 0;
     buildWorld(level);
-    S.sky = level ? null : SKY_IDS[Math.floor(rnd() * SKY_IDS.length)];
-    S.nextSky = level ? null : skyAfter(S.sky);
+    // A fight of waves changes its sky each wave, on a stage of its own as on the islands; a level or a duel has its own.
+    const waves = !S.match.quest && !S.match.duel;
+    S.sky = waves ? SKY_IDS[Math.floor(rnd() * SKY_IDS.length)] : null;
+    S.nextSky = waves ? skyAfter(S.sky!) : null;
     dark = 0; S.fade = 0; told = false;
     ambushed.clear(); S.cluesFound.length = 0; S.sprung = []; S.sealed = false; hazardCool = 0;
     // In a duel the fighters start apart, at whichever of the place's starts chance gives each.

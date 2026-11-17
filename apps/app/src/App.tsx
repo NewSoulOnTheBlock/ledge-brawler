@@ -1,11 +1,10 @@
 // spec/app/index.md, "Story: Choose a fighter"; spec/app/index.md, "Story: Learn the moves"
 import { cn } from "@repo/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, type JSX, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fighters } from "../gen/app.ts";
 import { chaptersDone } from "../gen/app__saga.ts";
 import { KitButton, KitWord } from "./kit.tsx";
 import { CampaignScreen, ChapterClear, Ending, GuideTalk, Prelude } from "./Campaign.tsx";
-import { CoopParty, CoopTable, Wiped } from "./Coop.tsx";
 import { type Table, type TalkWord, type Together, joinTogether } from "./coop.ts";
 import { unend } from "./story/endings.ts";
 import { DILEMMAS, PARLEY, keepRank, rankOf, repliesOf, type Stance, stand, choose, echoOf, forget, give, memoryOf, reckoning, remember, specialsOf } from "./story/parley.ts";
@@ -20,12 +19,11 @@ import { CHARS, MOVES_TO_FIND } from "./game/data.ts";
 import { createPost } from "./game/post/post.ts";
 import { createView, isCalm, setCalm } from "./game/render.ts";
 import { skyIsDark } from "./game/sky.ts";
-import { DUEL, type Level, hasLevel, levelById, levelOf } from "./game/levels.ts";
+import { type Level, hasLevel, levelById, levelOf, survivalStage } from "./game/levels.ts";
 import { type Sample, playSample } from "./game/samples.ts";
 import { type Button, type Game, type Ui, createGame } from "./game/sim.ts";
 import { Combo, Hud, TouchPad, TOUCH_SEEN, TOUCH_SIZES, setTouchFit, touchFit } from "./Hud.tsx";
 import { BigButton, MoveList, SelectScreen, SmallButton, TitleBackdrop, TitleScreen, VolumeSliders } from "./screens.tsx";
-import { Profile } from "./Profile.tsx";
 import type { Runtime } from "./runtime.ts";
 import { type FactId, HEROES, PROTAGONISTS, factNumber, type Hero } from "./story/canon.ts";
 import { KitIcon } from "./kit.tsx";
@@ -40,7 +38,17 @@ import { unlock } from "./achievements.ts";
 import { useSaga } from "./useSaga.ts";
 import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor, roomCode, spectateRoom, stageFor } from "./versus.ts";
 import { type Entry, proFight, proReport, proResult, proWithdraw } from "./pro.ts";
-import { ProEntry } from "./ProEntry.tsx";
+/** A screen loaded the first time it is shown, not with the game: paying (Solana and the wallet's own module), the
+ *  profile, and playing together (the multiplayer client). Nothing shows while it loads, for the moment it takes. */
+const later = <P extends object>(load: () => Promise<ComponentType<P>>) => {
+  const Loaded = lazy(() => load().then((component) => ({ default: component })));
+  return (props: P & JSX.IntrinsicAttributes) => <Suspense fallback={null}><Loaded {...props} /></Suspense>;
+};
+const ProEntry = later(() => import("./ProEntry.tsx").then((m) => m.ProEntry));
+const Profile = later(() => import("./Profile.tsx").then((m) => m.Profile));
+const CoopTable = later(() => import("./Coop.tsx").then((m) => m.CoopTable));
+const CoopParty = later(() => import("./Coop.tsx").then((m) => m.CoopParty));
+const Wiped = later(() => import("./Coop.tsx").then((m) => m.Wiped));
 
 const KEYMAP: Record<string, Button> = {
   ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowDown: "down", KeyS: "down",
@@ -584,11 +592,11 @@ export function App({ runtime }: { runtime: Runtime }) {
     send({ type: "train", vigor: 10 * build.health, learned: granted && !proOn.current ? 5 : saga ? Math.min(5, chaptersDone(HEROES.indexOf(hero), saga)) : 0 });
     return [specialsOf(hero, fighter), build] as const;
   }, [rules, send, saga, granted]);
-  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(null, ...mine); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter]);
+  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(survivalStage(), ...mine); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter]);
   /** Joins the room the page's address names, for the duel in play. */
   const connect = useCallback(() => {
     setStanding({ rivals: [], status: "joining" });
-    joinVersus(duelCode(), nameFor(rules.get().fighter), DUEL, game, rules, setStanding, paidIn.current?.mode === "versus" ? paidIn.current.id : undefined)
+    joinVersus(duelCode(), nameFor(rules.get().fighter), true, game, rules, setStanding, paidIn.current?.mode === "versus" ? paidIn.current.id : undefined)
       .then((room) => { if (rules.get().duel && !net.current) net.current = room; else room.leave(); })
       .catch((error: unknown) => { console.warn("versus:", error); setStanding({ rivals: [], status: error instanceof Error && error.message === "full" ? "full" : "offline" }); });
   }, [game, rules]);
@@ -597,7 +605,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     const mine = built();
     if (!send({ type: "duel" })) return;
     setLevel(null);
-    game.begin(stageFor(DUEL, duelCode(), 0), ...mine); began.current = performance.now();
+    game.begin(stageFor(duelCode(), 0), ...mine); began.current = performance.now();
     track("versus_start", { fighter: rules.get().fighter, pro: proOn.current, room: duelCode() });
     connect(); sideways();
   }, [send, game, connect, rules]);

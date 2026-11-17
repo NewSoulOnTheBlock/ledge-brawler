@@ -1,0 +1,16 @@
+fly fly_00.png 80
+fly fly_01.png 80
+fly fly_02.png 80
+fly fly_03.png 80
+land land_00.png 80
+land land_01.png 80
+land land_02.png 80
+linger linger_00.png 120
+linger linger_01.png 120
+linger linger_02.png 120
+linger linger_03.png 120
+linger linger_04.png 120
+linger linger_05.png 120
+fade fade_00.png 120
+fade fade_01.png 120
+fade fade_02.png 120

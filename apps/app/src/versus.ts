@@ -7,7 +7,7 @@
 import { CHARS } from "./game/data.ts";
 import { outfitOf } from "./game/relics.ts";
 import { type Frame, frameOf } from "./game/figure.ts";
-import type { Level } from "./game/levels.ts";
+import { type Level, VERSUS_STAGES } from "./game/levels.ts";
 import type { Game, Hurt, Peer, Rules, Shot, Sprite } from "./game/sim.ts";
 import { SKY_IDS, type SkyId } from "./game/sky.ts";
 
@@ -111,8 +111,13 @@ export function skyFor(code: string, round: number): SkyId {
   for (const ch of code) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return SKY_IDS[hash % SKY_IDS.length];
 }
-/** The duel's place under the sky of `code`'s round. */
-export const stageFor = (stage: Level, code: string, round: number): Level => ({ ...stage, sky: skyFor(code, round) });
+/** The place of `code`'s round, under its sky: chosen from the room and the round alone (never the clock), so that
+ *  every player in the room fights in the same one, and the next round, in the next. */
+export function stageFor(code: string, round: number): Level {
+  let hash = round * 7919;
+  for (const ch of code) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return { ...VERSUS_STAGES[(hash + round) % VERSUS_STAGES.length], sky: skyFor(code, round) };
+}
 
 /** A link that brings whoever opens it to `code`'s room. */
 export const inviteLink = (code: string) => `${location.origin}${location.pathname}?room=${code}`;
@@ -153,7 +158,7 @@ export interface RoomLink {
 /** Joins the room `code` as `name`, for the duel `rules` has just started in `game`. With `entry`, it is a pro match
  *  (pro.ts): this seat says which entry it paid, and players who have not paid one are not fought. With `link`, it
  *  is a co-op group's room (coop.ts): no rounds and no winner, and fighters are said only while a level is played. */
-export async function joinVersus(code: string, name: string, stage: Level | null, game: Game, rules: Rules, onStanding: (standing: Standing) => void, entry?: number, link?: RoomLink): Promise<Versus> {
+export async function joinVersus(code: string, name: string, staged: boolean, game: Game, rules: Rules, onStanding: (standing: Standing) => void, entry?: number, link?: RoomLink): Promise<Versus> {
   await loadSdk();
   // A room seats five. The open room, once full, has another behind it, and another behind that; a private room
   // that is full is full, and whoever was sent its link is told so.
@@ -361,7 +366,7 @@ export async function joinVersus(code: string, name: string, stage: Level | null
         round = ahead ? Math.max(...all.map((w) => w.round)) : round + 1;
         next = false;
         over = 0; winner = undefined; winnerEntry = undefined; said = 0;
-        if (stage && rules.send({ type: "rematch" })) game.begin(stageFor(stage, code, round));
+        if (staged && rules.send({ type: "rematch" })) game.begin(stageFor(code, round));
       }
       if (now - told > 250) {
         told = now;
