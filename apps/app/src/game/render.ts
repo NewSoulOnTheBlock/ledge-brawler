@@ -1006,16 +1006,16 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       ctx.fillStyle = `rgba(${p.color},${p.life / p.max})`;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
-    ctx.textAlign = "center"; ctx.font = '700 17px "Evil Empire", sans-serif';
+    ctx.textAlign = "center"; ctx.font = '700 17px "Seven Swordsmen BB", sans-serif';
     for (const fl of S.floaters) {
       if (fl.warn) {
         // An enemy's special by name: pale gold edged in black and red, larger, readable on any sky.
         const a = Math.min(1, fl.life / 12);
-        ctx.font = '700 24px "Evil Empire", sans-serif'; ctx.lineJoin = "round";
+        ctx.font = '700 24px "Seven Swordsmen BB", sans-serif'; ctx.lineJoin = "round";
         ctx.lineWidth = 7; ctx.strokeStyle = `rgba(20,4,4,${a})`; ctx.strokeText(fl.text, fl.x, fl.y);
         ctx.lineWidth = 3; ctx.strokeStyle = `rgba(200,30,22,${a})`; ctx.strokeText(fl.text, fl.x, fl.y);
         ctx.fillStyle = `rgba(255,236,190,${a})`; ctx.fillText(fl.text, fl.x, fl.y);
-        ctx.font = '700 17px "Evil Empire", sans-serif';
+        ctx.font = '700 17px "Seven Swordsmen BB", sans-serif';
         continue;
       }
       ctx.fillStyle = fl.red ? `rgba(212,42,30,${Math.min(1, fl.life / 20)})` : theme() || S.dark || (S.sky && playing() && skyIsDark(S.sky)) ? `rgba(240,240,235,${Math.min(1, fl.life / 20)})` : `rgba(17,17,17,${Math.min(1, fl.life / 20)})`;

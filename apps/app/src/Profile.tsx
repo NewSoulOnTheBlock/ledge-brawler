@@ -8,7 +8,7 @@ import { SmallButton, BigButton } from "./screens.tsx";
 import { HEROES, PROTAGONISTS } from "./story/canon.ts";
 import { ACHIEVEMENTS, unlocked as getUnlocked } from "./achievements.ts";
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 const CHAPTERS_PER_HERO = 5;
 
 export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) {

@@ -7,7 +7,7 @@ import type { Button, Game } from "./game/sim.ts";
 import { KitBar } from "./kit.tsx";
 import { Kbd } from "./screens.tsx";
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 
 function Bar({ label, value, max, fill, className }: { label: string; value: number; max: number; fill?: string; className?: string }) {
   return (

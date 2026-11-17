@@ -12,7 +12,7 @@ import { KitButton, KitPanel } from "./kit.tsx";
 import { HEROES, type Hero, PROTAGONISTS } from "./story/canon.ts";
 import type { Rival, Standing } from "./versus.ts";
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 
 /** The chapters of `hero`'s campaign the host may start: every one finished, and the next. */
 export function chaptersFor(hero: Hero, saga: Saga | undefined) {

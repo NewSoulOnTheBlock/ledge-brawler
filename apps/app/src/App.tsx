@@ -285,15 +285,15 @@ function shareCard(wave: number, kos: number, fighter: number, rank: number | nu
   const c = CHARS[fighter];
   ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, 600, 340);
   ctx.strokeStyle = c.color; ctx.lineWidth = 3; ctx.strokeRect(8, 8, 584, 324);
-  ctx.font = 'bold 32px "Evil Empire", sans-serif'; ctx.fillStyle = "#f6dfa6"; ctx.textAlign = "center";
+  ctx.font = 'bold 32px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#f6dfa6"; ctx.textAlign = "center";
   ctx.fillText("FIVE BLADES", 300, 52);
-  ctx.font = 'bold 24px "Evil Empire", sans-serif'; ctx.fillStyle = c.color;
+  ctx.font = 'bold 24px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = c.color;
   ctx.fillText(c.name.toUpperCase(), 300, 100);
-  ctx.font = 'bold 64px "Evil Empire", sans-serif'; ctx.fillStyle = "#ffffff";
+  ctx.font = 'bold 64px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#ffffff";
   ctx.fillText(`Wave ${wave}`, 300, 180);
-  ctx.font = 'bold 28px "Evil Empire", sans-serif'; ctx.fillStyle = "#e03828";
+  ctx.font = 'bold 28px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#e03828";
   ctx.fillText(`${kos} K.O.`, 300, 220);
-  if (rank) { ctx.font = 'bold 20px "Evil Empire", sans-serif'; ctx.fillStyle = "#999"; ctx.fillText(`#${rank} of ${total}`, 300, 270); }
+  if (rank) { ctx.font = 'bold 20px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#999"; ctx.fillText(`#${rank} of ${total}`, 300, 270); }
   ctx.font = '14px "Evil Empire", sans-serif'; ctx.fillStyle = "#666";
   ctx.fillText("ledge-brawler.vercel.app", 300, 310);
   const a = document.createElement("a"); a.download = `five-blades-wave-${wave}.png`; a.href = canvas.toDataURL("image/png"); a.click();
@@ -961,7 +961,7 @@ export function App({ runtime }: { runtime: Runtime }) {
   const skyNow = game.scene.level?.sky ?? game.scene.sky, lit = game.scene.dark || (skyNow ? skyIsDark(skyNow) : !!level?.theme);
   const c = CHARS[match.fighter];
   // What is said across the fight: lettered with a rim of the page's own colour, to be read over any backdrop.
-  const said = "pointer-events-none absolute inset-x-0 text-center font-sans font-bold uppercase transition-opacity duration-base [text-shadow:0_0_2px_var(--background),0_0_8px_var(--background),0_2px_0_var(--background)]";
+  const said = "pointer-events-none absolute inset-x-0 text-center font-display font-bold uppercase transition-opacity duration-base [text-shadow:0_0_2px_var(--background),0_0_8px_var(--background),0_2px_0_var(--background)]";
   // A fighter's colour as it shows over the place in play: ink, which a dark place would swallow, becomes the page's lettering.
   const shown = lit && parseInt(c.color.slice(1, 3), 16) + parseInt(c.color.slice(3, 5), 16) + parseInt(c.color.slice(5, 7), 16) < 150 ? "var(--foreground)" : c.color;
 

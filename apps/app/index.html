@@ -25,9 +25,11 @@
     <!-- The first paint needs these two before anything else: the picture behind the home screen, and the face everything is set in (public/fonts/README.md). -->
     <link rel="preload" as="image" href="/src/home.webp" fetchpriority="high" />
     <link rel="preload" as="image" href="/src/logo.webp" fetchpriority="high" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/seven-swordsmen.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/fonts/evil-empire.woff2" crossorigin />
     <style>
       /* One weight, given for every weight, so that bold text uses the face as it is drawn and is not thickened by the browser. */
+      @font-face { font-family: "Seven Swordsmen BB"; font-weight: 100 900; font-display: block; src: url(/fonts/seven-swordsmen.woff2) format("woff2"); }
       @font-face { font-family: "Evil Empire"; font-weight: 100 900; font-display: block; src: url(/fonts/evil-empire.woff2) format("woff2"); }
       @keyframes loading { from { transform: translateX(-60%); } to { transform: translateX(260%); } }
     </style>

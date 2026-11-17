@@ -9,7 +9,7 @@ export type PausePage = "menu" | "moves" | "settings";
 /** One thing the pause can do: its label and what pressing it does. */
 export interface PauseAction { label: string; act: () => void }
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 const item = "w-full py-2.5 text-[13px] tracking-[0.16em]";
 
 /** The pause's panel: its first page (`menu`) or its settings; the move list is its own panel (screens.tsx, MoveList). */

@@ -1,2 +1,17 @@
 @import "@repo/design-system/theme.css";
 @source "../../../packages/ui/src";
+
+/* The game's display face, for titles, buttons and every uppercase label (the `font-display` class); running text
+   keeps the design system's `sans`. The token file has a place for sans and mono only (vibestack/design/tokens.ts),
+   so this one face is named here. public/fonts/README.md says which face goes where. */
+@theme {
+  --font-display: "Seven Swordsmen BB", "Evil Empire", "Trebuchet MS", sans-serif;
+}
+
+/* Running text stands off whatever is behind it (art, the fight, a panel): a soft dark shadow. The game's text is
+   light on dark everywhere, and `--background` here is the light theme's, so the shadow is named as black. */
+@layer base {
+  :where(p, li, dt, dd, td, th, label, figcaption, blockquote) {
+    text-shadow: 0 1px 2px oklch(0 0 0 / 0.9), 0 0 1px oklch(0 0 0 / 0.9);
+  }
+}

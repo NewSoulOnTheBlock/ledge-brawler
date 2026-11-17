@@ -11,7 +11,7 @@ import { drawPreview } from "./game/render.ts";
 import { OUTFITS, RELICS, canWear, outfitOf, skinOf, wear } from "./game/relics.ts";
 import { type Quote, TICKERS, quoteOf } from "./prices.ts";
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 const screen = "absolute inset-0 grid [place-items:safe_center] overflow-y-auto bg-background/80 px-4 py-6";
 
 export function Kbd({ children }: { children: ReactNode }) {
@@ -82,7 +82,7 @@ const CREDITS: [string, string][] = [
   ["The guide", "Reaper (Animated Pixel Art)"],
   ["Versus stage and sounds", "Platform Fighter Template"],
   ["Pixel effects", "pixelfx by Patch and Hugo Duprez (MIT)"],
-  ["Typeface", "Evil Empire by Tup Wanders, wanders.work (SIL Open Font License)"],
+  ["Typefaces", "Seven Swordsmen BB by Nate Piekos, Blambot (blambot.com), used under license; Evil Empire by Tup Wanders, wanders.work (SIL Open Font License)"],
   ["Screen effects", "after Celeste's effects, Maddy Makes Games (MIT)"],
   ["Multiplayer", "Multiplayer Agent"],
 ];
@@ -441,7 +441,7 @@ export function VolumeSliders({ sfxVol, musicVol, onSfx, onMusic }: { sfxVol: nu
   const [sfx, setSfx] = useState(sfxVol), [mus, setMus] = useState(musicVol);
   return (
     <div className="mt-4 grid gap-2">
-      <h4 className={cn("font-sans font-bold uppercase", "text-[11px] tracking-[0.2em] text-destructive")}>Volume</h4>
+      <h4 className={cn("font-display font-bold uppercase", "text-[11px] tracking-[0.2em] text-destructive")}>Volume</h4>
       <label className="grid grid-cols-[3.5em_1fr_2em] items-center gap-2 text-[11px]">
         <span className="tracking-widest text-muted-foreground uppercase">SFX</span>
         <input type="range" min="0" max="100" value={Math.round(sfx * 100)} onChange={(e) => { const v = +e.target.value / 100; setSfx(v); onSfx(v); }} className="w-full accent-destructive" />

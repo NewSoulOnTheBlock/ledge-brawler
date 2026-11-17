@@ -16,7 +16,7 @@ import { SCHOOLS, deedsOf, end, endedBy, epilogue, waysOf } from "./story/ending
 import { VOICES } from "./story/voices.ts";
 import { PATHS, buildOf, pointsLeft, spend, unbuild } from "./story/build.ts";
 
-const display = "font-sans font-bold uppercase";
+const display = "font-display font-bold uppercase";
 /** What is inside comes up out of nothing each time `on` changes: a card of a telling, a truth opened, an ending told. Not for a player who has asked for less motion. */
 function Rise({ on, className, children }: { on: unknown; className?: string; children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
