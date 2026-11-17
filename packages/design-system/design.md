@@ -58,8 +58,8 @@ this prose into tokens. To change the design, describe it, and have the change w
 | Token | Value |
 | --- | --- |
 | `radius` | 0rem |
-| `font.sans` | "Evil Empire", "Trebuchet MS", sans-serif |
-| `font.mono` | "Evil Empire", "Trebuchet MS", sans-serif |
+| `font.sans` | "Lexend", "Trebuchet MS", sans-serif |
+| `font.mono` | "Lexend", "Trebuchet MS", sans-serif |
 | `shadow.sm` | 0 1px 2px oklch(0 0 0 / 0.08) |
 | `shadow.md` | 0 4px 12px oklch(0 0 0 / 0.12) |
 | `shadow.lg` | 0 12px 32px oklch(0 0 0 / 0.18) |

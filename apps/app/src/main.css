@@ -5,7 +5,7 @@
    keeps the design system's `sans`. The token file has a place for sans and mono only (vibestack/design/tokens.ts),
    so this one face is named here. public/fonts/README.md says which face goes where. */
 @theme {
-  --font-display: "Seven Swordsmen BB", "Evil Empire", "Trebuchet MS", sans-serif;
+  --font-display: "Seven Swordsmen BB", "Lexend", "Trebuchet MS", sans-serif;
 }
 
 /* Running text stands off whatever is behind it (art, the fight, a panel): a soft dark shadow. The game's text is

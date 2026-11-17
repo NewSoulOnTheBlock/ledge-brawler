@@ -876,10 +876,10 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       ctx.fillStyle = `rgba(120,235,255,${0.12 + 0.2 * strength})`; ctx.fill();
       ctx.strokeStyle = `rgba(255,255,255,${0.5 + 0.4 * strength})`; ctx.lineWidth = 3; ctx.stroke();
     }
-    if (F.tag && !F.boss) { ctx.textAlign = "center"; ctx.font = '700 13px "Evil Empire", sans-serif'; ctx.fillStyle = INK; ctx.fillText(F.tag, x, F.skel.head.y - 34); }
+    if (F.tag && !F.boss) { ctx.textAlign = "center"; ctx.font = '700 13px "Lexend", sans-serif'; ctx.fillStyle = INK; ctx.fillText(F.tag, x, F.skel.head.y - 34); }
     if (F.peer) {
       // Another player: their name, and a pip for each life they have left.
-      ctx.textAlign = "center"; ctx.font = '700 13px "Evil Empire", sans-serif'; ctx.fillStyle = F.color === "#111111" ? INK : F.color;
+      ctx.textAlign = "center"; ctx.font = '700 13px "Lexend", sans-serif'; ctx.fillStyle = F.color === "#111111" ? INK : F.color;
       ctx.fillText(F.peer.name, x, F.skel.head.y - 34);
       for (let i = 0; i < F.peer.lives; i++) ctx.fillRect(x - F.peer.lives * 5 + i * 10 + 1, F.skel.head.y - 30, 7, 4);
     }
@@ -900,7 +900,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       ctx.lineWidth = 4; ctx.strokeStyle = out ? "rgba(140,140,140,0.6)" : `rgba(255,214,102,${pulse})`;
       ctx.beginPath(); ctx.ellipse(x, feet, 70, 14, 0, 0, Math.PI * 2); ctx.stroke();
       if (held > 0) { ctx.strokeStyle = "#8dffb0"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, feet - 70, 26, -Math.PI / 2, -Math.PI / 2 + held * Math.PI * 2); ctx.stroke(); }
-      ctx.textAlign = "center"; ctx.font = '700 15px "Evil Empire", sans-serif'; ctx.lineJoin = "round";
+      ctx.textAlign = "center"; ctx.font = '700 15px "Lexend", sans-serif'; ctx.lineJoin = "round";
       const text = out ? "OUT" : own ? (held > 0 ? "BEING REVIVED" : "DOWN · A TEAMMATE CAN REVIVE YOU") : "DOWN · STAND HERE TO REVIVE";
       ctx.lineWidth = 5; ctx.strokeStyle = "rgba(10,8,6,0.9)"; ctx.strokeText(text, x, feet - 110);
       ctx.fillStyle = out ? "#bbbbbb" : "#ffe9b0"; ctx.fillText(text, x, feet - 110);
@@ -1146,14 +1146,14 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       ctx.strokeStyle = chosen ? "#e0b84a" : "rgba(255,255,255,0.3)"; ctx.lineWidth = chosen ? 2.5 : 1; ctx.strokeRect(x + 0.5, y0 + 0.5, cell - 1, cell - 1);
       drawItem(held.item, x + (cell - 28) / 2, y0 + (cell - 28) / 2 - 2, 28);
       if (held.count > 1) {
-        ctx.font = '700 12px "Evil Empire", sans-serif'; ctx.textAlign = "right";
+        ctx.font = '700 12px "Lexend", sans-serif'; ctx.textAlign = "right";
         ctx.fillStyle = "#000"; ctx.fillText(`×${held.count}`, x + cell - 2, y0 + cell - 3);
         ctx.fillStyle = "#f6efe0"; ctx.fillText(`×${held.count}`, x + cell - 3, y0 + cell - 4);
       }
     });
     const chosen = S.bag[S.chosen];
     if (!chosen) return;
-    ctx.font = '700 12px "Evil Empire", sans-serif'; ctx.textAlign = coarse ? "center" : "right"; ctx.letterSpacing = "1px";
+    ctx.font = '700 12px "Lexend", sans-serif'; ctx.textAlign = coarse ? "center" : "right"; ctx.letterSpacing = "1px";
     const tx = coarse ? cssW / 2 : x0 + w, label = coarse ? ITEMS[chosen.item].name.toUpperCase() : `${ITEMS[chosen.item].name.toUpperCase()}   T USE · R NEXT`;
     const ty = coarse ? y0 + cell + 15 : y0 + cell + 17;
     ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillText(label, tx + 1, ty + 1);
@@ -1197,7 +1197,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       ctx.fillStyle = RED; ctx.fillRect(x, y, w * left, 10);
       ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 1; ctx.strokeRect(x - 3.5, y - 3.5, w + 7, 17);
       if (boss.tag) {
-        ctx.font = '700 15px "Evil Empire", sans-serif'; ctx.textAlign = "center"; ctx.letterSpacing = "3px";
+        ctx.font = '700 15px "Lexend", sans-serif'; ctx.textAlign = "center"; ctx.letterSpacing = "3px";
         ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillText(boss.tag.toUpperCase(), cssW / 2 + 1, y - 11);
         ctx.fillStyle = "#f6efe0"; ctx.fillText(boss.tag.toUpperCase(), cssW / 2, y - 12);
         ctx.letterSpacing = "0px";

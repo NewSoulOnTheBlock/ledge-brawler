@@ -294,7 +294,7 @@ function shareCard(wave: number, kos: number, fighter: number, rank: number | nu
   ctx.font = 'bold 28px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#e03828";
   ctx.fillText(`${kos} K.O.`, 300, 220);
   if (rank) { ctx.font = 'bold 20px "Seven Swordsmen BB", sans-serif'; ctx.fillStyle = "#999"; ctx.fillText(`#${rank} of ${total}`, 300, 270); }
-  ctx.font = '14px "Evil Empire", sans-serif'; ctx.fillStyle = "#666";
+  ctx.font = '14px "Lexend", sans-serif'; ctx.fillStyle = "#666";
   ctx.fillText("ledge-brawler.vercel.app", 300, 310);
   const a = document.createElement("a"); a.download = `five-blades-wave-${wave}.png`; a.href = canvas.toDataURL("image/png"); a.click();
 }

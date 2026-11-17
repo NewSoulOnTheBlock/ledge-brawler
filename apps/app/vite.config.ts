@@ -18,7 +18,7 @@ function offline(): Plugin {
     generateBundle(_, bundle) {
       const files = Object.values(bundle);
       const entry = files.find((file) => file.type === "chunk" && file.isEntry);
-      const core = new Set<string>(["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/fonts/seven-swordsmen.woff2", "/fonts/evil-empire.woff2"]);
+      const core = new Set<string>(["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/fonts/seven-swordsmen.woff2", "/fonts/lexend.woff2"]);
       // The first script, what it imports before it runs, its styles, and the faces and picture the home screen shows.
       const add = (name: string) => {
         const file = bundle[name];

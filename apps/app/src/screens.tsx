@@ -82,7 +82,7 @@ const CREDITS: [string, string][] = [
   ["The guide", "Reaper (Animated Pixel Art)"],
   ["Versus stage and sounds", "Platform Fighter Template"],
   ["Pixel effects", "pixelfx by Patch and Hugo Duprez (MIT)"],
-  ["Typefaces", "Seven Swordsmen BB by Nate Piekos, Blambot (blambot.com), used under license; Evil Empire by Tup Wanders, wanders.work (SIL Open Font License)"],
+  ["Typefaces", "Seven Swordsmen BB by Nate Piekos, Blambot (blambot.com), used under license; Lexend by The Lexend Project, lexend.com (SIL Open Font License)"],
   ["Screen effects", "after Celeste's effects, Maddy Makes Games (MIT)"],
   ["Multiplayer", "Multiplayer Agent"],
 ];
