@@ -9,12 +9,14 @@ import { afterEach, expect, it, vi } from "vitest";
 import { type Room, Refused, joinArena } from "../src/arena/link.ts";
 import { pot } from "../src/arena/pot.vibe";
 import type { BoutWord } from "../src/arena/protocol.ts";
+import type { RunWord } from "../src/arena/run.ts";
 import type { Pro } from "../src/arena/arena.ts";
 import { serve } from "../src/arena/serve.ts";
 import { DUEL, allLevels } from "../src/game/levels.ts";
+import { type Paid, joinRun } from "../src/run.ts";
 import { type Standing, type Versus, joinVersus } from "../src/versus.ts";
 import { within } from "../src/story/within.ts";
-import { type Sfx, type Ui, createGame } from "../src/game/sim.ts";
+import { type Sfx, type Ui, type World, createGame } from "../src/game/sim.ts";
 import { runtimeOn } from "../src/runtime.ts";
 import { rulesOf } from "../src/useMatch.ts";
 
@@ -398,34 +400,40 @@ it("Fight for the pot: the server begins rounds, lands only blows that could hav
   await until(() => bo.mine()!.hp === 80, "a blow, held to 60");
   // Its game is told the health the server took, not what the striker's game claimed.
   expect(bo.seen.hits).toEqual([{ from: ada.room.sessionId, dmg: 60 }]);
-  // Told twice, from the round before, or from across the arena, it does nothing.
+  // Told twice, from the round before, from across the arena, or from beyond a body's reach with no shot let go, it does nothing.
+  const pause = () => new Promise((done) => setTimeout(done, 60));
   blow(ada, bo, 10, 2); blow(ada, bo, 10, 3, 0);
-  at(ada.room, 4000); await until(() => true, ""); blow(ada, bo, 10, 4);
-  at(ada.room, 500); at(bo.room, 560, { special: true });
+  at(bo.room, 4000); await pause(); blow(ada, bo, 10, 4);
+  at(bo.room, 1100); await pause(); blow(ada, bo, 10, 5);
+  // A shot let go reaches that far, for a moment.
+  ada.room.send("orb", { x: 520, y: 580, vx: 9, vy: 0, r: 9, g: 0, life: 60, color: "#fff", big: false, disc: false, round: 1 });
+  await pause(); blow(ada, bo, 10, 6);
+  await until(() => bo.mine()!.hp === 70, "a shot's blow");
   // In the middle of a special the fighter cannot be touched.
-  await new Promise((done) => setTimeout(done, 60)); blow(ada, bo, 10, 5);
-  at(bo.room, 560, { guard: true });
+  at(bo.room, 560, { special: true });
+  await pause(); blow(ada, bo, 10, 7);
   // A held guard lets a fifth through.
-  await new Promise((done) => setTimeout(done, 60)); blow(ada, bo, 20, 6);
-  await until(() => bo.mine()!.hp === 76, "the guarded blow");
-  expect(bo.seen.hits.length).toBe(2);
+  at(bo.room, 560, { guard: true });
+  await pause(); blow(ada, bo, 20, 8);
+  await until(() => bo.mine()!.hp === 66, "the guarded blow");
+  expect(bo.seen.hits.length).toBe(3);
 
   // spec/app/bout.md, "A fall off the islands costs a standing fighter 25 health, and may knock it out, with no knockout scored"
   at(bo.room, 560);
   bo.room.fell();
-  await until(() => bo.mine()!.hp === 51, "the fall");
+  await until(() => bo.mine()!.hp === 41, "the fall");
   // spec/app/bout.md, "A blow that takes the last health knocks its fighter out: a life is lost, and the striker scores a knockout"
-  blow(ada, bo, 60, 7);
+  blow(ada, bo, 60, 9);
   await until(() => bo.mine()!.lives === 2, "a knockout");
   expect([bo.mine()!.hp, ada.mine()!.kos]).toEqual([0, 1]);
   // spec/app/bout.md, "A knocked-out fighter with lives left comes back with its most health"
-  blow(ada, bo, 10, 8);
+  blow(ada, bo, 10, 10);
   later(2_000);
   await until(() => bo.mine()!.hp === 140, "back on its feet");
   expect(bo.mine()!.lives).toBe(2);
 
   // spec/app/bout.md, "A round is over when at most one fighter has lives left"
-  let n = 9;
+  let n = 11;
   for (const lives of [1, 0]) {
     // The striker's game says where it is many times a second; here, before each blow.
     for (let hp = 140; hp > 0; hp -= 60) { later(1_000); at(ada.room, 500); blow(ada, bo, 60, n++); await until(() => bo.mine()!.hp === Math.max(0, hp - 60), "a blow"); }
@@ -448,16 +456,22 @@ it("Fight for the pot: the server begins rounds, lands only blows that could hav
 });
 
 // spec/app/bout.md, "Story: Fight for the pot"
-it("Fight for the pot: a pro match seats only paid entries, locks once its fight begins, and its winner's entry is told to the site", async () => {
-  // The site's pot (server/api/pro-arena.js) at its network boundary: what the arena asks, answered as the site would.
-  const asked: Record<string, unknown>[] = [];
+/**
+ * The site's pot (server/api/pro-arena.js) at its network boundary, answered as the site would: entries 11 and 12 are
+ * paid seats in match 7, entry 21 a paid run not yet played; the sign-in that shows them is "good". The arena reaches
+ * it through its own client (pot.vibe).
+ */
+async function sitePot() {
+  const asked: Record<string, unknown>[] = [], played = new Set<unknown>();
   const site = createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => { body += chunk; });
     req.on("end", () => {
       const said = JSON.parse(body) as Record<string, unknown>;
       asked.push({ ...said, authorization: req.headers.authorization });
-      const answer = said.action !== "seat" ? { ok: true } : said.token === "good" && (said.entry === 11 || said.entry === 12) ? { match: 7 } : { error: "That entry has no match to play." };
+      if (said.action === "kept") played.add(said.entry);
+      const answer = said.action === "seat" ? (said.token === "good" && (said.entry === 11 || said.entry === 12) ? { match: 7 } : { error: "That entry has no match to play." })
+        : said.action === "run" ? { ok: said.token === "good" && said.entry === 21 && !played.has(21) } : { ok: true };
       res.writeHead("error" in answer ? 400 : 200, { "content-type": "application/json" }).end(JSON.stringify(answer));
     });
   });
@@ -465,6 +479,11 @@ it("Fight for the pot: a pro match seats only paid entries, locks once its fight
   servers.push({ close: () => new Promise((done) => site.close(() => done())) });
   const address = site.address();
   const pro = await Effect.runPromise(Effect.provide(pot(`http://localhost:${typeof address === "object" && address ? address.port : 0}`, Redacted.make("arena-secret")), FetchHttpClient.layer));
+  return { asked, pro };
+}
+
+it("Fight for the pot: a pro match seats only paid entries, locks once its fight begins, and its winner's entry is told to the site", async () => {
+  const { asked, pro } = await sitePot();
   const { player, at, later, url } = await arenaServer(pro);
 
   // A seat only for an entry the site says is paid and the player's own.
@@ -558,6 +577,8 @@ it("Fight other players: two games at the arena start the server's round togethe
   const stand = (p: typeof ada, x: number, facing: number) => { Matter.Body.setPosition(p.hero().body, { x, y: 600 }); Matter.Body.setVelocity(p.hero().body, { x: 0, y: 0 }); p.hero().facing = facing; };
   const full = bo.rules.get().hp;
   await play(() => { stand(bo, 560, -1); stand(ada, 500, 1); return ada.game.scene.enemies.some((E) => E.peer && Math.abs(E.body.position.x - 560) < 2); }, "Bo seen where Bo is");
+  // Put there in an instant, as no game could be: the server lands no blow of Ada's for a moment.
+  later(1_100);
   // spec/app/bout.md, "A blow lands only between two different fighters who are both standing, in a round that is not over, and does from 1 to 60"
   await play(() => { stand(bo, 560, -1); ada.game.press("punch"); ada.game.release("punch"); return bo.rules.get().hp < full; }, "a punch landing", 300);
   const punched = bo.rules.get().hp;
@@ -568,4 +589,107 @@ it("Fight other players: two games at the arena start the server's round togethe
   // The server took the same: its word does not lower Bo's health further.
   await play(() => false, "", 30).catch(() => undefined);
   expect(bo.rules.get().hp).toBe(punched - 25);
+});
+
+// spec/app/index.md, "Story: Fight the waves"; spec/app/index.md, "Story: Stay alive"
+// A paid run as the arena plays it, met through the game's own link to it: the waves are the server's, a blow of the
+// player's lands only near its enemy, a fall costs what it costs, and the run's end is the score the site is told.
+it("Fight the waves: a paid run is played at the arena, which lands only the player's blows that could land, takes its falls, and tells the site the score", async () => {
+  const { asked, pro } = await sitePot();
+  const { url, later } = await arenaServer(pro);
+  /** Lets the run play on, the clock moved ahead a little at a time, until `seen` holds. */
+  async function ahead<T>(seen: () => T, what: string): Promise<NonNullable<T>> {
+    for (let i = 0; i < 400; i++) { const v = seen(); if (v) return v; later(80); await new Promise((done) => setTimeout(done, 15)); }
+    throw new Error(`never: ${what}`);
+  }
+  await expect(joinArena({ kind: "run", name: "Thief", fighter: 0, vigor: 0, pro: { entry: 22, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
+  const room = await joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" } }, url);
+  servers.push({ close: () => room.leave() });
+  const seen = { run: null as RunWord | null, world: null as World | null, hits: 0 };
+  room.onRun((run) => { seen.run = run; });
+  room.on("world", (data: { w: World }) => { seen.world = data.w; });
+  room.on("hit", () => { seen.hits++; });
+  // spec/app/index.md, "A fight starts from the select screen with full health, 40 aura and nothing else"
+  await until(() => seen.run, "the run");
+  expect(seen.run).toMatchObject({ hp: 100, most: 100, wave: 0, kos: 0, alive: true, over: false });
+  const stand = (x: number, y: number) => room.me.set({ s: [Math.round(x), Math.round(y), 0, 0, 1, 100, 0, 1, 0, 0, 1, 0, "m:jab:3", 0, "", Date.now()].join(",") });
+  stand(560, 600);
+  // spec/app/index.md, "Enemies of a wave arrive one at a time"
+  const first = await ahead(() => seen.world?.foes[0], "an enemy");
+  expect(seen.run!.wave).toBe(1);
+  const uid = first[0], foeNow = () => seen.world?.foes.find((f) => f[0] === uid);
+  const blow = () => room.send("foe", { h: [[uid, 40, 3, -2, -1, 0, 0, 1]] });
+  // From across the arena, a blow lands on nothing.
+  const whole = foeNow()![7];
+  stand(first[2] + 2000, first[3]); blow();
+  await ahead(() => seen.world && foeNow() && seen.world !== null, "a word of the world");
+  later(200); await new Promise((done) => setTimeout(done, 80));
+  expect(foeNow()?.[7]).toBe(whole);
+  // spec/app/index.md, "Only an enemy in the arena can be knocked out, and each one counts"
+  // Beside it, blows land until it falls, and the run counts it.
+  await ahead(() => { const f = foeNow(); if (!f) return true; stand(f[2] - 60, f[3]); blow(); return false; }, "the enemy knocked out");
+  await ahead(() => seen.run!.kos >= 1 && seen.run, "the knockout counted");
+  // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
+  const before = seen.run!.hp;
+  room.fell();
+  await ahead(() => seen.run!.hp <= before - 25, "the fall");
+  // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
+  // Falls, a second apart, until the fighter is down: the run is over, and its score is what the site is told.
+  await ahead(() => { if (seen.run!.over) return true; later(1_100); room.fell(); return false; }, "the run over");
+  const kept = await until(() => asked.find((a) => a.action === "kept"), "the score told");
+  expect(kept).toEqual({ action: "kept", entry: 21, wave: seen.run!.wave, kos: seen.run!.kos, fighter: 2, name: "Ada", authorization: "Bearer arena-secret" });
+  expect([seen.run!.alive, seen.run!.kos >= 1]).toEqual([false, true]);
+  // One entry is one run.
+  await room.leave();
+  await expect(joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
+});
+
+// spec/app/index.md, "Story: Fight the waves"; spec/app/index.md, "Story: Stay alive"
+// A player's game, its own arena of sim.ts, as the guest of a paid run the arena server plays (run.ts): the enemies
+// it draws are the server's, a punch thrown here knocks one out there, and its health, its falls and its end are the
+// server's.
+it("Fight the waves: a paid run's game fights the server's enemies, its punch knocks one out there, and its health and its end are the server's", async () => {
+  const { asked, pro } = await sitePot();
+  const { url, later } = await arenaServer(pro);
+  vi.stubEnv("VITE_ARENA_URL", url);
+  const rules = rulesOf(runtimeOn(KeyValueStore.layerMemory));
+  let paid: Paid | null = null, run: RunWord | null = null;
+  const ended: number[][] = [];
+  const ui: Ui = { sfx: silent, banner: () => undefined, callout: () => undefined, foeHit: (uid, blow) => paid?.foeHit(uid, blow), shot: (orb) => paid?.shot(orb), fell: () => paid?.fell(), lost: (wave, kos) => ended.push([wave, kos]) };
+  const game = createGame(rules, ui);
+  rules.send({ type: "enter" }); rules.send({ type: "focus", pick: 2 }); rules.send({ type: "fight" }); game.begin();
+  paid = await joinRun({ entry: 21, token: "good" }, "Ada", game, rules, (said) => { run = said; });
+  const playing = paid;
+  servers.push({ close: () => Promise.resolve(playing.leave()) });
+  const hero = () => game.scene.hero!;
+  /** The game frame by frame, the server's clock moving with it, until `done` holds. */
+  async function play(done: () => boolean, what: string, most = 1200) {
+    for (let i = 0; i < most; i++) {
+      playing.tick(); game.frame(1000 / 60); later(16);
+      if (done()) return;
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    throw new Error(`never: ${what}`);
+  }
+  // spec/app/index.md, "Enemies of a wave arrive one at a time"
+  await play(() => game.scene.enemies.some((E) => E.remote && E.alive), "an enemy of the server's");
+  // spec/app/index.md, "Only an enemy in the arena can be knocked out, and each one counts"
+  await play(() => {
+    const E = game.scene.enemies.find((each) => each.remote && each.alive);
+    if (E) { Matter.Body.setPosition(hero().body, { x: E.body.position.x - 55, y: E.body.position.y }); Matter.Body.setVelocity(hero().body, { x: 0, y: 0 }); hero().facing = 1; game.press("punch"); game.release("punch"); }
+    return (run?.kos ?? 0) >= 1;
+  }, "a knockout at the server");
+  // The health here is the server's.
+  await play(() => run !== null && rules.get().hp === run.hp, "the health held to the server's", 120);
+  // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
+  const before = run!.hp;
+  Matter.Body.setPosition(hero().body, { x: 560, y: 1750 });
+  await play(() => run!.hp <= before - 25, "the fall taken");
+  // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
+  // Fall after fall, a second apart at the server, until the run is over: its score is the server's, told to the site.
+  await play(() => { if (run!.over) return true; if (rules.get().alive) { Matter.Body.setPosition(hero().body, { x: 560, y: 1750 }); later(1_100); } return false; }, "the run over", 3000);
+  await play(() => ended.length > 0, "the game told its end", 600);
+  expect(rules.get().alive).toBe(false);
+  expect(await until(() => asked.find((a) => a.action === "kept"), "the score told")).toMatchObject({ entry: 21, wave: run!.wave, kos: run!.kos, fighter: 2 });
+  expect(run!.kos).toBeGreaterThanOrEqual(1);
 });

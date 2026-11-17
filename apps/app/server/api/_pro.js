@@ -5,7 +5,8 @@
 //     the server checks it is the very message it built before adding its own signature and sending it;
 //   - a payout row is unique per (kind, ref), is claimed by one atomic UPDATE before anything is sent, and its
 //     signature is written down before it is broadcast, so a crash can never pay twice;
-//   - a Versus match's winner is the arena server's word (spec/app/bout.md), never a player's game's.
+//   - a Versus match's winner, and a Survival run's waves and knockouts, are the arena server's word (spec/app/bout.md;
+//     apps/app/src/arena/run.ts), never a player's game's, so a day's best run is paid without the operator.
 // Set on the Vercel project, never in the code:
 //   BLADES_MINT        the $BLADES mint; pro mode is closed while it is unset
 //   POT_SECRET         the pot wallet's secret key (base58, or a JSON byte array)
@@ -145,11 +146,18 @@ async function recheck(sql, row) {
 
 const most = (wave) => { let n = 0; for (let w = 1; w <= wave + 1; w++) n += Math.min(w + 1, 8); return n; };
 
-/** Keeps a paid Survival run's result, once, and only within RUN_HOURS of paying. */
-async function result(sql, userId, entryId, { wave, kos, fighter, name }) {
+/** Whether a paid Survival entry of `userId`'s may be played now: paid within RUN_HOURS, and not yet played to its end. */
+async function playable(sql, userId, entryId) {
+  const [row] = await sql`SELECT id FROM pro_entries WHERE id = ${entryId} AND user_id = ${userId} AND mode = 'survival' AND status = 'paid'
+    AND result_at IS NULL AND paid_at > now() - make_interval(hours => ${RUN_HOURS})`;
+  return !!row;
+}
+
+/** Keeps a paid Survival run's result as the arena played it, once, and only within RUN_HOURS of paying. */
+async function result(sql, entryId, { wave, kos, fighter, name }) {
   if (!Number.isInteger(wave) || wave < 0 || wave > 999 || !Number.isInteger(kos) || kos < 0 || kos > most(wave)) return { error: "That result is not possible." };
   const [row] = await sql`UPDATE pro_entries SET wave = ${wave}, kos = ${kos}, fighter = ${fighter}, name = ${name}, result_at = now()
-    WHERE id = ${entryId} AND user_id = ${userId} AND mode = 'survival' AND status = 'paid' AND result_at IS NULL AND paid_at > now() - make_interval(hours => ${RUN_HOURS})
+    WHERE id = ${entryId} AND mode = 'survival' AND status = 'paid' AND result_at IS NULL AND paid_at > now() - make_interval(hours => ${RUN_HOURS})
     RETURNING id, day, wave, kos`;
   return row ? { kept: row } : { error: "That run has already been counted, or was not paid for." };
 }
@@ -259,9 +267,9 @@ async function retry(sql, payoutId) {
 }
 
 /**
- * The daily work (api/pro-admin.js, by Vercel cron): each Survival day past its grace gets its winner, held for the
- * operator to approve; a match nobody else joined in an hour is refunded; a match the arena has not settled in an
- * hour is held.
+ * The daily work (api/pro-admin.js, by Vercel cron): each Survival day past its grace pays its pot to its best run,
+ * every result being the arena's; a match nobody else joined in an hour is refunded; a match the arena has not
+ * settled in an hour is held.
  */
 async function daily(sql) {
   const done = [];
@@ -271,8 +279,9 @@ async function daily(sql) {
     const ref = new Date(day).toISOString().slice(0, 10);
     const [{ entries, pot }] = await sql`SELECT count(*)::int AS entries, coalesce(sum(amount), 0)::text AS pot FROM pro_entries WHERE mode = 'survival' AND status = 'paid' AND day = ${ref}`;
     const [best] = await sql`SELECT id, wallet FROM pro_entries WHERE mode = 'survival' AND status = 'paid' AND day = ${ref} AND result_at IS NOT NULL ORDER BY wave DESC, kos DESC, result_at ASC LIMIT 1`;
-    if (best) await sql`INSERT INTO pro_payouts (kind, ref, entry_id, wallet, amount, status) VALUES ('survival', ${ref}, ${best.id}, ${best.wallet}, ${pot}, 'held') ON CONFLICT (kind, ref) DO NOTHING`;
+    const [payout] = best ? await sql`INSERT INTO pro_payouts (kind, ref, entry_id, wallet, amount, status) VALUES ('survival', ${ref}, ${best.id}, ${best.wallet}, ${pot}, 'approved') ON CONFLICT (kind, ref) DO NOTHING RETURNING id` : [];
     await sql`INSERT INTO pro_days (day) VALUES (${ref}) ON CONFLICT DO NOTHING`;
+    if (payout) await send(sql, payout.id);
     done.push({ day: ref, entries, pot, winner: best ? Number(best.id) : null });
   }
   const alone = await sql`UPDATE pro_matches SET status = 'settled', settled_at = now(), note = 'nobody came' WHERE status = 'open' AND seats = 1 AND created_at < now() - interval '1 hour' RETURNING id`;
@@ -282,4 +291,4 @@ async function daily(sql) {
   return { days: done, refunded: alone.length, held: stale.length };
 }
 
-module.exports = { enabled, chain, quote, enter, recheck, result, survivalBoard, seatOf, lock, decided, withdraw, refund, send, retry, daily, FEE_TOKENS, SEATS };
+module.exports = { enabled, chain, quote, enter, recheck, playable, result, survivalBoard, seatOf, lock, decided, withdraw, refund, send, retry, daily, FEE_TOKENS, SEATS };

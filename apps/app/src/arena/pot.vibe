@@ -1,5 +1,5 @@
 // spec/app/bout.md, "Story: Fight for the pot"
-// The pot of every pro match, kept by the site (server/api/pro-arena.js) and asked for the arena (arena.ts, `Pro`).
+// The pot of every pro match and paid run, kept by the site (server/api/pro-arena.js) and asked for the arena (arena.ts, `Pro`).
 
 import type { Pro } from "./arena.ts"
 
@@ -7,6 +7,7 @@ import type { Pro } from "./arena.ts"
 export error Unanswered { cause: unknown }
 
 schema Seat { readonly match: number }
+schema Ok { readonly ok: boolean }
 
 /** The pot of pro matches, asked of the site at `site` with `secret`. */
 export effect function pot(site: string, secret: Redacted.Redacted) {
@@ -26,6 +27,11 @@ export effect function pot(site: string, secret: Redacted.Redacted) {
     fight: (match) => asked(effect { try ask({ action: "fight", match }) }),
     // A result the site did not take is told again: the pot must not wait for the operator for want of a word.
     result: (match, winner) => asked(retry(effect { try ask({ action: "result", match, winner }) }, { schedule: Schedule.exponential("2 seconds"), times: 8 })),
+    run: (entry, token) => asked(effect {
+      const said = try ask({ action: "run", entry, token })
+      return Schema.is(Ok)(said) && said.ok
+    }),
+    kept: (entry, result) => asked(retry(effect { try ask({ action: "kept", entry, ...result }) }, { schedule: Schedule.exponential("2 seconds"), times: 8 })),
   }
   return pro
 }

@@ -1,11 +1,15 @@
-// Pro Versus matches as the arena server referees them (apps/app/src/arena/pot.vibe; spec/app/bout.md, "Story: Fight
-// for the pot"). Only the arena may call: Authorization: Bearer <ARENA_SECRET>, set on this project and on the arena.
+// Pro Versus matches and paid Survival runs as the arena server plays them (apps/app/src/arena/pot.vibe; spec/app/bout.md,
+// "Story: Fight for the pot"; apps/app/src/arena/run.ts). Only the arena may call: Authorization: Bearer <ARENA_SECRET>,
+// set on this project and on the arena.
 //   POST {action: "seat",   entry, token}    the match a paid entry plays in, if `token` is its owner's sign-in
 //   POST {action: "fight",  match}           the arena has begun the match's fight: no more entries are seated in it
 //   POST {action: "result", match, winner}   how it ended: the winner's entry is paid the pot; null holds it for review
+//   POST {action: "run",    entry, token}    whether a paid Survival entry is its owner's and still to be played
+//   POST {action: "kept",   entry, wave, kos, fighter, name}   how the arena played that run to its end, once
 const { neon } = require("@neondatabase/serverless");
 const { createHash, timingSafeEqual } = require("node:crypto");
 const pro = require("./_pro.js");
+const { named } = require("./_names.js");
 const { userIdOfToken } = require("./_privy.js");
 
 const digest = (text) => createHash("sha256").update(String(text)).digest();
@@ -34,6 +38,14 @@ module.exports = async (req, res) => {
         const match = id(body.match);
         if (!match) return res.status(400).json({ error: "Which match?" });
         return res.status(200).json({ settled: await pro.decided(sql, match, body.winner === null ? null : id(body.winner)) });
+      }
+      case "run": {
+        const userId = await userIdOfToken(typeof body.token === "string" ? body.token : "");
+        return res.status(200).json({ ok: !!userId && (await pro.playable(sql, userId, id(body.entry))) });
+      }
+      case "kept": {
+        const out = await pro.result(sql, id(body.entry), { wave: body.wave, kos: body.kos, fighter: Number.isInteger(body.fighter) ? body.fighter : null, name: named(body.name) || "Player" });
+        return res.status(out.error ? 400 : 200).json(out);
       }
       default:
         return res.status(400).json({ error: "Unknown action." });

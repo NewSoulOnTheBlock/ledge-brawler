@@ -3,6 +3,7 @@
 **/dist
 **/build
 **/gen
+!vibestack/gen
 **/.spec-cache
 **/.vibe
 **/.turbo
@@ -12,4 +13,3 @@ art
 workbench
 mobile
 apps/app/public
-apps/app/src/game/packs

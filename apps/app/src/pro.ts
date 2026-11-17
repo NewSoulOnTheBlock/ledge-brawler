@@ -1,6 +1,6 @@
 // Pro mode: Survival and Versus for an entry fee in $BLADES, paid from the player's Privy wallet (server/api/pro.js).
-// The page only signs what the server builds. A Versus match is fought at the arena server, which says who won and
-// has the pot paid (spec/app/bout.md, "Story: Fight for the pot"); a Survival run's end is told by the page.
+// The page only signs what the server builds. A Versus match and a Survival run are played at the arena server, which
+// says how they ended and has the pots paid (spec/app/bout.md, "Story: Fight for the pot"; arena/run.ts).
 import type { ProSeat } from "./arena/protocol.ts";
 import { authHeaders, SITE } from "./scores.ts";
 
@@ -44,9 +44,8 @@ export async function payEntry(mode: ProMode, wallet: string, sign: (tx: Uint8Ar
   throw new Error("The entry is still being confirmed. Check your wallet, then try again in a minute.");
 }
 
-export const proResult = (entry: number, run: { wave: number; kos: number; fighter: number; name: string }) => call({ action: "result", entry, ...run });
 export const proWithdraw = (entry: number) => call({ action: "withdraw", entry });
-/** A paid Versus seat as the arena server takes it: the entry, and the sign-in that shows it is this player's. */
+/** A paid seat or run as the arena server takes it: the entry, and the sign-in that shows it is this player's. */
 export async function proSeat(entry: Entry): Promise<ProSeat> {
   return { entry: entry.id, token: (await authHeaders()).Authorization?.slice("Bearer ".length) ?? "" };
 }

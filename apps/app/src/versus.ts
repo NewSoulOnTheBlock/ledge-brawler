@@ -6,12 +6,12 @@
 // who has won. Rounds begin when the server says, every few seconds while two or more are at the table.
 import { CHARS } from "./game/data.ts";
 import { outfitOf } from "./game/relics.ts";
-import { type Frame, frameOf } from "./game/figure.ts";
 import type { Level } from "./game/levels.ts";
 import type { Game, Hurt, Peer, Rules, Shot, Sprite } from "./game/sim.ts";
 import { SKY_IDS, type SkyId } from "./game/sky.ts";
 import { type Room, Refused, joinArena } from "./arena/link.ts";
-import type { BoutWord, Fields, ProSeat } from "./arena/protocol.ts";
+import type { BoutWord, ProSeat } from "./arena/protocol.ts";
+import { type Word, pack, unpack, wordOf } from "./arena/word.ts";
 
 /** How often a fighter says where it is; and how far into the past the others are drawn, at least and at most: as far
  *  as the jitter on the way needs, so that there is always a place heard of on each side of the moment drawn. */
@@ -28,12 +28,6 @@ const PING_EVERY = 2000;
 const BLOW = { dmg: 60, push: 30, stun: 150, reach: 2600, perSecond: 25 };
 /** How many fight at one table: one for each of the five blades. */
 export const SEATS = 5;
-
-const say = (at: Frame) => ("move" in at ? `m:${at.move}:${Math.floor(at.frame)}` : `a:${at.anim}:${Math.floor(at.frame)}`);
-function heard(text: string): Frame {
-  const [kind, name, frame] = text.split(":");
-  return kind === "m" ? { move: name, frame: Number(frame) } : { anim: name as never, frame: Number(frame) };
-}
 
 /** A player at the table, for the list on screen. In a duel its lives, knockouts and whether it stands are the
  *  server's (spec/app/bout.md): lives count down from three, and none left is out. */
@@ -77,30 +71,6 @@ export const stageFor = (stage: Level, code: string, round: number): Level => ({
 
 /** A link that brings whoever opens it to `code`'s room. */
 export const inviteLink = (code: string) => `${location.origin}${location.pathname}?room=${code}`;
-
-/** What a player's game says of its fighter, twenty times a second. */
-interface Word { x: number; y: number; vx: number; vy: number; facing: number; hp: number; lives: number; alive: boolean; glow: boolean; guard: boolean; round: number; kos: number; at: Frame; over: boolean; special: Peer["special"];
-  /** When it was said, by the sayer's own clock, in milliseconds; an older game does not say, and it is taken as heard. */
-  sent?: number }
-// The room allows a player sixty messages a second and drops the rest without a word, and every field set is a
-// message of its own. So a fighter's whole state goes as ONE field, a line of text, and its name and fighter, which
-// do not change, as two more, once.
-const pack = (w: Word) => [Math.round(w.x), Math.round(w.y), Math.round(w.vx * 10) / 10, Math.round(w.vy * 10) / 10, w.facing, w.hp, w.lives, +w.alive, +w.glow, +w.guard, w.round, w.kos, say(w.at), +w.over,
-  // A special: which, how far in, its aim in hundredths of a radian, and its centre.
-  w.special ? [w.special.slot, Math.round(w.special.t), w.special.ang === undefined ? "" : Math.round(w.special.ang * 100), w.special.c ? Math.round(w.special.c.x) : "", w.special.c ? Math.round(w.special.c.y) : ""].join(":") : "",
-  Math.round(w.sent ?? 0)].join(",");
-/** A special as it was packed, or none: an older game says nothing of them. */
-function special(text: string | undefined): Peer["special"] {
-  if (!text) return null;
-  const [slot, t, ang, cx, cy] = text.split(":");
-  return { slot: Number(slot), t: Number(t), ang: ang === "" ? undefined : Number(ang) / 100, c: cx === "" ? undefined : { x: Number(cx), y: Number(cy) } };
-}
-function unpack(p: Fields): Word | null {
-  if (typeof p.s !== "string") return null;
-  const v = p.s.split(","), n = (i: number) => Number(v[i]);
-  if (v.length < 13) return null;
-  return { x: n(0), y: n(1), vx: n(2), vy: n(3), facing: n(4), hp: n(5), lives: n(6), alive: v[7] === "1", glow: v[8] === "1", guard: v[9] === "1", round: n(10), kos: n(11), at: heard(v[12]), over: v[13] === "1", special: special(v[14]), sent: v[15] ? n(15) : undefined };
-}
 
 /** What a co-op group (together.ts) adds to a room: its own words, heard and said each frame, and which of its levels is
  *  being played, which stands for a duel's round (a fighter is drawn only by those playing the same one). */
@@ -285,9 +255,7 @@ export async function joinVersus(code: string | undefined, name: string, stage: 
       // In co-op a fighter is said only while its level is played.
       if (hero && (!link || (round > 0 && match.screen === "Play")) && now - said >= SAY_EVERY) {
         if (match.fighter !== fighter) { fighter = match.fighter; room.me.set({ f: fighter, o: outfitOf(fighter).id }); }
-        const at = hero.body.position, v = hero.body.velocity, kos = bout?.fighters[me]?.kos ?? 0;
-        const word: Word = { x: at.x, y: at.y, vx: v.x, vy: v.y, facing: hero.facing, hp: match.hp, lives: match.lives, alive: match.alive, glow: match.overdrive > 0 || hero.charging, guard: game.scene.guard > 0, round, kos, at: frameOf(hero, game.scene.time), over: match.overdrive > 0,
-          special: hero.special ? { slot: CHARS.flatMap((c) => c.specials).indexOf(hero.special.def), t: hero.special.t, ang: hero.special.ang, c: hero.special.c } : null };
+        const word = wordOf(game, match, round, bout?.fighters[me]?.kos ?? 0);
         // A fighter that has not changed is said again only five times a second, to show it is still there: what
         // changes, blows and effects, needs the connection more.
         const same = pack(word);

@@ -1,12 +1,14 @@
-// spec/app/lobby.md, "Story: Find a match"; spec/app/bout.md, "Story: Fight for the pot"
-// What the arena server (arena.ts) and the games (room.ts) say to each other over one WebSocket, as JSON. A game
+// spec/app/lobby.md, "Story: Find a match"; spec/app/bout.md, "Story: Fight for the pot"; spec/app/index.md, "Story: Fight the waves"
+// What the arena server (arena.ts) and the games (link.ts) say to each other over one WebSocket, as JSON. A game
 // asks for a seat; once seated it sets the fields others see of it and sends words to everyone at its table, as it
 // did over the old relay. At a duel's table the server keeps the bout (spec/app/bout.md): a blow goes to the server,
-// which lands it or not, and tells everyone how the bout stands.
+// which lands it or not, and tells everyone how the bout stands. At a paid run's table the server plays the run
+// (run.ts) and tells its player the world and how the run stands.
+import type { RunWord } from "./run.ts";
 
 /** What a player shows the others: a few short fields (versus.ts packs a fighter's whole state into one). */
 export type Fields = Record<string, number | string | undefined>;
-export type Kind = "duel" | "group";
+export type Kind = "duel" | "group" | "run";
 
 /** A seat in a pro match: the paid entry, and the player's sign-in to prove it is theirs (server/api/pro-arena.js). */
 export interface ProSeat { entry: number; token: string }
@@ -43,7 +45,8 @@ export type ToGame =
   | { t: "state"; players: Record<string, Fields> }
   | { t: "said"; type: string; from: string; data: unknown }
   | { t: "left"; id: string }
-  | { t: "bout"; bout: BoutWord };
+  | { t: "bout"; bout: BoutWord }
+  | { t: "run"; run: RunWord };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const text = (v: unknown, most: number) => (typeof v === "string" ? v.slice(0, most) : undefined);
@@ -69,7 +72,7 @@ export function fromGame(raw: string): FromGame | undefined {
   if (!isRecord(v)) return undefined;
   switch (v.t) {
     case "seek": {
-      if (v.kind !== "duel" && v.kind !== "group") return undefined;
+      if (v.kind !== "duel" && v.kind !== "group" && v.kind !== "run") return undefined;
       const pro = isRecord(v.pro) && Number.isSafeInteger(v.pro.entry) && typeof v.pro.token === "string" ? { entry: v.pro.entry as number, token: v.pro.token.slice(0, 4096) } : undefined;
       const resume = isRecord(v.resume) && typeof v.resume.id === "string" && typeof v.resume.key === "string" ? { id: v.resume.id.slice(0, 32), key: v.resume.key.slice(0, 64) } : undefined;
       const whole = (n: unknown) => (typeof n === "number" && Number.isSafeInteger(n) ? n : 0);

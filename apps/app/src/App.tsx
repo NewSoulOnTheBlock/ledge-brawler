@@ -39,7 +39,9 @@ import { track } from "./track.ts";
 import { unlock } from "./achievements.ts";
 import { useSaga } from "./useSaga.ts";
 import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor, roomCode, stageFor } from "./versus.ts";
-import { type Entry, proResult, proSeat, proWithdraw } from "./pro.ts";
+import { type Entry, proSeat, proWithdraw } from "./pro.ts";
+import { type Paid, joinRun } from "./run.ts";
+import type { RunWord } from "./arena/run.ts";
 import { ProEntry } from "./ProEntry.tsx";
 
 const KEYMAP: Record<string, Button> = {
@@ -522,7 +524,11 @@ export function App({ runtime }: { runtime: Runtime }) {
   const [coopOpen, setCoopOpen] = useState(false), [table, setTable] = useState<Table | null>(null), [coopError, setCoopError] = useState("");
   const [group, setGroup] = useState<{ host: boolean } | null>(null), [party, setParty] = useState<Standing>({ rivals: [], status: "joining" });
   const [wiped, setWiped] = useState(false), [teamCleared, setTeamCleared] = useState(false), [heardTalk, setHeardTalk] = useState<TalkWord | null>(null);
-  const tick = useCallback(() => { net.current?.tick(); together.current?.versus.tick(); }, []);
+  // spec/app/index.md, "Story: Fight the waves"
+  // A paid run (run.ts): played at the arena server, which keeps its health and its score, and how it last said it stood.
+  const paidRun = useRef<Paid | null>(null), runSaid = useRef<RunWord | null>(null);
+  const [runWord, setRunWord] = useState<RunWord | null>(null);
+  const tick = useCallback(() => { net.current?.tick(); together.current?.versus.tick(); paidRun.current?.tick(); }, []);
   const audio = useMemo(createAudio, []);
   /** Plays a recorded sound at the player's volume for sounds, unless that is off. */
   const sound = useCallback((name: Sample) => { if (audio.sfxVol() > 0) playSample(name, audio.sfxVol()); }, [audio]);
@@ -535,20 +541,18 @@ export function App({ runtime }: { runtime: Runtime }) {
     };
     let made: ReturnType<typeof createGame> | null = null;
     const ui: Ui = {
-      strike: (to, blow) => (net.current ?? together.current?.versus)?.strike(to, blow), shot: (orb) => (net.current ?? together.current?.versus)?.shot(orb), fell: () => net.current?.fell(),
+      strike: (to, blow) => (net.current ?? together.current?.versus)?.strike(to, blow), shot: (orb) => (net.current ?? paidRun.current ?? together.current?.versus)?.shot(orb),
+      fell: () => (net.current ?? paidRun.current)?.fell(),
       fx: (sprite) => (net.current ?? together.current?.versus)?.fx(sprite),
-      foeHit: (uid, blow) => together.current?.foeHit(uid, blow), share: (event) => together.current?.share(event),
+      foeHit: (uid, blow) => (paidRun.current ?? together.current)?.foeHit(uid, blow), share: (event) => together.current?.share(event),
       wiped: () => setWiped(true), teamClear: () => setTeamCleared(true),
       sample: (name) => { if (audio.sfxVol() > 0) playSample(name, audio.sfxVol()); },
-      lost: (wave, kos) => {
+      lost: (here, there) => {
+        // A paid run's end and its score are the arena server's, which has put it in the day's pot (run.ts).
+        const kept = paidRun.current ? runSaid.current : null, { wave, kos } = kept ?? { wave: here, kos: there };
         setLost({ wave, kos });
         const f = rules.get().fighter;
-        // A paid run's end counts, once, towards the day's pot (server/api/_pro.js).
-        const paid = paidIn.current;
-        if (paid?.mode === "survival") {
-          paidIn.current = null;
-          void proResult(paid.id, { wave, kos, fighter: f, name: lastName() || nameFor(f) }).then(() => setProNote("This run is in today's pro pot."), (error: unknown) => setProNote(error instanceof Error ? error.message : "The run could not be counted."));
-        }
+        if (paidIn.current?.mode === "survival") { paidIn.current = null; setProNote(kept ? "This run is in today's pro pot." : "This run was not played at the arena, so it does not count."); }
         track("survival_end", { wave, kos, fighter: f, seconds: Math.round((performance.now() - began.current) / 1000) });
         const s = recordSurvival(f, wave, kos);
         if (wave >= 10) unlock("wave_10");
@@ -584,7 +588,24 @@ export function App({ runtime }: { runtime: Runtime }) {
     send({ type: "train", vigor: 10 * build.health, learned: granted && !proOn.current ? 5 : saga ? Math.min(5, chaptersDone(HEROES.indexOf(hero), saga)) : 0 });
     return [specialsOf(hero, fighter), build] as const;
   }, [rules, send, saga, granted]);
-  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(null, ...mine); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter]);
+  /** A paid run, just begun here, played at the arena server from now on; one it cannot reach does not count, and its
+   *  entry is kept for the next. */
+  const runAtArena = useCallback(() => {
+    paidRun.current?.leave(); paidRun.current = null; runSaid.current = null; setRunWord(null);
+    const paid = paidIn.current;
+    if (paid?.mode !== "survival") return;
+    const heard = (run: RunWord) => { runSaid.current = run; setRunWord(run); };
+    void proSeat(paid).then((seat) => joinRun(seat, lastName() || nameFor(rules.get().fighter), game, rules, heard))
+      .then((run) => { if (paidIn.current === paid) paidRun.current = run; else run.leave(); }, (error: unknown) => {
+        console.warn("run:", error);
+        if (paidIn.current === paid) { paidIn.current = null; ready.current = paid; }
+        setProNote("The arena could not be reached, so this run does not count. Your entry is kept for your next run.");
+      });
+  }, [game, rules]);
+  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(null, ...mine); runAtArena(); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter, runAtArena]);
+  // A paid run is left with the fight against the waves.
+  const waves = match?.screen === "Play" && !match.duel && !match.quest;
+  useEffect(() => { if (!waves) { paidRun.current?.leave(); paidRun.current = null; } }, [waves]);
   // spec/app/lobby.md, "Story: Find a match"
   /** Takes a seat for the duel in play: a pro seat's match, the table the page's address names, or, for the open
    *  room, wherever matchmaking finds one. */
@@ -967,7 +988,7 @@ export function App({ runtime }: { runtime: Runtime }) {
         extra={pro ? <p className="border-2 border-destructive bg-card px-4.5 py-3 text-[12.5px]"><b className="font-sans tracking-[0.12em] uppercase">Pro {versus ? "Versus" : "Survival"}</b> · 50,000 $BLADES entry{proNote && <span role="status" className="mt-1 block text-muted-foreground">{proNote}</span>}</p> : versus ? <MatchPicker /> : undefined} />}
       {match.screen === "Play" && (
         <>
-          <Hud match={match} keys={keys} />
+          <Hud match={paidRun.current && runWord ? { ...match, wave: runWord.wave, kos: runWord.kos } : match} keys={keys} />
           <Combo match={match} />
           {/* A first fight is coached, while there is a fight on and nothing over it. */}
           {match.alive && !match.paused && !match.cleared && !talk && !awakening && <Coach match={match} />}
@@ -1005,7 +1026,7 @@ export function App({ runtime }: { runtime: Runtime }) {
             <span className="bg-background/85 px-2 py-1 box-decoration-clone">{caption.text}</span>
           </p>
           {talk && match.quest && !match.paused && <GuideTalk who={talk.voice && talk.at + 1 === talk.lines.length ? talk.voice : talk.who} end={talk.end} choices={talk.at + 1 < talk.lines.length ? undefined : talk.voice ? [{ say: "Heed the Reaper", pick: () => heeding("reaper") }, { say: `Heed ${talk.voice}`, pick: () => heeding("voice") }] : talk.boss && level ? repliesOf(level.id).map((each) => ({ say: each.say, pick: () => answering(each.how) })) : undefined} line={talk.lines[talk.at]} at={talk.at} of={talk.lines.length} onNext={hear} onSkip={hush} />}
-          {lost && !match.quest && !match.duel && !match.paused && <KnockedOut lost={lost} fighter={match.fighter} went={{ seconds: lasted, best: match.best, found: match.found.length }} onAgain={() => start(() => { setLost(null); began.current = performance.now(); game.again(); })} onLeave={() => { setLost(null); send({ type: "openMoves" }); select("change"); }} />}
+          {lost && !match.quest && !match.duel && !match.paused && <KnockedOut lost={lost} fighter={match.fighter} went={{ seconds: lasted, best: match.best, found: match.found.length }} onAgain={() => start(() => { setLost(null); began.current = performance.now(); game.again(); runAtArena(); })} onLeave={() => { setLost(null); send({ type: "openMoves" }); select("change"); }} />}
           {match.quest && !match.alive && match.lives === 1 && !match.paused && level && !match.spared && !refused && saga && !(group && party.rivals.length > 1) && <Bargain memory={memoryOf(level.hero)} strength={canPay(level.hero, chaptersDone(HEROES.indexOf(level.hero), saga))} onGive={bargain} onRefuse={() => setRefused(true)} />}
           {match.quest && !match.alive && match.lives === 1 && !match.paused && level && (match.spared || refused) && !(group && party.rivals.length > 1) && <GameOver level={level} onAgain={() => { send({ type: "openMoves" }); send({ type: "change" }); embark(level); }} onLeave={() => { send({ type: "openMoves" }); select("change"); }} />}
           {awakening && !talk && !match.paused && (

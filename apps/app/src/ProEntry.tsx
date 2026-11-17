@@ -9,9 +9,9 @@ import { checkTokenGate } from "./token-gate.ts";
 
 const RULES: Record<ProMode, string[]> = {
   survival: [
-    "One entry is one run. Your best wave, then knockouts, is your score. Quitting a run before it ends forfeits it.",
+    "One entry is one run. Your wave, then knockouts, is your score. Leaving a run ends it where it stands.",
     "When the UTC day ends, the highest run takes every fee paid that day.",
-    "Winning runs are checked before the pot is paid out.",
+    "Runs are played on the arena server, which keeps the score: the day's best is paid automatically. No items drop in a pro run.",
   ],
   versus: [
     "Up to five paid seats per match. Last one standing takes the whole pot.",

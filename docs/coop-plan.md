@@ -65,6 +65,6 @@ seeded keys), `render.ts` (teammates, downed markers, minimap), App.tsx (`sit`, 
 Tables are now the arena server's (`apps/app/src/arena/`, `spec/app/lobby.md`), not the Multiplayer Agent relay's:
 "Find a group" seats a player at any open co-op table with a free seat, a private table is reached by its code, and a
 table stops taking players from matchmaking while its group plays a level. The level itself is still run by the
-host's game as above. Next: the arena runs it instead (a headless `createGame` with every player's fighter a
-stand-in), so that no player's game decides what the enemies do; the same world, with one player, makes a paid
-Survival run's result the server's, which the daily pot can then pay without the operator.
+host's game as above. A paid Survival run is already played at the arena (`apps/app/src/arena/run.ts`): a headless
+`createGame` as a co-op host whose fighter is a puppet of the player's game (`Game.puppet`), with that game as its
+guest. Next: the same for a co-op level, so that no player's game decides what the enemies do.

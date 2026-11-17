@@ -3,6 +3,7 @@
 // they once played in the relay's. A dropped connection is joined again at once, into the same seat while the server
 // keeps it (ten seconds), so a moment's loss of signal costs nothing.
 import type { BoutWord, Fields, Kind, ProSeat, ToGame } from "./protocol.ts";
+import type { RunWord } from "./run.ts";
 
 /** Where the arena server listens: set for a build by VITE_ARENA_URL (apps/app/arena/README.md), or this machine's. */
 const arena = () => (import.meta.env?.VITE_ARENA_URL as string | undefined) ?? "ws://localhost:8787/play";
@@ -26,6 +27,8 @@ export interface Room {
   onState(handler: (state: { entities?: { players?: Players } }) => void): void;
   /** A duel's table: how the server says the bout stands. */
   onBout(handler: (bout: BoutWord) => void): void;
+  /** A paid run's table: how the server says the run stands. */
+  onRun(handler: (run: RunWord) => void): void;
   onDisconnect(handler: () => void): void; onReconnect(handler: () => void): void;
   onLeave(handler: (id: string) => void): void;
   /** This fighter has fallen off the islands. */
@@ -45,9 +48,12 @@ export interface Seek { kind: Kind; name: string; fighter: number; vigor: number
 /** Takes a seat at the arena at `url`: the table `seek.code` names, or one matchmaking finds. */
 export function joinArena(seek: Seek, url = arena()): Promise<Room> {
   const handlers = new Map<string, ((data: never, from: string) => void)[]>();
-  const stateHandlers: ((state: { entities?: { players?: Players } }) => void)[] = [], boutHandlers: ((bout: BoutWord) => void)[] = [];
+  const stateHandlers: ((state: { entities?: { players?: Players } }) => void)[] = [], boutHandlers: ((bout: BoutWord) => void)[] = [], runHandlers: ((run: RunWord) => void)[] = [];
   const down: (() => void)[] = [], up: (() => void)[] = [], gone: ((id: string) => void)[] = [];
   let socket: WebSocket, key = "", left = false, tries = 0, online = false;
+  /** The last of the bout and the run the server told, for a handler that comes after them: the words that follow a
+   *  seat may all be heard before the game that asked for it has had a moment to listen. */
+  let lastBout: BoutWord | null = null, lastRun: RunWord | null = null;
   const say = (word: object) => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(word)); };
   /** What this player shows, kept so that a new connection can show it again at once. */
   const mine: Fields = {};
@@ -57,8 +63,9 @@ export function joinArena(seek: Seek, url = arena()): Promise<Room> {
     me: { set: (fields) => { Object.assign(mine, fields); say({ t: "set", f: fields }); } },
     send: (type, data) => say({ t: "say", type, data }),
     on: (type, handler) => { handlers.set(type, [...(handlers.get(type) ?? []), handler]); },
-    onState: (handler) => { stateHandlers.push(handler); },
-    onBout: (handler) => { boutHandlers.push(handler); },
+    onState: (handler) => { stateHandlers.push(handler); if (room.state) handler(room.state); },
+    onBout: (handler) => { boutHandlers.push(handler); if (lastBout) handler(lastBout); },
+    onRun: (handler) => { runHandlers.push(handler); if (lastRun) handler(lastRun); },
     onDisconnect: (handler) => { down.push(handler); }, onReconnect: (handler) => { up.push(handler); },
     onLeave: (handler) => { gone.push(handler); },
     fell: () => say({ t: "fell" }),
@@ -88,7 +95,8 @@ export function joinArena(seek: Seek, url = arena()): Promise<Room> {
           return;
         case "said": for (const handler of handlers.get(said.type) ?? []) handler(said.data as never, said.from); return;
         case "left": gone.forEach((handler) => handler(said.id)); return;
-        case "bout": boutHandlers.forEach((handler) => handler(said.bout)); return;
+        case "bout": lastBout = said.bout; boutHandlers.forEach((handler) => handler(said.bout)); return;
+        case "run": lastRun = said.run; runHandlers.forEach((handler) => handler(said.run)); return;
       }
     }
     function open() {

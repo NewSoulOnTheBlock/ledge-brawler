@@ -2,8 +2,9 @@
 
 How the arena server (`apps/app/src/arena/`) seats players who press Versus or Play together without a code of
 their own: it finds them a table of that kind with a free seat, and opens a new one only when there is none. A
-table is a room of the game: a duel's (spec/app/bout.md) or a co-op group's. A table opened from an invitation is
-private, and only its code brings anyone to it.
+table is a room of the game: a duel's (spec/app/bout.md), a co-op group's, or a paid Survival run's, which the
+server plays for its one player. A table opened from an invitation or for a run is private, and only its code
+brings anyone to it.
 
 Players and tables are known by the numbers the server gave them.
 
@@ -17,7 +18,7 @@ Players and tables are known by the numbers the server gave them.
 It starts with no tables. Table numbers are never given twice.
 
 ```quint
-type Kind = Duel | Group
+type Kind = Duel | Group | Run
 
 type Lobby = { tables: Set[int], kindOf: int -> Kind, seatsOf: int -> Set[int], listed: Set[int], open: Set[int], seated: Set[int], next: int }
 

@@ -3,13 +3,12 @@
 //   POST /api/pro {action: "quote",  mode, wallet}       a transaction paying the fee, for the wallet to sign
 //   POST /api/pro {action: "enter",  mode, wallet, tx, token, lastValid}   the signed transaction: sent, and the entry kept
 //   POST /api/pro {action: "check",  entry}              an entry left pending, looked at again
-//   POST /api/pro {action: "result", entry, wave, kos, fighter, name}     a paid Survival run's end, once
 //   POST /api/pro {action: "withdraw", entry}            a lone seat's fee back, while nobody else has joined
-// A Versus match's fight and its end are the arena server's to tell (pro-arena.js), not a player's game's.
+// A Versus match's fight and its end, and a Survival run's end, are the arena server's to tell (pro-arena.js), not a
+// player's game's.
 // Every POST needs Authorization: Bearer <privy-token>.
 const { neon } = require("@neondatabase/serverless");
 const pro = require("./_pro.js");
-const { named } = require("./_names.js");
 const { userIdOf } = require("./_privy.js");
 
 const MODES = new Set(["survival", "versus"]);
@@ -49,8 +48,6 @@ module.exports = async (req, res) => {
         if (!row) return answer({ error: "That entry was not found." });
         return answer({ entry: shown(await pro.recheck(sql, row)) });
       }
-      case "result":
-        return answer(await pro.result(sql, userId, id(body.entry), { wave: body.wave, kos: body.kos, fighter: Number.isInteger(body.fighter) ? body.fighter : null, name: named(body.name) || "Player" }));
       case "withdraw":
         return answer(await pro.withdraw(sql, userId, id(body.entry)));
       default:

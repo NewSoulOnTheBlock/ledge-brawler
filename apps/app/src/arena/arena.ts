@@ -1,12 +1,15 @@
-// spec/app/lobby.md, "Story: Find a match"; spec/app/bout.md, "Story: Fight for the pot"
-// The arena server's state: who is connected, the lobby that seats them (spec/app/lobby.md), and at each duel's
-// table the bout it referees (spec/app/bout.md). Every change to either goes through the rules' own `enabled` and
-// `step`. It does no I/O of its own: serve.ts feeds it what each socket says and the passing of time, and sends what
-// it answers; main.vibe gives it the pot (`Pro`). So it runs the same in a test as on the server.
+// spec/app/lobby.md, "Story: Find a match"; spec/app/bout.md, "Story: Fight for the pot"; spec/app/index.md, "Story: Fight the waves"
+// The arena server's state: who is connected, the lobby that seats them (spec/app/lobby.md), at each duel's table the
+// bout it referees (spec/app/bout.md), and at each paid run's table the run it plays (run.ts). Every change to the
+// lobby, a bout or a run's match goes through the rules' own `enabled` and `step`. It does no I/O of its own: serve.ts
+// feeds it what each socket says and the passing of time, and sends what it answers; main.vibe gives it the pot
+// (`Pro`). So it runs the same in a test as on the server.
 import { healthOf } from "../../gen/app.ts";
 import { type Bout, type Event as BoutEvent, alive, enabled as boutAllows, fighterOf, initial as noBout, over, step as boutStep } from "../../gen/app__bout.ts";
 import { type Event as LobbyEvent, type Kind as TableKind, type Lobby, enabled as lobbyAllows, hasRoom, initial as noLobby, kindAt, seatsAt, step as lobbyStep } from "../../gen/app__lobby.ts";
 import { type BoutWord, type Fields, type FromGame, type Kind, type ToGame, fromGame } from "./protocol.ts";
+import { type Run, createRun } from "./run.ts";
+import { type Word, unpack } from "./word.ts";
 
 /** The pot of a pro match, kept by the site (server/api/pro-arena.js). */
 export interface Pro {
@@ -16,6 +19,10 @@ export interface Pro {
   fight(match: number): Promise<void>;
   /** How it ended: the winner's entry, or null when no one was left standing. */
   result(match: number, winner: number | null): Promise<void>;
+  /** Whether a paid Survival entry may be played now, once `token` shows it is its owner's. */
+  run(entry: number, token: string): Promise<boolean>;
+  /** A paid run's end, as the server played it: the waves reached and the enemies knocked out. */
+  kept(entry: number, result: { wave: number; kos: number; fighter: number; name: string }): Promise<void>;
 }
 
 export interface Options {
@@ -31,16 +38,24 @@ export interface Connection { receive(raw: string): void; closed(): void }
  *  and the pause after one; the wait before a pro match's only round, for every paid seat to arrive; and how long a
  *  knocked-out fighter is down (the game's own two seconds, sim.ts). */
 const AWAY = 10_000, GATHER = 3_000, BETWEEN = 6_000, PRO_GATHER = 15_000, DOWN = 2_000;
-/** How often everyone's fields are told at most, and how many words a player may send in a second. */
-const STATE_EVERY = 50, WORDS_PER_SECOND = 120;
-/** What a player may land at most, whatever its game says (versus.ts): blows in a second, damage in a second, and how far
- *  from its target it may be seen (the widest special, and the lag between the two pictures). */
-const BLOWS = { perSecond: 30, damagePerSecond: 300, reach: 2600 };
+/** How often everyone's fields are told at most, how often a run's world is told its player, and how many words a
+ *  player may send in a second. */
+const STATE_EVERY = 50, WORLD_EVERY = 66, WORDS_PER_SECOND = 120;
+/** What a player may land at most, whatever its game says (versus.ts, run.ts): blows in a second, damage in a second,
+ *  and of it from beyond a body's reach (a shot or a special keeps up no more), and how far from its target it may be
+ *  seen at all (the widest special, and the lag between the two pictures). */
+const BLOWS = { perSecond: 30, damagePerSecond: 300, farPerSecond: 120, reach: 2600 };
 /** The game's guard (sim.ts): what it takes before it breaks, how much of a blow still gets through, how fast it mends
  *  (0.15 a step), and how long a broken one is down. */
 const GUARD = { most: 40, through: 0.2, mendPerMs: 0.15 * 60 / 1000, broken: 3_000 };
 /** A special makes its fighter untouchable while it lasts: never more than this long at once (the longest is under two seconds). */
 const SPECIAL_MOST = 2_500;
+/** How far from its target a blow may land: one of the fighter's own body, or, for a moment after the fighter was last
+ *  seen in a special or letting a shot go, one sent from a distance. */
+const NEAR = 320, SHOT_FOR = 2_000;
+/** How fast a fighter may be seen to move, in pixels a millisecond (a dash is under two); one seen faster lands no
+ *  blow for a second. Below this height, a fighter seen back up on the islands has fallen (sim.ts, VOID_Y). */
+const FASTEST = 3, FALLING = 1_300;
 /** Trained health a game may claim at most (spec/app/index.md, "A fighter can be trained for up to 50 more health, on the select screen"). */
 const TRAINED_MOST = 50;
 
@@ -53,10 +68,11 @@ interface Player {
   away: number | null;
   /** A pro seat's paid entry. */
   entry: number | null;
-  /** Its fighter as its game last said: where, guarding, in a special or a move, and since when. */
-  at: { x: number; y: number; guard: boolean; special: boolean; attacking: number; specialSince: number | null; guardLeft: number; guardBroken: number; heard: number } | null;
-  /** When its recent blows landed, and how much each did, for the limits per second. */
-  blows: { at: number; dmg: number }[];
+  /** Its fighter as its game last said: where, guarding, in a special or a move, and since when; until when it may land
+   *  a blow from afar (a run's), when it was last seen to fall, and when it was last seen moving too fast to be real. */
+  at: { x: number; y: number; guard: boolean; special: boolean; attacking: number; specialSince: number | null; guardLeft: number; guardBroken: number; heard: number; far: number; fell: number; leapt: number } | null;
+  /** When its recent blows landed, how much each did, and whether from afar, for the limits per second. */
+  blows: { at: number; dmg: number; far: boolean }[];
   words: number[];
   /** The last blow number its game gave (versus.ts numbers them), so that none is taken twice. */
   lastBlow: number;
@@ -76,10 +92,11 @@ interface Table {
   /** The round whose end has been dealt with (the lobby told, the pot settled). */
   ended: number;
   fought: boolean;
+  /** A paid run's table: the run the server plays, when it was last played on, when its world was last told, and how it stood when last told. */
+  run: Run | null; played: number; toldWorld: number; runSaid: string;
 }
 
-const kindOf = (kind: Kind): TableKind => (kind === "duel" ? "Duel" : "Group");
-const word = (raw: unknown) => (typeof raw === "string" ? raw.split(",") : []);
+const kindOf = (kind: Kind): TableKind => (kind === "duel" ? "Duel" : kind === "group" ? "Group" : "Run");
 
 export function createArena(options: Options = {}) {
   const now = options.now ?? Date.now;
@@ -113,16 +130,17 @@ export function createArena(options: Options = {}) {
   const tellBout = (table: Table) => { if (table.kind === "duel") tell(table, { t: "bout", bout: boutWord(table) }); };
 
   /** Seats `p` at `table`, which the lobby has just seated it at. */
-  function sitDown(p: Player, table: Table, most: number) {
+  function sitDown(p: Player, table: Table, most: number, fighter = 0) {
     p.table = table;
     if (table.kind === "duel") inBout(table, { type: "sit", id: p.num, most }, p.num);
+    if (table.kind === "run" && !table.run) startRun(p, table, most, fighter);
     p.send({ t: "seated", id: p.id, key: p.key, code: table.code, kind: table.kind, pro: table.pro !== null });
     p.send({ t: "state", players: everyone(table) });
     table.changed = true;
     tellBout(table);
   }
   function openTable(kind: Kind, code: string, pro: number | null): Table {
-    const table: Table = { num: lobby.next - 1, code, kind, pro, bout: noBout, next: null, down: new Map(), changed: true, told: 0, ended: 0, fought: false };
+    const table: Table = { num: lobby.next - 1, code, kind, pro, bout: noBout, next: null, down: new Map(), changed: true, told: 0, ended: 0, fought: false, run: null, played: now(), toldWorld: 0, runSaid: "" };
     tables.set(table.num, table); codes.set(code, table.num);
     return table;
   }
@@ -133,6 +151,8 @@ export function createArena(options: Options = {}) {
     const table = p.table;
     p.table = null; players.delete(p.num);
     if (!table) return;
+    // A run its player leaves ends where it stands.
+    table.run?.end();
     inLobby({ type: "leave", table: table.num }, p.num);
     if (table.kind === "duel") { inBout(table, { type: "stand", id: p.num }, p.num); table.down.delete(p.num); }
     tell(table, { t: "left", id: p.id });
@@ -154,6 +174,7 @@ export function createArena(options: Options = {}) {
     // Trained health counts, up to what training can give; a fighter that is not one of the five is the first.
     const most = healthOf(ask.fighter >= 0 && ask.fighter <= 4 ? ask.fighter : 0) + Math.max(0, Math.min(TRAINED_MOST, ask.vigor));
     p.name = ask.name;
+    if (ask.kind === "run") return seekRun(p, ask, most);
     if (ask.pro) {
       if (ask.kind !== "duel" || !options.pro) return p.send({ t: "refused", why: "pro", message: "Pro matches are not open." });
       if ([...players.values()].some((other) => other.entry === ask.pro!.entry)) return p.send({ t: "refused", why: "pro", message: "That entry is already seated." });
@@ -165,19 +186,19 @@ export function createArena(options: Options = {}) {
       p.entry = ask.pro.entry;
       return atCode(p, `pro${seat.match}`, "duel", most, seat.match);
     }
-    // A pro match's table is reached only by paying for a seat at it.
-    if (ask.code?.startsWith("pro")) return p.send({ t: "refused", why: "pro", message: "A pro match is entered by paying for it." });
+    // A pro match's or a run's table is reached only by paying for a seat at it.
+    if (ask.code?.startsWith("pro") || ask.code?.startsWith("run")) return p.send({ t: "refused", why: "pro", message: "A pro match is entered by paying for it." });
     if (ask.code) return atCode(p, ask.code, ask.kind, most, null);
     const table = matched(ask.kind);
     if (!inLobby({ type: "seek", kind: kindOf(ask.kind), table }, p.num)) return p.send({ t: "refused", why: "bad", message: "No seat could be found." });
     sitDown(p, tables.get(table) ?? openTable(ask.kind, newCode(), null), most);
   }
   // spec/app/lobby.md, "A player with an invitation opens a private table, or sits at the table it names while it has a free seat"
-  function atCode(p: Player, code: string, kind: Kind, most: number, pro: number | null) {
+  function atCode(p: Player, code: string, kind: Kind, most: number, pro: number | null, fighter = 0) {
     const at = codes.get(code);
     if (at === undefined) {
       if (!inLobby({ type: "host", kind: kindOf(kind) }, p.num)) return p.send({ t: "refused", why: "bad", message: "No seat could be found." });
-      return sitDown(p, openTable(kind, code, pro), most);
+      return sitDown(p, openTable(kind, code, pro), most, fighter);
     }
     const table = tables.get(at)!;
     if (table.kind !== kind) return p.send({ t: "refused", why: "bad", message: "That code is another kind of table." });
@@ -200,17 +221,23 @@ export function createArena(options: Options = {}) {
     return true;
   }
 
-  /** What a player's fields say of its fighter, for the referee: its packed state (versus.ts), read as far as needed. */
+  /** What a player's fields say of its fighter, for the referee: its packed state (word.ts). */
   function heard(p: Player, f: Fields) {
-    if (typeof f.s !== "string") return;
-    const v = word(f.s), t = now(), was = p.at;
-    const x = Number(v[0]), y = Number(v[1]);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const special = !!v[14], attacking = v[12]?.startsWith("m:") || special ? t : was?.attacking ?? 0;
-    const guard = v[9] === "1";
+    const w = unpack(f);
+    if (!w) return;
+    const t = now(), was = p.at, { x, y, guard } = w, special = !!w.special;
+    const attacking = "move" in w.at || special ? t : was?.attacking ?? 0;
     // The guard mends while it is not held, at the game's pace, and gives way only to what it takes (`strike`).
     const guardLeft = was ? Math.min(GUARD.most, was.guardLeft + (guard ? 0 : (t - was.heard) * GUARD.mendPerMs)) : GUARD.most;
-    p.at = { x, y, guard, special, attacking, specialSince: special ? was?.specialSince ?? t : null, guardLeft, guardBroken: was?.guardBroken ?? 0, heard: t };
+    // Seen back on the islands from far below them, the fighter fell; seen somewhere it could not have got to, it leapt.
+    const moved = was ? Math.hypot(x - was.x, y - was.y) : 0, fell = !!was && was.y > FALLING && y < was.y - 500;
+    const leapt = was && !fell && moved > FASTEST * Math.max(16, t - was.heard) + 60 ? t : was?.leapt ?? 0;
+    p.at = { x, y, guard, special, attacking, specialSince: special ? was?.specialSince ?? t : null, guardLeft, guardBroken: was?.guardBroken ?? 0, heard: t,
+      far: special ? t + SHOT_FOR : was?.far ?? 0, fell: was?.fell ?? 0, leapt };
+    const run = p.table?.run;
+    if (!run) return;
+    if (fell) fall(p, false);
+    run.steer(p.id, { ...w, special: special && t - p.at.specialSince! < SPECIAL_MOST ? w.special : null } satisfies Word);
   }
 
   // spec/app/bout.md, "A blow lands only between two different fighters who are both standing, in a round that is not over, and does from 1 to 60"
@@ -224,14 +251,14 @@ export function createArena(options: Options = {}) {
     if (!target || target.table !== table || target === by || d.round !== table.bout.round) return;
     if (typeof d.n === "number") { if (d.n <= by.lastBlow) return; by.lastBlow = d.n; }
     const a = by.at, b = target.at;
-    // Seen within reach of each other, and the striker in a move, a special or just after one.
-    if (!a || !b || Math.hypot(a.x - b.x, a.y - b.y) > BLOWS.reach || t - a.attacking > 2_000) return;
+    // The striker in a move, a special or just after one, and not just seen where it could not have been.
+    if (!a || !b || t - a.attacking > 2_000 || t - a.leapt < 1_000) return;
     // A special makes its fighter untouchable, for as long as one can last.
     if (b.special && b.specialSince !== null && t - b.specialSince < SPECIAL_MOST) return;
-    by.blows = by.blows.filter((blow) => t - blow.at < 1000);
     const raw = typeof d.dmg === "number" && Number.isFinite(d.dmg) ? d.dmg : 0;
     let dmg = Math.round(Math.max(1, Math.min(60, raw)));
-    if (by.blows.length >= BLOWS.perSecond || by.blows.reduce((sum, blow) => sum + blow.dmg, 0) + dmg > BLOWS.damagePerSecond) return;
+    // Near enough, and within what a fighter can do in a second.
+    if (!allowed(by, Math.hypot(a.x - b.x, a.y - b.y), dmg, t)) return;
     // A held guard takes most of a blow, until it has taken too much and breaks, taking nothing of the blow that breaks it.
     if (b.guard && t >= b.guardBroken) {
       b.guardLeft -= dmg;
@@ -239,7 +266,6 @@ export function createArena(options: Options = {}) {
       dmg = Math.max(1, Math.round(dmg * GUARD.through));
     }
     if (!inBout(table, { type: "strike", target: target.num, dmg }, by.num)) return;
-    by.blows.push({ at: t, dmg });
     if (fighterOf(target.num, table.bout).hp === 0) table.down.set(target.num, t);
     // The target's game takes the push, and the health the server took: never more, so that it is never below the
     // server's, and the bout it is told next brings it to the server's (versus.ts).
@@ -249,6 +275,16 @@ export function createArena(options: Options = {}) {
   }
 
   // spec/app/bout.md, "A fall off the islands costs a standing fighter 25 health, and may knock it out, with no knockout scored"
+  // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
+  /** A fall `p`'s game told of (`told`), or one the server saw and the game did not tell of: every fall told counts,
+   *  as the game takes each itself, and one only seen counts unless a fall was told a moment before. */
+  function fall(p: Player, told = true) {
+    const t = now(), run = p.table?.run;
+    if (!run) return fell(p);
+    if (!p.at || (!told && t - p.at.fell < 1_000)) return;
+    p.at.fell = t;
+    run.fell();
+  }
   function fell(p: Player) {
     const table = p.table;
     if (!table || table.kind !== "duel" || !inBout(table, { type: "plunge", id: p.num }, p.num)) return;
@@ -295,13 +331,78 @@ export function createArena(options: Options = {}) {
         // At a duel's table the server lands every blow, and counts every knockout itself.
         if (table.kind === "duel" && said.type === "hit") return strike(p, said.data);
         if (table.kind === "duel" && said.type === "ko") return;
-        if (table.kind === "duel" && said.type === "orb" && p.at) p.at.attacking = t;
+        if (said.type === "orb" && p.at) { p.at.attacking = t; p.at.far = t + SHOT_FOR; }
+        // At a run's table the server lands the player's blows on its enemies; there is no one else to tell.
+        if (table.run) { if (said.type === "foe") foe(p, table.run, said.data); return; }
         return tell(table, { t: "said", type: said.type, from: p.id, data: said.data }, p);
-      case "fell": return fell(p);
+      case "fell": return fall(p);
       case "again":
         if (table.kind === "duel" && table.pro === null && over(table.bout) && table.next !== null) table.next = Math.min(table.next, t + 1000);
         return;
       case "leave": return standUp(p);
+    }
+  }
+
+  // spec/app/index.md, "Story: Fight the waves"
+  /** A paid run's table, once its entry is shown to be the player's and still to be played. */
+  async function seekRun(p: Player, ask: Extract<FromGame, { t: "seek" }>, most: number) {
+    const entry = ask.pro?.entry;
+    if (entry === undefined || !options.pro) return p.send({ t: "refused", why: "pro", message: "Pro runs are not open." });
+    const taken = () => [...players.values()].some((other) => other !== p && other.entry === entry);
+    if (taken()) return p.send({ t: "refused", why: "pro", message: "That entry is already being played." });
+    const ok = await options.pro.run(entry, ask.pro!.token).catch(() => false);
+    if (!players.has(p.num) || p.table) return;
+    if (!ok || taken()) return p.send({ t: "refused", why: "pro", message: "That run cannot be played: it is not paid, not yours, or already over." });
+    p.entry = entry;
+    atCode(p, `run${entry}`, "run", most, null, ask.fighter);
+  }
+  /** The run of `p`'s paid entry, played from now on at `table`. */
+  function startRun(p: Player, table: Table, most: number, fighter = 0) {
+    const entry = p.entry!;
+    table.run = createRun(fighter, most - healthOf(fighter), {
+      landed: (blow) => { const at = players.get(p.num); at?.send({ t: "said", type: "hit", from: "arena", data: { ...blow, to: at.id } }); },
+      ended: (result) => {
+        const at = players.get(p.num);
+        at?.send({ t: "run", run: result });
+        void options.pro?.kept(entry, { wave: result.wave, kos: result.kos, fighter, name: at?.name ?? p.name }).catch(() => undefined);
+      },
+    });
+    table.played = now();
+  }
+  /** Each tick: the run played on as long as has passed (held while its player has it paused), and its world and how
+   *  it stands told to its player. */
+  function playing(table: Table, t: number) {
+    const run = table.run!, p = seatedAt(table)[0];
+    if (p?.fields.P !== 1) run.play(t - table.played);
+    table.played = t;
+    if (!p || p.away !== null) return;
+    if (t - table.toldWorld >= WORLD_EVERY) { table.toldWorld = t; p.send({ t: "said", type: "world", from: "arena", data: { w: run.world() } }); }
+    const now = run.word(), said = JSON.stringify(now);
+    if (said !== table.runSaid) { table.runSaid = said; p.send({ t: "run", run: now }); }
+  }
+  /** Whether `p` may land a blow of `dmg` from `apart` away now, by what it has landed this second; counted if so. */
+  function allowed(p: Player, apart: number, dmg: number, t: number) {
+    const a = p.at!, far = apart > NEAR;
+    if (apart > (t < a.far ? BLOWS.reach : NEAR)) return false;
+    p.blows = p.blows.filter((blow) => t - blow.at < 1000);
+    const sum = (only: boolean) => p.blows.reduce((total, blow) => total + (only && !blow.far ? 0 : blow.dmg), 0);
+    if (p.blows.length >= BLOWS.perSecond || sum(false) + dmg > BLOWS.damagePerSecond || (far && sum(true) + dmg > BLOWS.farPerSecond)) return false;
+    p.blows.push({ at: t, dmg, far });
+    return true;
+  }
+  /** Blows `p`'s game says it landed on the run's enemies, each landed if it could have been: near enough the enemy,
+   *  with the fighter in a move or just after one, not just seen where it could not have been, and within what a
+   *  fighter can do in a second (`BLOWS`). */
+  function foe(p: Player, run: Run, data: unknown) {
+    const t = now(), a = p.at, h = (data as { h?: unknown } | null)?.h;
+    if (run.over || !a || !Array.isArray(h) || t - a.attacking > 2_000 || t - a.leapt < 1_000) return;
+    const within = (v: unknown, most: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(-most, Math.min(most, v)) : 0);
+    for (const hit of h.slice(0, 20)) {
+      if (!Array.isArray(hit) || typeof hit[0] !== "number") continue;
+      const [uid, dmg, kx, ky, stun, heavy, float, dir] = hit as unknown[];
+      const at = run.foeAt(uid as number), blow = Math.round(Math.max(1, within(dmg, 60)));
+      if (!at || !allowed(p, Math.hypot(at.x - a.x, at.y - a.y), blow, t)) continue;
+      run.foe(uid as number, { dmg: blow, kx: within(kx, 30), ky: within(ky, 30), stun: typeof stun === "number" && stun >= 0 ? within(stun, 150) : undefined, heavy: heavy === 1, float: float === 1, from: within(dir, 1) });
     }
   }
 
@@ -311,6 +412,7 @@ export function createArena(options: Options = {}) {
     for (const p of [...players.values()]) if (p.away !== null && t - p.away > AWAY) standUp(p);
     for (const table of tables.values()) {
       if (table.kind === "duel") rounds(table, t);
+      else if (table.run) playing(table, t);
       else gathering(table);
       if (table.changed && t - table.told >= STATE_EVERY) { table.changed = false; table.told = t; tell(table, { t: "state", players: everyone(table) }); }
     }

@@ -2,8 +2,7 @@
 // comes with Bearer <CRON_SECRET>, which Vercel sends by itself once CRON_SECRET is set on the project.
 //   GET  /api/pro-admin                                 cron: the daily work (_pro.js, daily)
 //   GET  /api/pro-admin?list=1                          what waits: held payouts and matches, failed or stuck payouts
-//   POST {action: "approve", payout}                    a held payout (a Survival day's winner) is sent
-//   POST {action: "assign",  payout, entry}             a held Survival payout goes to another run of that day instead
+//   POST {action: "approve", payout}                    a held payout is sent
 //   POST {action: "award",   match, entry}              a held Versus match is paid to the entrant the operator names
 //   POST {action: "refund",  match}                     a held Versus match: every entrant gets their fee back
 //   POST {action: "retry",   payout}                    a failed or stuck payout, once its last transaction cannot land
@@ -35,11 +34,6 @@ module.exports = async (req, res) => {
       case "approve": {
         const [p] = await sql`UPDATE pro_payouts SET status = 'approved' WHERE id = ${id(body.payout)} AND status = 'held' RETURNING id`;
         return p ? res.status(200).json({ payout: await pro.send(sql, p.id) }) : res.status(400).json({ error: "No held payout by that id." });
-      }
-      case "assign": {
-        const [p] = await sql`UPDATE pro_payouts p SET entry_id = e.id, wallet = e.wallet FROM pro_entries e
-          WHERE p.id = ${id(body.payout)} AND p.status = 'held' AND p.kind = 'survival' AND e.id = ${id(body.entry)} AND e.mode = 'survival' AND e.status = 'paid' AND e.day::text = p.ref RETURNING p.*`;
-        return p ? res.status(200).json({ payout: p }) : res.status(400).json({ error: "That run is not of this payout's day." });
       }
       case "award": {
         const [winner] = await sql`SELECT e.id, e.wallet FROM pro_entries e JOIN pro_matches m ON m.id = e.match_id WHERE m.id = ${id(body.match)} AND m.status = 'held' AND e.id = ${id(body.entry)} AND e.status = 'paid'`;

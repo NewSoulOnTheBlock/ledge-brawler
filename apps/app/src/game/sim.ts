@@ -72,6 +72,8 @@ export interface Ui {
   shot?(orb: Shot): void;
   /** In a duel: the fighter has fallen off the islands, which the arena server takes from its health (versus.ts). */
   fell?(): void;
+  /** The arena server (arena/run.ts): a blow has landed on the fighter a player's game plays (`puppet`), for that game to take. */
+  landed?(blow: Hurt): void;
 }
 /** A blow: its damage, the push it gives, and how it stuns. */
 export interface Hurt { dmg: number; kx: number; ky: number; stun?: number; heavy?: boolean; float?: boolean; from?: number }
@@ -275,8 +277,13 @@ export interface Game {
   peers(list: Peer[]): void;
   /** In a duel: a blow another player's game says has landed on this fighter. */
   struck(by: string, blow: Hurt): void;
-  /** In a duel: the health the arena server says this fighter has. */
+  /** In a duel, or a run the arena server plays: the health the server says this fighter has. */
   heldTo(hp: number): void;
+  /** The arena server (arena/run.ts): the fighter is played by a player's game elsewhere and stands where that game last
+   *  said, in the special it said; null plays it here again. */
+  puppet(word: Peer | null): void;
+  /** The fighter has fallen off the islands: 25 health, and back where it last stood, or down. */
+  plunge(): void;
   /** In a duel: an effect that played in another player's game. */
   fx(sprite: Omit<Sprite, "age">): void;
   /** In a duel: a projectile another player has let go. */
@@ -2236,6 +2243,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   /** Every source of damage goes through here: melee, orbs, beams, specials, shockwaves. */
   function hurt(T: Fighter, o: Hurt) {
     if (!T.alive || T.shade) return;
+    if (T === S.hero && steered) ui.landed?.(o);
     // A Ward Charm turns every blow while it lasts.
     if (T.isPlayer && S.warded > 0) { T.flash = 4; rings.push({ x: T.body.position.x, y: T.body.position.y, r: 20, max: 60, life: 10 }); ui.sample?.("shieldHit"); return; }
     if (T.isPlayer && S.guard > 0) {
@@ -2336,7 +2344,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
   // spec/app/index.md, "Something used from the bag heals, up to full health"
   /** A foe sometimes leaves something behind as it falls, and a level's boss always leaves two, one of them a draught. Not in a duel. */
   function leave(T: Fighter) {
-    if (S.match.duel || T.peer) return;
+    // Nor in a run the arena server plays: a paid run is fought with what the fighter brings.
+    if (S.match.duel || T.peer || steered) return;
     const n = T.boss ? 2 : rnd() < 0.24 ? 1 : 0, all = Object.keys(ITEMS) as ItemId[], total = all.reduce((sum, id) => sum + ITEMS[id].weight, 0);
     for (let i = 0; i < n; i++) {
       let roll = rnd() * total, item = all[0];
@@ -2590,6 +2599,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (S.match.quest) { stepQuest(); return; }
     // spec/app/index.md, "A duel starts from the select screen like a fight, with three lives and no waves"
     if (S.match.duel) { stepRival(); return; }
+    // A guest of the arena server's run waits for the waves the server sends (arena/run.ts).
+    if (S.coop && !S.coop.host) return;
     // A wave cleared: the place goes dark, and the next wave comes under another sky.
     // Not while a special that cleared the wave is still playing out: its end is the best of it.
     if (S.match.foes === 0 && S.match.waiting === 0 && waveWait === 0 && !hero().special && !effects.some((e) => e.kind === "timed")) { waveWait = 100; if (S.match.wave >= 1) dark = 100; }
@@ -2814,15 +2825,19 @@ export function createGame(rules: Rules, ui: Ui): Game {
     });
   }
 
+  // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
+  function plunged() {
+    const H = hero();
+    if (!H.alive || !send({ type: "plunge" })) return;
+    H.special = null;
+    if (S.match.duel || (S.coop && !S.coop.host)) ui.fell?.();
+    if (!H.alive) { Composite.remove(world, H.body); heroInWorld = false; heroDeadTimer = 120; fallen(); sfx.ko(); }
+    else { Body.setPosition(H.body, S.lastSafe); Body.setVelocity(H.body, { x: 0, y: 0 }); H.trail = []; }
+  }
   function stepVoid() {
     const H = hero();
-    // spec/app/index.md, "Falling off the islands costs 25 health and ends flight"
-    if (H.alive && H.body.position.y > S.voidY && send({ type: "plunge" })) {
-      H.special = null;
-      if (S.match.duel) ui.fell?.();
-      if (!H.alive) { Composite.remove(world, H.body); heroInWorld = false; heroDeadTimer = 120; fallen(); sfx.ko(); }
-      else { Body.setPosition(H.body, S.lastSafe); Body.setVelocity(H.body, { x: 0, y: 0 }); H.trail = []; }
-    }
+    // A played fighter's fall is told by its player's game (arena/run.ts), which sees it.
+    if (!steered && H.alive && H.body.position.y > S.voidY) plunged();
     for (const E of enemies.slice()) {
       if (!E.peer && !E.remote && E.body.position.y > S.voidY) { Composite.remove(world, E.body); removeEnemy(E); }
     }
@@ -2972,10 +2987,11 @@ export function createGame(rules: Rules, ui: Ui): Game {
         acc -= STEP; S.time += STEP / 1000; stepCount++;
         sinceHit++; sinceKo++;
         if (hitstop > 0) { hitstop--; continue; }
-        const I = heroIntent();
+        // A fighter its player's game plays elsewhere does nothing of itself here, and guards when that game says.
+        const I = steered ? still() : heroIntent();
         // The guard: held on the ground, it takes most of a blow and all of its push, until it has taken too much.
         // A broken guard is down for three seconds; one let go mends itself.
-        const guarding = input.guard && H.alive && H.grounded && !H.atk && !H.special && H.stun <= 0 && guardCool <= 0;
+        const guarding = steered ? steered.guard && H.alive && guardCool <= 0 : input.guard && H.alive && H.grounded && !H.atk && !H.special && H.stun <= 0 && guardCool <= 0;
         if (guarding && S.guard === 0) ui.sample?.("shield");
         if (guarding) { Object.assign(I, { dir: 0, P: false, K: false, X: false, jumpPressed: false, dash: false, fly: false, charge: false, special: -1 }); S.guard = Math.max(0.05, guardLeft / GUARD); }
         else { S.guard = 0; guardLeft = Math.min(GUARD, guardLeft + 0.15); }
@@ -2984,7 +3000,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         if (S.warded > 0) S.warded--;
         if (S.hasted > 0) S.hasted--;
         stepDrops();
-        if (H.alive) stepFighter(H, I);
+        if (H.alive) { if (steered) followPuppet(H, steered); else stepFighter(H, I); }
         // In a level of rooms an enemy far from the fighter waits where it is, until the fighter (or, in co-op, any of
         // the group) comes its way. A co-op stand-in is not stepped: the host's game moves it.
         const near = (E: Fighter) => sides().some((F) => Math.abs(E.body.position.x - F.body.position.x) < 2400 && Math.abs(E.body.position.y - F.body.position.y) < 1500);
@@ -2994,7 +3010,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
         if (H.alive) updatePose(H);
         for (const E of enemies) updatePose(E);
         for (const E of allies) updatePose(E);
-        if (H.alive) { resolveHits(H); stomp(H); }
+        // A played fighter's blows are its player's game's, told to the server (arena/run.ts).
+        if (H.alive && !steered) { resolveHits(H); stomp(H); }
         for (const E of enemies.slice()) if (E.alive && !E.peer && !E.remote) resolveHits(E);
         stepOrbs();
         for (let i = effects.length - 1; i >= 0; i--) if (!effects[i].step()) effects.splice(i, 1);
@@ -3081,7 +3098,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
    *  where it says less (a fighter it says is down goes down), or as healing where it says more. */
   function heldTo(hp: number) {
     const H = S.hero;
-    if (!H || !H.alive || !S.match.duel || hp === S.match.hp) return;
+    if (!H || !H.alive || !(S.match.duel || S.coop) || hp === S.match.hp) return;
     if (hp > S.match.hp) { send({ type: "heal", amount: Math.min(100, hp - S.match.hp) }); return; }
     send({ type: "suffer", damage: S.match.hp - Math.max(0, hp), heavy: false });
     if (!S.match.alive) knockOutHero({ x: 0, y: -6 });
@@ -3091,6 +3108,18 @@ export function createGame(rules: Rules, ui: Ui): Game {
     orbs.push({ ...o, dmg: 0, hero: false, home: false, pierce: false, cd: new Map(), trail: [], spin: 0, ghost: true });
   }
 
+
+  // ---------- a run the arena server plays (arena/run.ts) ----------
+  /** Where the fighter's player's game last said it was, while that game plays it. */
+  let steered: Peer | null = null;
+  const still = (): Intent => ({ dir: 0, run: false, jumpHeld: false, jumpPressed: false, down: false, P: false, K: false, X: false, special: -1 });
+  /** Each step: the fighter where its player's game last said, facing as it said, in the special it said. */
+  function followPuppet(H: Fighter, p: Peer) {
+    Body.setPosition(H.body, { x: p.x, y: p.y }); Body.setVelocity(H.body, { x: p.vx, y: p.vy });
+    H.facing = p.facing; H.atk = null;
+    const sp = p.special, def = sp ? CHARS.flatMap((c) => c.specials)[sp.slot] : undefined;
+    H.special = sp && def ? { def, kind: SK[def.kind], p: def.p ?? {}, t: sp.t, dur: SK[def.kind].dur, ang: sp.ang, c: sp.c } : null;
+  }
 
   // ---------- co-op (docs/coop-plan.md) ----------
   // The host's game runs the level's enemies and tells the others where they are about twelve times a second
@@ -3131,7 +3160,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     return said;
   }
   function heardWorld(w: World, at: number) {
-    if (!S.coop || S.coop.host || !S.level) return;
+    // A level's group, or a paid run's guest, which has no level of rooms (arena/run.ts).
+    if (!S.coop || S.coop.host) return;
     const foes = new Map(w.foes.map((f) => [f[0], f]));
     const was = heardWorlds[heardWorlds.length - 1];
     if (was) { worldGaps.push(at - was.at); if (worldGaps.length > 40) worldGaps.shift(); }
@@ -3227,5 +3257,5 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (on && S.hero) { S.hero.squash = 0; S.hero.squashV = 0; }
   };
 
-  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, heldTo, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
+  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, heldTo, puppet: (word: Peer | null) => { steered = word; }, plunge: plunged, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
 }
