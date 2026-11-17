@@ -24,7 +24,8 @@ export function createRun(fighter: number, vigor: number, on: { landed(blow: Hur
   const ui: Ui = {
     sfx: silent, banner: () => undefined, callout: () => undefined, landed: (blow) => on.landed(blow),
     // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
-    lost: () => { over = true; on.ended(word()); },
+    // Its end is told once the step it came in is played out (`play`), so that what is told is how the run stands.
+    lost: () => { over = true; },
   };
   const game = createGame(rules, ui);
   rules.send({ type: "enter" });
@@ -37,7 +38,11 @@ export function createRun(fighter: number, vigor: number, on: { landed(blow: Hur
   return {
     game,
     /** `ms` of the run, unless its player has paused it. */
-    play(ms: number) { if (!over) game.frame(Math.min(100, Math.max(0, ms))); },
+    play(ms: number) {
+      if (over) return;
+      game.frame(Math.min(100, Math.max(0, ms)));
+      if (over) on.ended(word());
+    },
     /** Where the player's game says the fighter is; a special it may not be in is left out by the caller. */
     steer(id: string, w: Word) { game.puppet(peerOf(id, w)); },
     /** A blow the player's game says it landed on enemy `uid`, already judged possible by the caller. */

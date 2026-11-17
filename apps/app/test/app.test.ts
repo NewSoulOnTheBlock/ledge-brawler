@@ -12,8 +12,10 @@ import type { BoutWord } from "../src/arena/protocol.ts";
 import type { RunWord } from "../src/arena/run.ts";
 import type { Pro } from "../src/arena/arena.ts";
 import { serve } from "../src/arena/serve.ts";
-import { DUEL, allLevels } from "../src/game/levels.ts";
+import { DUEL, allLevels, levelById } from "../src/game/levels.ts";
 import { type Paid, joinRun } from "../src/run.ts";
+import { PROTAGONISTS } from "../src/story/canon.ts";
+import { type Together, joinTogether } from "../src/together.ts";
 import { type Standing, type Versus, joinVersus } from "../src/versus.ts";
 import { within } from "../src/story/within.ts";
 import { type Sfx, type Ui, type World, createGame } from "../src/game/sim.ts";
@@ -692,4 +694,126 @@ it("Fight the waves: a paid run's game fights the server's enemies, its punch kn
   expect(rules.get().alive).toBe(false);
   expect(await until(() => asked.find((a) => a.action === "kept"), "the score told")).toMatchObject({ entry: 21, wave: run!.wave, kos: run!.kos, fighter: 2 });
   expect(run!.kos).toBeGreaterThanOrEqual(1);
+});
+
+// spec/app/index.md, "Story: Play a level of a campaign"; spec/app/lobby.md, "Story: Find a match"
+// A co-op level as the arena hosts it (arena/level.ts), met through the game's own link: the level its leader sets
+// out on is played at the server, its ambush springs when the group walks into it, the group's blows land there, its
+// enemies' blows come from there, the guide's talk holds it still, and it is put away when the group is back at the table.
+it("Play a level of a campaign: the arena hosts a group's level, springs its ambushes, lands the group's blows, and holds still while the guide talks", async () => {
+  const { url, later } = await arenaServer();
+  const seat = async (name: string) => {
+    const room = await joinArena({ kind: "group", name, fighter: 0, vigor: 0 }, url);
+    servers.push({ close: () => room.leave() });
+    const seen = { world: null as World | null, worlds: 0, hits: [] as { from: string; round?: number }[], said: [] as string[] };
+    room.on("world", (data: { ep: number; w: World }) => { if (data.ep === 1) { seen.world = data.w; seen.worlds++; } });
+    room.on("hit", (data: { round?: number }, from) => seen.hits.push({ from, round: data.round }));
+    room.on("lvl", () => seen.said.push("lvl"));
+    room.on("go", () => seen.said.push("go"));
+    return { room, seen };
+  };
+  const host = await seat("Ada"), guest = await seat("Bo");
+  expect(guest.room.code).toBe(host.room.code);
+  /** Where a fighter of the group says it is, in the level numbered 1. */
+  const stand = (room: Room, x: number, y: number, epoch = 1) => room.me.set({ E: epoch, n: room === host.room ? "Ada" : "Bo", f: 0, s: [Math.round(x), Math.round(y), 0, 0, 1, 100, 3, 1, 0, 0, 1, 0, "m:jab:3", 0, "", Date.now()].join(",") });
+  async function ahead<T>(seen: () => T, what: string): Promise<NonNullable<T>> {
+    for (let i = 0; i < 400; i++) { const v = seen(); if (v) return v; later(40); await new Promise((done) => setTimeout(done, 15)); }
+    throw new Error(`never: ${what}`);
+  }
+  // The leader sets out; the others are told, and the server hosts the level.
+  host.room.send("go", { epoch: 1, level: "forbidden-1" });
+  await until(() => guest.seen.said.includes("go"), "the others told");
+  // Far from its first ambush, the group meets nothing.
+  stand(host.room, 400, 3240); stand(guest.room, 460, 3240);
+  await ahead(() => host.seen.worlds > 3, "the level's world");
+  expect(host.seen.world!.foes).toEqual([]);
+  // spec/app/index.md, "A level brings its enemies where it places them, never more than eight waiting at once"
+  // Walking into it springs it, with one more for the second of the group.
+  stand(host.room, 3500, 560); stand(guest.room, 3530, 560);
+  await ahead(() => (host.seen.world?.foes.length ?? 0) >= 3, "the ambush sprung");
+  const sprung = host.seen.world!.foes;
+  expect(sprung.length).toBe(3);
+  // While the guide talks the level holds still.
+  host.room.send("talk", { ep: 1, t: { lines: ["Listen."], at: 0 } });
+  await ahead(() => host.seen.worlds > 0, "");
+  const held = JSON.stringify(host.seen.world!.foes.map((f) => [f[0], f[2], f[3]]));
+  for (let i = 0; i < 10; i++) { later(60); await new Promise((done) => setTimeout(done, 20)); }
+  expect(JSON.stringify(host.seen.world!.foes.map((f) => [f[0], f[2], f[3]]))).toBe(held);
+  host.room.send("talk", { ep: 1, t: null });
+  // Its enemies go for the group, and their blows are told to the fighter they land on.
+  await ahead(() => [...host.seen.hits, ...guest.seen.hits].find((hit) => hit.from === "arena" && hit.round === 1), "an enemy's blow");
+  // A blow of the group's lands only near its enemy, and enough of them knock it out at the server.
+  const uid = sprung[0][0], foeNow = () => host.seen.world?.foes.find((f) => f[0] === uid);
+  await ahead(() => { const f = foeNow(); if (!f) return true; stand(guest.room, f[2] - 60, f[3]); guest.room.send("foe", { ep: 1, to: "arena", h: [[uid, 40, 3, -2, -1, 0, 0, 1]] }); return false; }, "the enemy knocked out");
+  expect(guest.seen.world!.foes.some((f) => f[0] === uid)).toBe(false);
+  // What happens to everyone is told to the others.
+  guest.room.send("lvl", { e: "key", i: 0, by: "Bo", ep: 1 });
+  await until(() => host.seen.said.includes("lvl"), "the key told");
+  // Back at the table, the level is put away once the group has been out of it a while: no more of its world is told.
+  stand(host.room, 400, 3240, 0); stand(guest.room, 460, 3240, 0);
+  for (let i = 0; i < 8; i++) { later(1_000); await new Promise((done) => setTimeout(done, 25)); }
+  const told = host.seen.worlds;
+  later(500); await new Promise((done) => setTimeout(done, 200));
+  expect(host.seen.worlds).toBe(told);
+});
+
+// spec/app/index.md, "Story: Play a level of a campaign"; spec/app/lobby.md, "Story: Find a match"
+// Two players' games, each its own arena of sim.ts, at one co-op table of the arena server through together.ts: they
+// find each other, take two of the five, and the host sets out; the level's enemies are the server's, the same in both
+// games, and a punch thrown in one knocks one out there, and it is gone from both.
+it("Play a level of a campaign: a group's games find each other, set out together, and fight the same enemies of the server's", async () => {
+  const { url, later } = await arenaServer();
+  vi.stubEnv("VITE_ARENA_URL", url);
+  async function member(name: string) {
+    const rules = rulesOf(runtimeOn(KeyValueStore.layerMemory));
+    let group: Together | null = null;
+    const ui: Ui = { sfx: silent, banner: () => undefined, callout: () => undefined, foeHit: (uid, blow) => group?.foeHit(uid, blow), share: (event) => group?.share(event), shot: (orb) => group?.versus.shot(orb), fx: (sprite) => group?.versus.fx(sprite) };
+    const game = createGame(rules, ui);
+    rules.send({ type: "enter" });
+    const seen = { level: "", host: false };
+    group = await joinTogether(undefined, name, game, rules, {
+      table: () => undefined, talk: () => undefined, standing: () => undefined, host: () => undefined, parley: () => undefined,
+      // As the page sets out (App.tsx, `embark`): its protagonist, a quest, and the level as the server hosts it.
+      start: (id, host) => {
+        const hero = PROTAGONISTS.find((p) => p.id === (name === "Ada" ? "forbidden" : "ember"))!;
+        rules.send({ type: "focus", pick: hero.fighter }); rules.send({ type: "embark" });
+        game.coop({ host: false }); game.begin(levelById(id));
+        Object.assign(seen, { level: id, host });
+      },
+    });
+    const playing = group;
+    servers.push({ close: () => Promise.resolve(playing.leave()) });
+    return { rules, game, group: playing, seen, hero: () => game.scene.hero! };
+  }
+  // spec/app/lobby.md, "A player looking for a match sits at an open table of that kind with a free seat, or, only when there is none, opens a new one"
+  const ada = await member("Ada"), bo = await member("Bo");
+  async function play(done: () => boolean, what: string, most = 900) {
+    for (let i = 0; i < most; i++) {
+      for (const m of [ada, bo]) { m.group.versus.tick(); m.game.frame(1000 / 60); }
+      later(16);
+      if (done()) return;
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    throw new Error(`never: ${what}`);
+  }
+  await play(() => ada.group.host() && !bo.group.host(), "the first to sit leading");
+  ada.group.seat("forbidden"); bo.group.seat("ember"); bo.group.ready(true);
+  ada.group.choose("forbidden-1");
+  await play(() => true, "");
+  ada.group.start();
+  await play(() => ada.seen.level === "forbidden-1" && bo.seen.level === "forbidden-1", "both setting out");
+  expect([ada.seen.host, bo.seen.host]).toEqual([true, false]);
+  // Into the first ambush, both of them: it springs at the server, and both games see the same enemies of its.
+  const into = (m: typeof ada, x: number) => { Matter.Body.setPosition(m.hero().body, { x, y: 556 }); Matter.Body.setVelocity(m.hero().body, { x: 0, y: 0 }); };
+  const theirs = (m: typeof ada) => m.game.scene.enemies.filter((E) => E.remote && E.alive).map((E) => E.uid).sort();
+  await play(() => { into(ada, 3500); into(bo, 3530); return theirs(ada).length >= 3 && theirs(bo).length >= 3; }, "the ambush in both games");
+  expect(theirs(bo)).toEqual(theirs(ada));
+  // A punch of Bo's, thrown in Bo's game, knocks one out at the server, and it is gone from both games.
+  const uid = theirs(bo)[0];
+  later(1_100);
+  await play(() => {
+    const E = bo.game.scene.enemies.find((each) => each.remote && each.uid === uid && each.alive);
+    if (E) { Matter.Body.setPosition(bo.hero().body, { x: E.body.position.x - 55, y: E.body.position.y }); Matter.Body.setVelocity(bo.hero().body, { x: 0, y: 0 }); bo.hero().facing = 1; bo.game.press("punch"); bo.game.release("punch"); }
+    return !theirs(ada).includes(uid) && !theirs(bo).includes(uid);
+  }, "the enemy knocked out in both games", 1500);
 });

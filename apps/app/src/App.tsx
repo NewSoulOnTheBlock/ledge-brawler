@@ -530,6 +530,8 @@ export function App({ runtime }: { runtime: Runtime }) {
   const [runWord, setRunWord] = useState<RunWord | null>(null);
   const tick = useCallback(() => { net.current?.tick(); together.current?.versus.tick(); paidRun.current?.tick(); }, []);
   const audio = useMemo(createAudio, []);
+  /** The boss speaks before it fights, and the level waits while it does. */
+  const bossSpeaks = useRef(() => undefined as void);
   /** Plays a recorded sound at the player's volume for sounds, unless that is off. */
   const sound = useCallback((name: Sample) => { if (audio.sfxVol() > 0) playSample(name, audio.sfxVol()); }, [audio]);
   const game = useMemo(() => {
@@ -570,9 +572,11 @@ export function App({ runtime }: { runtime: Runtime }) {
       // Another of the five is in this level: what is seen of them, as the fighter comes near.
       meet: () => { const seen = playing.current && crossing(playing.current.id); if (seen) sayCaption({ text: seen.text }); },
       // The boss speaks before it fights, and the level waits while it does.
-      parley: () => { const said = playing.current && PARLEY[playing.current.id]; if (said) { setTalk({ ...said, at: 0, boss: repliesOf(playing.current!.id).length > 0 }); made?.talk(true); talking.current = true; } },
+      parley: () => bossSpeaks.current(),
       sfx: audio.sfx, rumble, duck: audio.duck, clue, banner: (text, tone) => sayBanner({ text, tone }), callout: (text, sub) => sayCallout({ text, sub: sub && inHand(sub) }) };
     made = createGame(rules, ui);
+    // In co-op the boss comes face to face with the group in the arena's level, which tells the host's game (together.ts).
+    bossSpeaks.current = () => { const said = playing.current && PARLEY[playing.current.id]; if (said) { setTalk({ ...said, at: 0, boss: repliesOf(playing.current!.id).length > 0 }); made?.talk(true); talking.current = true; } };
     return made;
   }, [rules, audio, sayBanner, sayCallout, sayCaption, tell]);
 
@@ -678,8 +682,10 @@ export function App({ runtime }: { runtime: Runtime }) {
     paid.current = null; setRefused(false);
     // Kept as it was made, so that setting out on it again shapes it afresh and not twice.
     setLevel(made); playing.current = made;
+    // In co-op the level's world is the arena's (arena/level.ts): every game of the group is its guest, and the host
+    // leads the group's talk.
     const part = together ? { host: together.host } : null;
-    game.coop(part); setGroup(part); setWiped(false); setTeamCleared(false); setHeardTalk(null);
+    game.coop(together ? { host: false } : null); setGroup(part); setWiped(false); setTeamCleared(false); setHeardTalk(null);
     game.begin(next, ...mine); sideways();
     game.title(PARLEY[made.id]?.who ?? null);
     began.current = performance.now(); setWent(null);
@@ -716,7 +722,8 @@ export function App({ runtime }: { runtime: Runtime }) {
           setCoopOpen(false);
           embarkNow.current(made, { fighter: PROTAGONISTS.find((p) => p.id === hero)!.fighter, host });
         },
-        host: (host) => { setGroup({ host }); game.coop({ host }); },
+        host: (host) => setGroup({ host }),
+        parley: () => bossSpeaks.current(),
         talk: setHeardTalk,
         standing: setParty,
       });
@@ -775,7 +782,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     const at = playing.current, back = at && repliesOf(at.id).find((each) => each.how === how)?.back;
     if (!at) return;
     stand(at.hero, at.id, how);
-    if (how !== "silent") game.answer(how);
+    if (how !== "silent") { game.answer(how); together.current?.answer(how); }
     if (back) setTalk({ lines: [back], at: 0, who: PARLEY[at.id].who, end: "Fight" });
     else { setTalk(null); game.talk(false); talking.current = false; }
   }, [game]);

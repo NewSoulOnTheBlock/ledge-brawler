@@ -1,11 +1,12 @@
 // spec/app/index.md, "Story: Play a level of a campaign"; spec/app/lobby.md, "Story: Find a match"
 // Co-op (docs/coop-plan.md): up to five play one campaign chapter together, at the arena server's tables like a duel
 // (versus.ts, which keeps every fighter where its game says). At the table each takes one of the five protagonists, no
-// two the same, and the host (whoever has sat longest) chooses a chapter of their own campaign and starts it. In the
-// level the host's game runs the enemies and everything the level does, and tells the others twelve times a second
-// (`world`); the others' blows on those enemies go to the host's game, a few at a time (`foe`). Whatever happens to
-// the whole group (an ambush, a piece of the key, the way out) is told to all (`lvl`), and so is the host's guide's
-// talk (`talk`). If the host goes, whoever has sat longest after them takes the level over.
+// two the same, and the host (whoever has sat longest) chooses a chapter of their own campaign and starts it. The
+// level's world is the arena server's (arena/level.ts): it runs the enemies and everything the level does, and tells
+// every game of the group twelve times a second (`world`); each game's blows on those enemies go to it, a few at a
+// time (`foe`), and their blows on a fighter come from it. Whatever happens to the whole group (a piece of the key,
+// the way out) is told to all and to the server (`lvl`), and so is the host's guide's talk (`talk`), during which the
+// level waits. If the host goes, whoever has sat longest after them leads the group on.
 import type { Hero } from "./story/canon.ts";
 import type { Game, Hurt, Rules, Shared, World } from "./game/sim.ts";
 import type { Room } from "./arena/link.ts";
@@ -24,8 +25,9 @@ export interface Together {
   seat(hero: Hero | null): void; ready(on: boolean): void;
   /** The host: the chapter to play, then starts it for everyone at the table. */
   choose(level: string): void; start(): void;
-  /** This game's own part in a level being played: its blows on the host's enemies, what happens to everyone, the guide. */
-  foeHit(uid: number, blow: Hurt): void; share(event: Shared): void; say(talk: TalkWord | null): void;
+  /** This game's own part in a level being played: its blows on the level's enemies, what happens to everyone, the
+   *  guide, and (the host) how the boss was answered. */
+  foeHit(uid: number, blow: Hurt): void; share(event: Shared): void; say(talk: TalkWord | null): void; answer(how: "defied" | "reasoned"): void;
   /** Back at the table after a level. */
   back(): void;
   /** The room, for what a duel's room does in a level too: fighters, blows, shots and effects (versus.ts). */
@@ -38,8 +40,10 @@ export interface TogetherEvents {
   table(table: Table): void;
   /** A level has been started for the group: this game is to set out on `level`, as host or not. */
   start(level: string, host: boolean): void;
-  /** The host has changed while a level is played: this game has become it, or is no longer. */
+  /** The host has changed while a level is played: this game leads the group now, or no longer does. */
   host(host: boolean): void;
+  /** The level's boss has come face to face with the group: the host's game has it speak. */
+  parley(): void;
   /** The host's guide's words, or null when it has stopped talking. */
   talk(talk: TalkWord | null): void;
   /** The fighters in the level, with their lives and how well each is heard (versus.ts). */
@@ -49,10 +53,8 @@ export interface TogetherEvents {
 /** How often each game says it is still there; and how long one can be silent before it is taken to have gone. The
  *  relay keeps a seat for half a minute after its player has gone, and a host that has gone must be replaced at once. */
 const BEAT_EVERY = 1000, SILENT = 5000;
-/** How often the host's game tells of the world, and the others send their blows, in milliseconds. */
-const WORLD_EVERY = 66, FOE_EVERY = 80;
-/** What a blow told of by a teammate may be at most (as in versus.ts), and how many a teammate may land in a second. */
-const BLOW = { dmg: 80, push: 30, stun: 150, perSecond: 40 };
+/** How often each game sends its blows on the level's enemies, in milliseconds. */
+const FOE_EVERY = 80;
 
 /** Sits down as `name` at the table `code`, or, without one, at whichever open table matchmaking finds room at. */
 export async function joinTogether(code: string | undefined, name: string, game: Game, rules: Rules, on: TogetherEvents): Promise<Together> {
@@ -61,9 +63,8 @@ export async function joinTogether(code: string | undefined, name: string, game:
   const sat = Date.now();
   let hero: Hero | null = null, ready = false, pick: string | null = null;
   /** The level being played by this game (counted from 1), or 0 at the table; and the host's, as last heard. */
-  let epoch = 0, wasHost = false, lastWorld = 0, lastFoe = 0, toldTable = "";
+  let epoch = 0, wasHost = false, lastFoe = 0, toldTable = "";
   const hits: number[][] = [];
-  const blows = new Map<string, number[]>();
   /** When each of the others was last heard from, by this game's clock: someone first seen is given the time it takes to be heard. */
   const heardAt = new Map<string, number>();
   let beat = 0;
@@ -115,22 +116,9 @@ export async function joinTogether(code: string | undefined, name: string, game:
         epoch = data.epoch; say({ E: epoch });
         on.start(data.level, false);
       });
-      r.on("world", (data: { ep: number; w: World }, from) => {
-        hear(from);
-        if (data.ep !== epoch || from !== hostId() || isHost()) return;
-        game.heardWorld(data.w, performance.now());
-      });
-      r.on("foe", (data: { ep: number; to: string; h: number[][] }, from) => {
-        if (data.ep !== epoch || data.to !== me || !isHost() || !Array.isArray(data.h)) return;
-        const now = performance.now(), recent = (blows.get(from) ?? []).filter((t) => now - t < 1000);
-        blows.set(from, recent);
-        const within = (v: unknown, most: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(-most, Math.min(most, v)) : 0);
-        for (const [uid, dmg, kx, ky, stun, heavy, float, dir] of data.h.slice(0, 20)) {
-          if (recent.length >= BLOW.perSecond) break;
-          recent.push(now);
-          game.hitFoe(uid, { dmg: Math.max(0, within(dmg, BLOW.dmg)), kx: within(kx, BLOW.push), ky: within(ky, BLOW.push), stun: stun < 0 ? undefined : Math.max(0, within(stun, BLOW.stun)), heavy: heavy === 1, float: float === 1, from: within(dir, 1) });
-        }
-      });
+      // The level's world, from the server that hosts it.
+      r.on("world", (data: { ep: number; w: World }, from) => { if (data.ep === epoch && from === "arena") game.heardWorld(data.w, performance.now()); });
+      r.on("parley", (data: { ep: number }, from) => { if (data.ep === epoch && from === "arena" && isHost()) on.parley(); });
       r.on("lvl", (data: Shared & { ep: number }, from) => { if (data.ep === epoch && epoch > 0) game.shared(data, from); });
       r.on("talk", (data: { ep: number; t: TalkWord | null }, from) => { if (data.ep === epoch && from === hostId() && !isHost()) on.talk(data.t); });
     },
@@ -140,8 +128,7 @@ export async function joinTogether(code: string | undefined, name: string, game:
       const host = isHost();
       if (epoch > 0 && host !== wasHost) on.host(host);
       wasHost = host;
-      if (epoch > 0 && host && rules.get().screen === "Play" && now - lastWorld >= WORLD_EVERY) { lastWorld = now; r.send("world", { ep: epoch, w: game.world() }); }
-      if (epoch > 0 && !host && hits.length && now - lastFoe >= FOE_EVERY) { lastFoe = now; r.send("foe", { ep: epoch, to: hostId(), h: hits.splice(0, 20) }); }
+      if (epoch > 0 && hits.length && now - lastFoe >= FOE_EVERY) { lastFoe = now; r.send("foe", { ep: epoch, to: "arena", h: hits.splice(0, 20) }); }
       const t = table(), said = JSON.stringify(t);
       if (said !== toldTable) { toldTable = said; on.table(t); }
     },
@@ -167,6 +154,7 @@ export async function joinTogether(code: string | undefined, name: string, game:
     foeHit(uid, blow) { if (hits.length < 60) hits.push([uid, Math.round(blow.dmg * 10) / 10, blow.kx, blow.ky, blow.stun ?? -1, blow.heavy ? 1 : 0, blow.float ? 1 : 0, blow.from ?? 0]); },
     share(event) { if (epoch > 0) room?.send("lvl", { ...event, ep: epoch }); },
     say(talk) { if (epoch > 0 && isHost()) room?.send("talk", { ep: epoch, t: talk }); },
+    answer(how) { if (epoch > 0 && isHost()) room?.send("answer", { ep: epoch, how }); },
     back() { epoch = 0; ready = false; hits.length = 0; say({ E: 0, r: 0 }); },
     host: isHost,
     leave() { versus.leave(); },

@@ -1,15 +1,18 @@
 // spec/app/lobby.md, "Story: Find a match"; spec/app/bout.md, "Story: Fight for the pot"; spec/app/index.md, "Story: Fight the waves"
 // The arena server's state: who is connected, the lobby that seats them (spec/app/lobby.md), at each duel's table the
-// bout it referees (spec/app/bout.md), and at each paid run's table the run it plays (run.ts). Every change to the
-// lobby, a bout or a run's match goes through the rules' own `enabled` and `step`. It does no I/O of its own: serve.ts
+// bout it referees (spec/app/bout.md), at each paid run's table the run it plays (run.ts), and at a co-op table the
+// level its group is playing, which it hosts (level.ts). Every change to the lobby, a bout or a game's match goes
+// through the rules' own `enabled` and `step`. It does no I/O of its own: serve.ts
 // feeds it what each socket says and the passing of time, and sends what it answers; main.vibe gives it the pot
 // (`Pro`). So it runs the same in a test as on the server.
 import { healthOf } from "../../gen/app.ts";
 import { type Bout, type Event as BoutEvent, alive, enabled as boutAllows, fighterOf, initial as noBout, over, step as boutStep } from "../../gen/app__bout.ts";
 import { type Event as LobbyEvent, type Kind as TableKind, type Lobby, enabled as lobbyAllows, hasRoom, initial as noLobby, kindAt, seatsAt, step as lobbyStep } from "../../gen/app__lobby.ts";
 import { type BoutWord, type Fields, type FromGame, type Kind, type ToGame, fromGame } from "./protocol.ts";
+import type { Hurt, Shared } from "../game/sim.ts";
+import { type Level, createLevel } from "./level.ts";
 import { type Run, createRun } from "./run.ts";
-import { type Word, unpack } from "./word.ts";
+import { type Word, peerOf, unpack } from "./word.ts";
 
 /** The pot of a pro match, kept by the site (server/api/pro-arena.js). */
 export interface Pro {
@@ -53,6 +56,8 @@ const SPECIAL_MOST = 2_500;
 /** How far from its target a blow may land: one of the fighter's own body, or, for a moment after the fighter was last
  *  seen in a special or letting a shot go, one sent from a distance. */
 const NEAR = 320, SHOT_FOR = 2_000;
+/** How long a co-op level the server hosts is kept with none of its group in it. */
+const LEVEL_EMPTY = 5_000;
 /** How fast a fighter may be seen to move, in pixels a millisecond (a dash is under two); one seen faster lands no
  *  blow for a second. Below this height, a fighter seen back up on the islands has fallen (sim.ts, VOID_Y). */
 const FASTEST = 3, FALLING = 1_300;
@@ -94,6 +99,9 @@ interface Table {
   fought: boolean;
   /** A paid run's table: the run the server plays, when it was last played on, when its world was last told, and how it stood when last told. */
   run: Run | null; played: number; toldWorld: number; runSaid: string;
+  /** A co-op table: the level its group is playing, which the server hosts, its number (together.ts, `epoch`), and when
+   *  any of the group was last in it. */
+  level: Level | null; levelEpoch: number; levelSeen: number;
 }
 
 const kindOf = (kind: Kind): TableKind => (kind === "duel" ? "Duel" : kind === "group" ? "Group" : "Run");
@@ -140,7 +148,7 @@ export function createArena(options: Options = {}) {
     tellBout(table);
   }
   function openTable(kind: Kind, code: string, pro: number | null): Table {
-    const table: Table = { num: lobby.next - 1, code, kind, pro, bout: noBout, next: null, down: new Map(), changed: true, told: 0, ended: 0, fought: false, run: null, played: now(), toldWorld: 0, runSaid: "" };
+    const table: Table = { num: lobby.next - 1, code, kind, pro, bout: noBout, next: null, down: new Map(), changed: true, told: 0, ended: 0, fought: false, run: null, played: now(), toldWorld: 0, runSaid: "", level: null, levelEpoch: 0, levelSeen: 0 };
     tables.set(table.num, table); codes.set(code, table.num);
     return table;
   }
@@ -333,7 +341,8 @@ export function createArena(options: Options = {}) {
         if (table.kind === "duel" && said.type === "ko") return;
         if (said.type === "orb" && p.at) { p.at.attacking = t; p.at.far = t + SHOT_FOR; }
         // At a run's table the server lands the player's blows on its enemies; there is no one else to tell.
-        if (table.run) { if (said.type === "foe") foe(p, table.run, said.data); return; }
+        if (table.run) { if (said.type === "foe" && !table.run.over) foe(p, table.run, said.data); return; }
+        if (table.kind === "group" && !group(p, table, said.type, said.data)) return;
         return tell(table, { t: "said", type: said.type, from: p.id, data: said.data }, p);
       case "fell": return fall(p);
       case "again":
@@ -390,12 +399,67 @@ export function createArena(options: Options = {}) {
     p.blows.push({ at: t, dmg, far });
     return true;
   }
-  /** Blows `p`'s game says it landed on the run's enemies, each landed if it could have been: near enough the enemy,
-   *  with the fighter in a move or just after one, not just seen where it could not have been, and within what a
-   *  fighter can do in a second (`BLOWS`). */
-  function foe(p: Player, run: Run, data: unknown) {
+  // spec/app/index.md, "Story: Play a level of a campaign"
+  /** What the server makes of a word said at a co-op table, and whether it goes on to the others too: the level its
+   *  leader sets out on is hosted here; the group's blows on its enemies are landed here, and go no further; what
+   *  happened to everyone, and the guide's talk, are told to the others and taken here too; how the boss was answered
+   *  is the level's alone; and nobody else tells of a level's world. */
+  function group(p: Player, table: Table, type: string, data: unknown): boolean {
+    const d = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>, ep = typeof d.ep === "number" ? d.ep : -1;
+    const level = table.level && ep === table.levelEpoch ? table.level : null;
+    switch (type) {
+      case "go":
+        if (typeof d.epoch === "number" && typeof d.level === "string" && d.epoch > table.levelEpoch) host(table, d.level, d.epoch);
+        return true;
+      case "foe": if (level) foe(p, level, d); return false;
+      case "lvl": { const event = sharedOf(d); if (level && event) level.shared(event, p.id); return true; }
+      case "talk": level?.talk(d.t !== null && d.t !== undefined); return true;
+      case "answer": if (level && (d.how === "defied" || d.how === "reasoned")) level.answer(d.how); return false;
+      case "world": case "parley": return false;
+      default: return true;
+    }
+  }
+  /** Something a game says happened to its whole group, if it is one of the things that can (sim.ts, `Shared`). */
+  function sharedOf(d: Record<string, unknown>): Shared | null {
+    const i = typeof d.i === "number" && Number.isInteger(d.i) && d.i >= 0 && d.i < 64 ? d.i : -1;
+    if (d.e === "clear") return { e: "clear" };
+    if (d.e === "amb" && i >= 0) return { e: "amb", i };
+    if (d.e === "key" && i >= 0) return { e: "key", i, by: typeof d.by === "string" ? d.by.slice(0, 24) : "" };
+    return null;
+  }
+  /** The level `id` hosted for `table`'s group, as its `epoch`th: whatever level it was playing before is put away. */
+  function host(table: Table, id: string, epoch: number) {
+    const level = createLevel(id, {
+      struck: (to: string, blow: Hurt) => { const at = players.get(Number(to)); if (at?.table === table) at.send({ t: "said", type: "hit", from: "arena", data: { ...blow, to, round: epoch } }); },
+      parley: () => tell(table, { t: "said", type: "parley", from: "arena", data: { ep: epoch } }),
+    });
+    if (!level) return;
+    Object.assign(table, { level, levelEpoch: epoch, levelSeen: now(), played: now(), toldWorld: 0 });
+  }
+  /** Each tick: the level played on, with the group's fighters where their games last said, and its world told to
+   *  them; put away once none of the group has been in it for a while (they set out a moment after they are told to). */
+  function hosting(table: Table, t: number) {
+    const level = table.level!, playing = seatedAt(table).filter((p) => p.fields.E === table.levelEpoch);
+    if (playing.length) table.levelSeen = t;
+    else if (t - table.levelSeen > LEVEL_EMPTY) { table.level = null; return; }
+    level.peers(playing.flatMap((p) => {
+      const w = unpack(p.fields);
+      return w ? [{ ...peerOf(p.id, w), name: String(p.fields.n ?? "?"), fighter: Math.max(0, Math.min(4, Number(p.fields.f) || 0)), outfit: typeof p.fields.o === "string" ? p.fields.o : undefined }] : [];
+    }));
+    level.play(t - table.played);
+    table.played = t;
+    if (t - table.toldWorld < WORLD_EVERY) return;
+    table.toldWorld = t;
+    const said: ToGame = { t: "said", type: "world", from: "arena", data: { ep: table.levelEpoch, w: level.world() } };
+    for (const p of playing) if (p.away === null) p.send(said);
+  }
+
+  /** Blows `p`'s game says it landed on the enemies of the run or level the server plays, each landed if it could have
+   *  been: near enough the enemy, with the fighter in a move or just after one, not just seen where it could not have
+   *  been, and within what a fighter can do in a second (`BLOWS`). */
+  function foe(p: Player, run: Pick<Run, "foeAt" | "foe">, data: unknown) {
     const t = now(), a = p.at, h = (data as { h?: unknown } | null)?.h;
-    if (run.over || !a || !Array.isArray(h) || t - a.attacking > 2_000 || t - a.leapt < 1_000) return;
+    if (!a || !Array.isArray(h) || t - a.attacking > 2_000 || t - a.leapt < 1_000) return;
     const within = (v: unknown, most: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(-most, Math.min(most, v)) : 0);
     for (const hit of h.slice(0, 20)) {
       if (!Array.isArray(hit) || typeof hit[0] !== "number") continue;
@@ -413,7 +477,7 @@ export function createArena(options: Options = {}) {
     for (const table of tables.values()) {
       if (table.kind === "duel") rounds(table, t);
       else if (table.run) playing(table, t);
-      else gathering(table);
+      else { gathering(table); if (table.level) hosting(table, t); }
       if (table.changed && t - table.told >= STATE_EVERY) { table.changed = false; table.told = t; tell(table, { t: "state", players: everyone(table) }); }
     }
   }

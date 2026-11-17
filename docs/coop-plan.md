@@ -64,7 +64,16 @@ seeded keys), `render.ts` (teammates, downed markers, minimap), App.tsx (`sit`, 
 ## Status (2026-11-17) — on the arena server
 Tables are now the arena server's (`apps/app/src/arena/`, `spec/app/lobby.md`), not the Multiplayer Agent relay's:
 "Find a group" seats a player at any open co-op table with a free seat, a private table is reached by its code, and a
-table stops taking players from matchmaking while its group plays a level. The level itself is still run by the
-host's game as above. A paid Survival run is already played at the arena (`apps/app/src/arena/run.ts`): a headless
-`createGame` as a co-op host whose fighter is a puppet of the player's game (`Game.puppet`), with that game as its
-guest. Next: the same for a co-op level, so that no player's game decides what the enemies do.
+table stops taking players from matchmaking while its group plays a level.
+
+The level's world is the arena's too (`apps/app/src/arena/level.ts`): when the host sets out (`go`), the server hosts
+the level in a headless `createGame` with no fighter of its own (`Game.haunt`), every fighter of the group a teammate
+placed where its game says. It springs the ambushes, runs the enemies and the boss, lands the group's blows (`foe`,
+judged as a duel's are), tells each game of the blows on its fighter, and holds still while the host's guide or boss
+talks (`talk`); the boss's coming is told to the host's game (`parley`), which sends back how it was answered
+(`answer`). Every game of the group is a guest; the host only leads the table and the talk, and no hand-over of the
+world is needed when it leaves. What each fighter meets itself (keys, traps, the way out) stays its own game's, told to
+all with `lvl`. A paid Survival run is played the same way (`run.ts`), its fighter a puppet of the player's game.
+
+The workbench check (`workbench/capture/coop.mjs`) needs the arena running beside the dev server
+(`apps/app/arena/README.md`, "On this machine").

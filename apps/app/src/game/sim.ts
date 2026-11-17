@@ -284,6 +284,10 @@ export interface Game {
   puppet(word: Peer | null): void;
   /** The fighter has fallen off the islands: 25 health, and back where it last stood, or down. */
   plunge(): void;
+  /** The arena server (arena/level.ts): this game hosts a co-op level for a group whose every fighter is a teammate
+   *  here, and has no fighter of its own in it; what is each fighter's own (its keys, traps, the way out) is its
+   *  player's game's. Called after `begin`. */
+  haunt(): void;
   /** In a duel: an effect that played in another player's game. */
   fx(sprite: Omit<Sprite, "age">): void;
   /** In a duel: a projectile another player has let go. */
@@ -385,7 +389,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   const dmgMul = (F: Fighter) => (F.isPlayer ? (F.od > 0 ? 1.5 : 1) * (1 + 0.08 * skills.damage) : 1);
   // docs/coop-plan.md: the fighters on the player's side, whom enemies go for. Alone that is the player's own; in co-op
   // its teammates' are added here, and every enemy, shot and special finds them through this.
-  const sides = (): Fighter[] => (S.hero ? [S.hero, ...allies] : allies);
+  const sides = (): Fighter[] => (S.hero && !ghost ? [S.hero, ...allies] : allies);
   const heroTargets = () => sides().filter((F) => F.alive && !F.special);
   /** Co-op host: what the others are still to be told with the next word of the world (`world`). */
   const outbox: { orbs: Shot[]; fx: Omit<Sprite, "age">[]; warns: Warn[] } = { orbs: [], fx: [], warns: [] };
@@ -408,7 +412,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   /** An ambush's foes, and in co-op more of them for each teammate: a third as many again each, never more than
    *  eight waiting at once (spec/app/index.md, "A level brings its enemies where it places them, never more than eight waiting at once"). */
   function crowd(foes: Level["ambushes"][number]["foes"]) {
-    const extra = Math.min(Math.round(foes.length * 0.35 * allies.length), Math.max(0, 8 - S.match.waiting - foes.length));
+    const extra = Math.min(Math.round(foes.length * 0.35 * teammates()), Math.max(0, 8 - S.match.waiting - foes.length));
     return [...foes, ...Array.from({ length: extra }, (_, k) => { const f = foes[k % foes.length]; return { ...f, x: f.x + (k % 2 ? 1 : -1) * Math.min(90, 30 * (k + 1)) }; })];
   }
   /** The living fighter on the player's side nearest to `E`, which it goes for; null when none is standing. */
@@ -2629,16 +2633,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
     play("puff", x, far.y, "enemy");
   }
 
-  function stepQuest() {
-    const L = S.level, H = hero(), at = H.body.position;
-    if (!L) return;
-    // In the black room the power is always there to be used.
-    // spec/app/index.md, "Charging adds three quarters of a point of aura each step, up to full"
-    if (S.dark && !H.special && S.match.aura < fullAura) send({ type: "charge", steps: 900 });
-    // spec/app/index.md, "Story: Play a level of a campaign"
-    // The boss's room: shut until every piece of the key is found, and shut again behind the fighter while the boss stands.
-    const room = S.bossRoom, missing = S.keys.filter((key) => !key.found).length, last = L.ambushes.length - 1;
-    const within = !!room && at.x > room[0] && at.x < room[2] && at.y > room[1] && at.y < room[3];
+  /** What this game's own fighter finds or is turned back by in a level: a piece of the key, a relic, a locked door,
+   *  another of the five. */
+  function stepFinds(L: Level, H: Fighter, at: Vec, room: Level["ambushes"][number]["zone"] | null, missing: number, within: boolean) {
     S.keys.forEach((key, i) => {
       if (key.found || !H.alive || Math.hypot(key.x - at.x, key.y - at.y) > 60) return;
       foundKey(i, null);
@@ -2664,6 +2661,21 @@ export function createGame(rules: Rules, ui: Ui): Game {
       } else outside = { x: at.x, y: at.y };
     }
     if (visitor && !visitor.met && Math.hypot(visitor.x - at.x, visitor.y - at.y) < 240) { visitor.met = true; ui.meet?.(); }
+  }
+
+  function stepQuest() {
+    const L = S.level, H = hero(), at = H.body.position;
+    if (!L) return;
+    // In the black room the power is always there to be used.
+    // spec/app/index.md, "Charging adds three quarters of a point of aura each step, up to full"
+    if (S.dark && !H.special && S.match.aura < fullAura) send({ type: "charge", steps: 900 });
+    // spec/app/index.md, "Story: Play a level of a campaign"
+    // The boss's room: shut until every piece of the key is found, and shut again behind the fighter while the boss stands.
+    const room = S.bossRoom, missing = S.keys.filter((key) => !key.found).length, last = L.ambushes.length - 1;
+    const inRoom = (p: Vec) => !!room && p.x > room[0] && p.x < room[2] && p.y > room[1] && p.y < room[3];
+    // A level the arena hosts has no fighter of its own: the boss's fight is on once any of the group is in its room.
+    const within = ghost ? allies.some((F) => F.alive && inRoom(F.body.position)) : inRoom(at);
+    if (!ghost) stepFinds(L, H, at, room, missing, within);
     for (const blast of blasts.slice()) if (--blast.wait <= 0) {
       blasts.splice(blasts.indexOf(blast), 1);
       play("boom", blast.x, blast.y, "enemy", 1.5); shake(9); sfx.boom(false);
@@ -2684,7 +2696,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (room && boss) {
       if (!fought && within) fought = true;
       // The boss never leaves its room; the fighter cannot, once the fight is on.
-      for (const F of fought ? [H, boss] : [boss]) {
+      for (const F of fought && !ghost ? [H, boss] : [boss]) {
         // The boss is kept its own half-width, and a wall's thickness, inside the room: its walls do not stop it (`clearWay`).
         const pad = F === H ? 20 : 96, p = F.body.position, x = Math.min(room[2] - pad, Math.max(room[0] + pad, p.x)), y = F === H ? Math.min(room[3], Math.max(room[1] + 20, p.y)) : p.y;
         if (x !== p.x || y !== p.y) { Body.setPosition(F.body, { x, y }); Body.setVelocity(F.body, { x: x !== p.x ? 0 : F.body.velocity.x, y: y !== p.y ? 0 : F.body.velocity.y }); }
@@ -2708,7 +2720,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         const E = enemies[enemies.length - 1];
         E.final = i === last;
         // Co-op: tougher for each teammate, a boss most of all (docs/coop-plan.md).
-        const more = 1 + (n === 0 && E.final && L.guarded ? 0.6 : 0.25) * allies.length;
+        const more = 1 + (n === 0 && E.final && L.guarded ? 0.6 : 0.25) * teammates();
         E.hp = E.maxHp = Math.round(E.hp * more);
         // The first to stand in a guarded level's last room is its boss: four times the size and the health, with attacks of its own.
         if (E.final && n === 0 && L.guarded) {
@@ -2720,6 +2732,14 @@ export function createGame(rules: Rules, ui: Ui): Game {
         }
       });
     });
+    // What the fighter itself meets is its own game's: a level the arena hosts has none (`haunt`).
+    if (!ghost) stepGround(L, H, at);
+    S.sealed =!!L.guarded && (!ambushed.has(L.ambushes.length - 1) || S.match.waiting > 0 || enemies.some((E) => E.final));
+    if (!ghost && !S.sealed && Math.hypot(L.exit.x - at.x, L.exit.y - at.y) < 64 && send({ type: "clear" })) { ui.banner("Chapter clear", "gold"); sfx.power(); ui.share?.({ e: "clear" }); }
+  }
+
+  /** What a fighter of this game's own meets on the ground of a level: a clue, a spring, a hazard, a trap. */
+  function stepGround(L: Level, H: Fighter, at: Vec) {
     L.clues.forEach((clue, i) => {
       if (S.cluesFound.includes(i) || Math.hypot(clue.x - at.x, clue.y - at.y) > 70) return;
       S.cluesFound.push(i);
@@ -2742,8 +2762,6 @@ export function createGame(rules: Rules, ui: Ui): Game {
       break;
     }
     stepTraps(H);
-    S.sealed =!!L.guarded && (!ambushed.has(L.ambushes.length - 1) || S.match.waiting > 0 || enemies.some((E) => E.final));
-    if (!S.sealed && Math.hypot(L.exit.x - at.x, L.exit.y - at.y) < 64 && send({ type: "clear" })) { ui.banner("Chapter clear", "gold"); sfx.power(); ui.share?.({ e: "clear" }); }
   }
 
   // The traps of a hand-drawn level (traps.ts): only the player's own fighter meets them, in its own game.
@@ -2837,7 +2855,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   function stepVoid() {
     const H = hero();
     // A played fighter's fall is told by its player's game (arena/run.ts), which sees it.
-    if (!steered && H.alive && H.body.position.y > S.voidY) plunged();
+    if (!steered && !ghost && H.alive && H.body.position.y > S.voidY) plunged();
     for (const E of enemies.slice()) {
       if (!E.peer && !E.remote && E.body.position.y > S.voidY) { Composite.remove(world, E.body); removeEnemy(E); }
     }
@@ -3000,7 +3018,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         if (S.warded > 0) S.warded--;
         if (S.hasted > 0) S.hasted--;
         stepDrops();
-        if (H.alive) { if (steered) followPuppet(H, steered); else stepFighter(H, I); }
+        if (H.alive && !ghost) { if (steered) followPuppet(H, steered); else stepFighter(H, I); }
         // In a level of rooms an enemy far from the fighter waits where it is, until the fighter (or, in co-op, any of
         // the group) comes its way. A co-op stand-in is not stepped: the host's game moves it.
         const near = (E: Fighter) => sides().some((F) => Math.abs(E.body.position.x - F.body.position.x) < 2400 && Math.abs(E.body.position.y - F.body.position.y) < 1500);
@@ -3011,7 +3029,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         for (const E of enemies) updatePose(E);
         for (const E of allies) updatePose(E);
         // A played fighter's blows are its player's game's, told to the server (arena/run.ts).
-        if (H.alive && !steered) { resolveHits(H); stomp(H); }
+        if (H.alive && !steered && !ghost) { resolveHits(H); stomp(H); }
         for (const E of enemies.slice()) if (E.alive && !E.peer && !E.remote) resolveHits(E);
         stepOrbs();
         for (let i = effects.length - 1; i >= 0; i--) if (!effects[i].step()) effects.splice(i, 1);
@@ -3108,6 +3126,17 @@ export function createGame(rules: Rules, ui: Ui): Game {
     orbs.push({ ...o, dmg: 0, hero: false, home: false, pierce: false, cd: new Map(), trail: [], spin: 0, ghost: true });
   }
 
+
+  // ---------- a level the arena server hosts (arena/level.ts) ----------
+  /** This game hosts a level for a group and has no fighter of its own in it (`haunt`). */
+  let ghost = false;
+  /** How many teammates a level's enemies are made tougher for: the others beside the host's own fighter, as many as
+   *  in the host's game when a fighter of the group hosted it. */
+  const teammates = () => (ghost ? Math.max(0, allies.length - 1) : allies.length);
+  function haunt() {
+    ghost = true;
+    if (S.hero && heroInWorld) { Composite.remove(world, S.hero.body); heroInWorld = false; }
+  }
 
   // ---------- a run the arena server plays (arena/run.ts) ----------
   /** Where the fighter's player's game last said it was, while that game plays it. */
@@ -3257,5 +3286,5 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (on && S.hero) { S.hero.squash = 0; S.hero.squashV = 0; }
   };
 
-  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, heldTo, puppet: (word: Peer | null) => { steered = word; }, plunge: plunged, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
+  return { scene: S, press, release, clearInput, toggleRun: () => (input.run = !input.run), begin, frame, talk, again, bargain, answer, title: (boss: string | null) => { bossName = boss; }, trial, specials: () => { const own = CHARS[S.match.fighter].specials; return kit ? [...kit.slice(0, 3), ...own.slice(3)] : own; }, gift, visit, peers: (list: Peer[]) => peers(list), struck, heldTo, puppet: (word: Peer | null) => { steered = word; }, plunge: plunged, haunt, shot, fx, coop, world: worldWord, heardWorld, hitFoe, shared };
 }
