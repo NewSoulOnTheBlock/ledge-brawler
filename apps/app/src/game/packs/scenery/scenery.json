@@ -1,0 +1,960 @@
+{
+ "belltower": {
+  "file": "scenery/atlas.png",
+  "x": 0,
+  "y": 0,
+  "w": 30,
+  "h": 80,
+  "k": 5,
+  "far": 0.3
+ },
+ "spires": {
+  "file": "scenery/atlas.png",
+  "x": 31,
+  "y": 0,
+  "w": 110,
+  "h": 80,
+  "k": 6,
+  "far": 0.18
+ },
+ "drownedTowers": {
+  "file": "scenery/atlas.png",
+  "x": 142,
+  "y": 0,
+  "w": 140,
+  "h": 70,
+  "k": 6,
+  "far": 0.2
+ },
+ "basalt": {
+  "file": "scenery/atlas.png",
+  "x": 283,
+  "y": 0,
+  "w": 80,
+  "h": 70,
+  "k": 6,
+  "far": 0.3
+ },
+ "rooftops": {
+  "file": "scenery/atlas.png",
+  "x": 364,
+  "y": 0,
+  "w": 120,
+  "h": 50,
+  "k": 6,
+  "far": 0.25
+ },
+ "arch": {
+  "file": "scenery/atlas.png",
+  "x": 0,
+  "y": 81,
+  "w": 40,
+  "h": 46,
+  "k": 3.4
+ },
+ "charTree": {
+  "file": "scenery/atlas.png",
+  "x": 41,
+  "y": 81,
+  "w": 34,
+  "h": 46,
+  "k": 3
+ },
+ "gate-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 76,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "gate-frost": {
+  "file": "scenery/atlas.png",
+  "x": 111,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "gate-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 146,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "gate-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 181,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "gate-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 216,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "gate-ember": {
+  "file": "scenery/atlas.png",
+  "x": 251,
+  "y": 81,
+  "w": 34,
+  "h": 44,
+  "k": 3.6
+ },
+ "pine": {
+  "file": "scenery/atlas.png",
+  "x": 286,
+  "y": 81,
+  "w": 22,
+  "h": 42,
+  "k": 3
+ },
+ "column": {
+  "file": "scenery/atlas.png",
+  "x": 309,
+  "y": 81,
+  "w": 14,
+  "h": 40,
+  "k": 3
+ },
+ "columnBroken": {
+  "file": "scenery/atlas.png",
+  "x": 324,
+  "y": 81,
+  "w": 14,
+  "h": 40,
+  "k": 3
+ },
+ "frozenHost": {
+  "file": "scenery/atlas.png",
+  "x": 339,
+  "y": 81,
+  "w": 90,
+  "h": 34,
+  "k": 4,
+  "far": 0.5,
+  "alpha": 0.6
+ },
+ "cage": {
+  "file": "scenery/atlas.png",
+  "x": 430,
+  "y": 81,
+  "w": 14,
+  "h": 34,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "portcullis": {
+  "file": "scenery/atlas.png",
+  "x": 445,
+  "y": 81,
+  "w": 26,
+  "h": 32,
+  "k": 3,
+  "wall": true
+ },
+ "charTreeS": {
+  "file": "scenery/atlas.png",
+  "x": 472,
+  "y": 81,
+  "w": 22,
+  "h": 30,
+  "k": 3
+ },
+ "banner": {
+  "file": "scenery/atlas.png",
+  "x": 495,
+  "y": 81,
+  "w": 14,
+  "h": 28,
+  "k": 3,
+  "wall": true,
+  "sway": true
+ },
+ "bannerTorn": {
+  "file": "scenery/atlas.png",
+  "x": 0,
+  "y": 128,
+  "w": 14,
+  "h": 28,
+  "k": 3,
+  "wall": true,
+  "sway": true
+ },
+ "stained": {
+  "file": "scenery/atlas.png",
+  "x": 15,
+  "y": 128,
+  "w": 16,
+  "h": 28,
+  "k": 3,
+  "wall": true,
+  "shaft": "230,120,160"
+ },
+ "chain": {
+  "file": "scenery/atlas.png",
+  "x": 32,
+  "y": 128,
+  "w": 3,
+  "h": 28,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "pineS": {
+  "file": "scenery/atlas.png",
+  "x": 36,
+  "y": 128,
+  "w": 14,
+  "h": 26,
+  "k": 3
+ },
+ "censer": {
+  "file": "scenery/atlas.png",
+  "x": 51,
+  "y": 128,
+  "w": 9,
+  "h": 22,
+  "k": 3,
+  "under": true,
+  "sway": true,
+  "light": [
+   0,
+   17,
+   60,
+   "255,170,90"
+  ],
+  "smoke": true
+ },
+ "ivy": {
+  "file": "scenery/atlas.png",
+  "x": 61,
+  "y": 128,
+  "w": 12,
+  "h": 22,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "idol": {
+  "file": "scenery/atlas.png",
+  "x": 74,
+  "y": 128,
+  "w": 20,
+  "h": 22,
+  "k": 3,
+  "light": [
+   0,
+   -12,
+   50,
+   "120,240,255"
+  ]
+ },
+ "fgTuft-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 95,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "fgTuft-frost": {
+  "file": "scenery/atlas.png",
+  "x": 110,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "fgTuft-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 125,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "fgTuft-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 140,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "fgTuft-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 155,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "fgTuft-ember": {
+  "file": "scenery/atlas.png",
+  "x": 170,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 4.5,
+  "fg": true,
+  "sway": true
+ },
+ "candelabra": {
+  "file": "scenery/atlas.png",
+  "x": 185,
+  "y": 128,
+  "w": 15,
+  "h": 20,
+  "k": 3,
+  "light": [
+   0,
+   -18,
+   110,
+   "255,190,110"
+  ],
+  "flicker": true
+ },
+ "cart": {
+  "file": "scenery/atlas.png",
+  "x": 201,
+  "y": 128,
+  "w": 36,
+  "h": 20,
+  "k": 4,
+  "far": 0.55,
+  "alpha": 0.85
+ },
+ "shroomL": {
+  "file": "scenery/atlas.png",
+  "x": 238,
+  "y": 128,
+  "w": 18,
+  "h": 20,
+  "k": 3,
+  "light": [
+   0,
+   -12,
+   110,
+   "90,230,255"
+  ]
+ },
+ "reeds": {
+  "file": "scenery/atlas.png",
+  "x": 257,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 3,
+  "sway": true
+ },
+ "reedsB": {
+  "file": "scenery/atlas.png",
+  "x": 272,
+  "y": 128,
+  "w": 14,
+  "h": 20,
+  "k": 3,
+  "sway": true
+ },
+ "stalactite": {
+  "file": "scenery/atlas.png",
+  "x": 287,
+  "y": 128,
+  "w": 6,
+  "h": 18,
+  "k": 3,
+  "under": true
+ },
+ "barred": {
+  "file": "scenery/atlas.png",
+  "x": 294,
+  "y": 128,
+  "w": 14,
+  "h": 18,
+  "k": 3,
+  "wall": true
+ },
+ "icicleL": {
+  "file": "scenery/atlas.png",
+  "x": 309,
+  "y": 128,
+  "w": 5,
+  "h": 18,
+  "k": 3,
+  "under": true,
+  "drip": true
+ },
+ "columnStub": {
+  "file": "scenery/atlas.png",
+  "x": 315,
+  "y": 128,
+  "w": 14,
+  "h": 18,
+  "k": 3
+ },
+ "glowVine": {
+  "file": "scenery/atlas.png",
+  "x": 330,
+  "y": 128,
+  "w": 9,
+  "h": 18,
+  "k": 3,
+  "under": true,
+  "sway": true,
+  "light": [
+   0,
+   8,
+   50,
+   "90,230,255"
+  ]
+ },
+ "painting": {
+  "file": "scenery/atlas.png",
+  "x": 340,
+  "y": 128,
+  "w": 14,
+  "h": 17,
+  "k": 3,
+  "wall": true
+ },
+ "hangMoss-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 355,
+  "y": 128,
+  "w": 12,
+  "h": 16,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "crystal": {
+  "file": "scenery/atlas.png",
+  "x": 368,
+  "y": 128,
+  "w": 12,
+  "h": 15,
+  "k": 3,
+  "light": [
+   0,
+   -8,
+   70,
+   "120,255,230"
+  ]
+ },
+ "grave": {
+  "file": "scenery/atlas.png",
+  "x": 381,
+  "y": 128,
+  "w": 12,
+  "h": 15,
+  "k": 3
+ },
+ "urn-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 394,
+  "y": 128,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 406,
+  "y": 128,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "urn-frost": {
+  "file": "scenery/atlas.png",
+  "x": 437,
+  "y": 128,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-frost": {
+  "file": "scenery/atlas.png",
+  "x": 449,
+  "y": 128,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "urn-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 480,
+  "y": 128,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 0,
+  "y": 157,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "urn-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 31,
+  "y": 157,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 43,
+  "y": 157,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "urn-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 74,
+  "y": 157,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 86,
+  "y": 157,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "urn-ember": {
+  "file": "scenery/atlas.png",
+  "x": 117,
+  "y": 157,
+  "w": 11,
+  "h": 14,
+  "k": 3
+ },
+ "fgRock-ember": {
+  "file": "scenery/atlas.png",
+  "x": 129,
+  "y": 157,
+  "w": 30,
+  "h": 14,
+  "k": 4.5,
+  "fg": true
+ },
+ "stalagmite": {
+  "file": "scenery/atlas.png",
+  "x": 160,
+  "y": 157,
+  "w": 7,
+  "h": 14,
+  "k": 3
+ },
+ "poster": {
+  "file": "scenery/atlas.png",
+  "x": 168,
+  "y": 157,
+  "w": 11,
+  "h": 14,
+  "k": 3,
+  "wall": true
+ },
+ "hangMoss-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 180,
+  "y": 157,
+  "w": 10,
+  "h": 14,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "bell": {
+  "file": "scenery/atlas.png",
+  "x": 191,
+  "y": 157,
+  "w": 12,
+  "h": 14,
+  "k": 3,
+  "under": true,
+  "sway": true
+ },
+ "names": {
+  "file": "scenery/atlas.png",
+  "x": 204,
+  "y": 157,
+  "w": 20,
+  "h": 14,
+  "k": 3,
+  "wall": true
+ },
+ "torch": {
+  "file": "scenery/atlas.png",
+  "x": 225,
+  "y": 157,
+  "w": 7,
+  "h": 13,
+  "k": 3,
+  "wall": true,
+  "light": [
+   0,
+   -11,
+   120,
+   "255,170,80"
+  ],
+  "flicker": true
+ },
+ "fallenStatue": {
+  "file": "scenery/atlas.png",
+  "x": 233,
+  "y": 157,
+  "w": 34,
+  "h": 13,
+  "k": 3
+ },
+ "shroomM": {
+  "file": "scenery/atlas.png",
+  "x": 268,
+  "y": 157,
+  "w": 12,
+  "h": 13,
+  "k": 3,
+  "light": [
+   0,
+   -8,
+   70,
+   "255,110,230"
+  ]
+ },
+ "rockB-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 281,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "rockB-frost": {
+  "file": "scenery/atlas.png",
+  "x": 306,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "rockB-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 331,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "rockB-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 356,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "rockB-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 381,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "rockB-ember": {
+  "file": "scenery/atlas.png",
+  "x": 406,
+  "y": 157,
+  "w": 24,
+  "h": 12,
+  "k": 3
+ },
+ "icicle": {
+  "file": "scenery/atlas.png",
+  "x": 431,
+  "y": 157,
+  "w": 3,
+  "h": 11,
+  "k": 3,
+  "under": true,
+  "drip": true
+ },
+ "candles": {
+  "file": "scenery/atlas.png",
+  "x": 435,
+  "y": 157,
+  "w": 11,
+  "h": 11,
+  "k": 3,
+  "light": [
+   0,
+   -10,
+   80,
+   "255,190,110"
+  ],
+  "flicker": true
+ },
+ "candlesLean": {
+  "file": "scenery/atlas.png",
+  "x": 447,
+  "y": 157,
+  "w": 13,
+  "h": 11,
+  "k": 3,
+  "light": [
+   2,
+   -8,
+   80,
+   "255,190,110"
+  ],
+  "flicker": true
+ },
+ "stalactiteS": {
+  "file": "scenery/atlas.png",
+  "x": 461,
+  "y": 157,
+  "w": 4,
+  "h": 10,
+  "k": 3,
+  "under": true
+ },
+ "snowRock": {
+  "file": "scenery/atlas.png",
+  "x": 466,
+  "y": 157,
+  "w": 18,
+  "h": 10,
+  "k": 3
+ },
+ "emberRock": {
+  "file": "scenery/atlas.png",
+  "x": 485,
+  "y": 157,
+  "w": 18,
+  "h": 10,
+  "k": 3,
+  "light": [
+   0,
+   -4,
+   45,
+   "255,110,40"
+  ]
+ },
+ "rock-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 0,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-cavern": {
+  "file": "scenery/atlas.png",
+  "x": 17,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "rock-frost": {
+  "file": "scenery/atlas.png",
+  "x": 40,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-frost": {
+  "file": "scenery/atlas.png",
+  "x": 57,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "rock-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 80,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-shrine": {
+  "file": "scenery/atlas.png",
+  "x": 97,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "rock-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 120,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-ruin": {
+  "file": "scenery/atlas.png",
+  "x": 137,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "rock-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 160,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-fungal": {
+  "file": "scenery/atlas.png",
+  "x": 177,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "rock-ember": {
+  "file": "scenery/atlas.png",
+  "x": 200,
+  "y": 172,
+  "w": 16,
+  "h": 9,
+  "k": 3
+ },
+ "rubble-ember": {
+  "file": "scenery/atlas.png",
+  "x": 217,
+  "y": 172,
+  "w": 22,
+  "h": 9,
+  "k": 3
+ },
+ "shroomS": {
+  "file": "scenery/atlas.png",
+  "x": 240,
+  "y": 172,
+  "w": 14,
+  "h": 8,
+  "k": 3,
+  "light": [
+   0,
+   -4,
+   50,
+   "120,220,255"
+  ]
+ },
+ "stump": {
+  "file": "scenery/atlas.png",
+  "x": 255,
+  "y": 172,
+  "w": 12,
+  "h": 8,
+  "k": 3,
+  "light": [
+   0,
+   -4,
+   40,
+   "255,120,50"
+  ]
+ },
+ "bat": {
+  "file": "scenery/atlas.png",
+  "x": 268,
+  "y": 172,
+  "w": 22,
+  "h": 7,
+  "k": 3,
+  "frames": 2
+ },
+ "crow": {
+  "file": "scenery/atlas.png",
+  "x": 291,
+  "y": 172,
+  "w": 22,
+  "h": 7,
+  "k": 3,
+  "frames": 2
+ },
+ "fill-cavern": {
+  "file": "scenery/fill-cavern.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ },
+ "fill-frost": {
+  "file": "scenery/fill-frost.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ },
+ "fill-shrine": {
+  "file": "scenery/fill-shrine.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ },
+ "fill-ruin": {
+  "file": "scenery/fill-ruin.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ },
+ "fill-fungal": {
+  "file": "scenery/fill-fungal.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ },
+ "fill-ember": {
+  "file": "scenery/fill-ember.png",
+  "w": 32,
+  "h": 32,
+  "k": 3,
+  "tile": true
+ }
+}

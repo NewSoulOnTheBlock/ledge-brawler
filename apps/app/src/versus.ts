@@ -6,7 +6,7 @@
 // who has won. Rounds begin when the server says, every few seconds while two or more are at the table.
 import { CHARS } from "./game/data.ts";
 import { outfitOf } from "./game/relics.ts";
-import type { Level } from "./game/levels.ts";
+import { type Level, VERSUS_STAGES } from "./game/levels.ts";
 import type { Game, Hurt, Peer, Rules, Shot, Sprite } from "./game/sim.ts";
 import { SKY_IDS, type SkyId } from "./game/sky.ts";
 import { type Room, Refused, joinArena } from "./arena/link.ts";
@@ -66,8 +66,13 @@ export function skyFor(code: string, round: number): SkyId {
   for (const ch of code) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return SKY_IDS[hash % SKY_IDS.length];
 }
-/** The duel's place under the sky of `code`'s round. */
-export const stageFor = (stage: Level, code: string, round: number): Level => ({ ...stage, sky: skyFor(code, round) });
+/** The place of `code`'s round, under its sky: chosen from the room and the round alone (never the clock), so that
+ *  every player in the room fights in the same one, and the next round, in the next. */
+export function stageFor(code: string, round: number): Level {
+  let hash = round * 7919;
+  for (const ch of code) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return { ...VERSUS_STAGES[(hash + round) % VERSUS_STAGES.length], sky: skyFor(code, round) };
+}
 
 /** A link that brings whoever opens it to `code`'s room. */
 export const inviteLink = (code: string) => `${location.origin}${location.pathname}?room=${code}`;
@@ -81,11 +86,11 @@ export interface RoomLink {
   epoch(): number;
 }
 
-/** Takes a seat as `name`, for the duel `rules` has just started in `game`: at the table `code`, or, for "open" (or
- *  none), wherever matchmaking finds room. With `pro`, it is a pro match's seat (pro.ts), whose table only paid
+/** Takes a seat as `name`, for the duel `rules` has just started in `game` (`staged`: in one of the duel's places,
+ *  stageFor): at the table `code`, or, for "open" (or none), wherever matchmaking finds room. With `pro`, it is a pro match's seat (pro.ts), whose table only paid
  *  entries reach. With `link`, it is a co-op group's table (together.ts): no rounds and no winner, and fighters are
  *  said only while a level is played. Fails with "full" when the table named is full. */
-export async function joinVersus(code: string | undefined, name: string, stage: Level | null, game: Game, rules: Rules, onStanding: (standing: Standing) => void, pro?: ProSeat, link?: RoomLink): Promise<Versus> {
+export async function joinVersus(code: string | undefined, name: string, staged: boolean, game: Game, rules: Rules, onStanding: (standing: Standing) => void, pro?: ProSeat, link?: RoomLink): Promise<Versus> {
   let fighter = rules.get().fighter;
   const room: Room = await joinArena({ kind: link ? "group" : "duel", name, fighter, vigor: rules.get().vigor, code: code === "open" ? undefined : code, pro })
     .catch((error: unknown) => { throw error instanceof Refused && error.why === "full" ? new Error("full") : error; });
@@ -249,7 +254,7 @@ export async function joinVersus(code: string | undefined, name: string, stage: 
       // down after it began waits for the next (spec/app/bout.md, "A fighter sits down once, while there is a seat, with its most health").
       else if (bout && bout.fighting && bout.round > round && (bout.fighters[me]?.lives ?? 0) > 0) {
         round = bout.round; said = 0;
-        if (stage && rules.send({ type: "rematch" })) game.begin(stageFor(stage, room.code, round));
+        if (staged && rules.send({ type: "rematch" })) game.begin(stageFor(room.code, round));
       }
       game.peers(others(now));
       // In co-op a fighter is said only while its level is played.

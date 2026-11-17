@@ -1,0 +1,256 @@
+{
+ "wraith": {
+  "file": "wraith.png",
+  "w": 48,
+  "h": 48,
+  "cols": 10,
+  "feet": [
+   25,
+   42
+  ],
+  "scale": 3.5,
+  "faces": -1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 8,
+    "fps": 8.3
+   },
+   "float": {
+    "start": 8,
+    "frames": 8,
+    "fps": 10
+   },
+   "attack": {
+    "start": 16,
+    "frames": 9,
+    "fps": 10.6
+   },
+   "cast": {
+    "start": 25,
+    "frames": 12,
+    "fps": 10.9
+   },
+   "hurt": {
+    "start": 37,
+    "frames": 4,
+    "fps": 10.5
+   },
+   "death": {
+    "start": 41,
+    "frames": 14,
+    "fps": 8.6
+   }
+  }
+ },
+ "wraith-script": {
+  "file": "wraith-script.png",
+  "w": 24,
+  "h": 8,
+  "cols": 4,
+  "feet": [
+   12,
+   8
+  ],
+  "scale": 3.5,
+  "faces": -1,
+  "anims": {
+   "fly": {
+    "start": 0,
+    "frames": 4,
+    "fps": 12.5
+   },
+   "land": {
+    "start": 4,
+    "frames": 3,
+    "fps": 12.5
+   },
+   "linger": {
+    "start": 7,
+    "frames": 6,
+    "fps": 8.3
+   },
+   "fade": {
+    "start": 13,
+    "frames": 3,
+    "fps": 8.3
+   }
+  }
+ },
+ "blotling": {
+  "file": "blotling.png",
+  "w": 48,
+  "h": 32,
+  "cols": 10,
+  "feet": [
+   24,
+   31
+  ],
+  "scale": 3.5,
+  "faces": -1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 7.7
+   },
+   "hop": {
+    "start": 6,
+    "frames": 6,
+    "fps": 11.3
+   },
+   "attack": {
+    "start": 12,
+    "frames": 7,
+    "fps": 10.6
+   },
+   "hurt": {
+    "start": 19,
+    "frames": 3,
+    "fps": 11.1
+   },
+   "split": {
+    "start": 22,
+    "frames": 10,
+    "fps": 12.2
+   },
+   "death": {
+    "start": 32,
+    "frames": 9,
+    "fps": 11.1
+   }
+  }
+ },
+ "blotling-m": {
+  "file": "blotling-m.png",
+  "w": 32,
+  "h": 24,
+  "cols": 10,
+  "feet": [
+   16,
+   23
+  ],
+  "scale": 3.5,
+  "faces": -1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 7.7
+   },
+   "hop": {
+    "start": 6,
+    "frames": 6,
+    "fps": 11.3
+   },
+   "attack": {
+    "start": 12,
+    "frames": 7,
+    "fps": 10.6
+   },
+   "hurt": {
+    "start": 19,
+    "frames": 3,
+    "fps": 11.1
+   },
+   "split": {
+    "start": 22,
+    "frames": 10,
+    "fps": 12.2
+   },
+   "death": {
+    "start": 32,
+    "frames": 9,
+    "fps": 11.1
+   }
+  }
+ },
+ "blotling-s": {
+  "file": "blotling-s.png",
+  "w": 24,
+  "h": 16,
+  "cols": 10,
+  "feet": [
+   12,
+   15
+  ],
+  "scale": 3.5,
+  "faces": -1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 7.7
+   },
+   "hop": {
+    "start": 6,
+    "frames": 6,
+    "fps": 11.3
+   },
+   "attack": {
+    "start": 12,
+    "frames": 7,
+    "fps": 10.6
+   },
+   "hurt": {
+    "start": 19,
+    "frames": 3,
+    "fps": 11.1
+   },
+   "death": {
+    "start": 22,
+    "frames": 9,
+    "fps": 11.1
+   }
+  }
+ },
+ "seal-bearer": {
+  "file": "seal-bearer.png",
+  "w": 64,
+  "h": 48,
+  "cols": 10,
+  "feet": [
+   32,
+   46
+  ],
+  "scale": 3.5,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 6.3
+   },
+   "walk": {
+    "start": 6,
+    "frames": 8,
+    "fps": 8.3
+   },
+   "block": {
+    "start": 14,
+    "frames": 6,
+    "fps": 10.3
+   },
+   "bash": {
+    "start": 20,
+    "frames": 8,
+    "fps": 10
+   },
+   "turn": {
+    "start": 28,
+    "frames": 6,
+    "fps": 9.1
+   },
+   "hurt": {
+    "start": 34,
+    "frames": 4,
+    "fps": 9.8
+   },
+   "death": {
+    "start": 38,
+    "frames": 14,
+    "fps": 8.5
+   }
+  }
+ }
+}

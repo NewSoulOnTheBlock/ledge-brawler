@@ -16,7 +16,9 @@ export interface ProSeat { entry: number; token: string }
 export type FromGame =
   /** A seat: at the table `code`, or, without one, wherever matchmaking finds room. `resume` takes back a seat this
    *  game lost a moment ago, with the key it was given. */
-  | { t: "seek"; kind: Kind; name: string; fighter: number; vigor: number; code?: string; pro?: ProSeat; resume?: { id: string; key: string } }
+  | { t: "seek"; kind: Kind; name: string; fighter: number; vigor: number; code?: string; pro?: ProSeat; resume?: { id: string; key: string };
+    /** A run's: the UTC day whose stage the game began it on (levels.ts, `survivalStage`). */
+    day?: number }
   /** Changes to what this player shows. */
   | { t: "set"; f: Fields }
   /** A word for everyone else at the table. At a duel's table a `hit` goes to the server instead. */
@@ -76,7 +78,7 @@ export function fromGame(raw: string): FromGame | undefined {
       const pro = isRecord(v.pro) && Number.isSafeInteger(v.pro.entry) && typeof v.pro.token === "string" ? { entry: v.pro.entry as number, token: v.pro.token.slice(0, 4096) } : undefined;
       const resume = isRecord(v.resume) && typeof v.resume.id === "string" && typeof v.resume.key === "string" ? { id: v.resume.id.slice(0, 32), key: v.resume.key.slice(0, 64) } : undefined;
       const whole = (n: unknown) => (typeof n === "number" && Number.isSafeInteger(n) ? n : 0);
-      return { t: "seek", kind: v.kind, name: (text(v.name, 24) ?? "").trim() || "Player", fighter: whole(v.fighter), vigor: whole(v.vigor), code: codeOf(v.code) || undefined, pro, resume };
+      return { t: "seek", kind: v.kind, name: (text(v.name, 24) ?? "").trim() || "Player", fighter: whole(v.fighter), vigor: whole(v.vigor), code: codeOf(v.code) || undefined, pro, resume, day: typeof v.day === "number" && Number.isSafeInteger(v.day) ? v.day : undefined };
     }
     case "set": { const f = fields(v.f); return f && { t: "set", f }; }
     case "say": return typeof v.type === "string" && v.type.length <= 16 ? { t: "say", type: v.type, data: v.data } : undefined;

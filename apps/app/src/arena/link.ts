@@ -43,7 +43,7 @@ export class Refused extends Error {
   constructor(readonly why: "full" | "pro" | "bad" | "offline", message: string) { super(message); }
 }
 
-export interface Seek { kind: Kind; name: string; fighter: number; vigor: number; code?: string; pro?: ProSeat }
+export interface Seek { kind: Kind; name: string; fighter: number; vigor: number; code?: string; pro?: ProSeat; day?: number }
 
 /** Takes a seat at the arena at `url`: the table `seek.code` names, or one matchmaking finds. */
 export function joinArena(seek: Seek, url = arena()): Promise<Room> {

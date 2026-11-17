@@ -21,10 +21,11 @@ export interface Paid {
   leave(): void;
 }
 
-/** Plays the run `rules` has just begun in `game` at the arena, for the paid entry `seat`; `onRun` hears how it stands. */
-export async function joinRun(seat: ProSeat, name: string, game: Game, rules: Rules, onRun: (run: RunWord) => void): Promise<Paid> {
+/** Plays the run `rules` has just begun in `game` on the stage of the UTC day `day` at the arena, for the paid entry
+ *  `seat`; `onRun` hears how it stands. */
+export async function joinRun(seat: ProSeat, day: number, name: string, game: Game, rules: Rules, onRun: (run: RunWord) => void): Promise<Paid> {
   const match = rules.get();
-  const room = await joinArena({ kind: "run", name, fighter: match.fighter, vigor: match.vigor, pro: seat });
+  const room = await joinArena({ kind: "run", name, fighter: match.fighter, vigor: match.vigor, pro: seat, day });
   game.coop({ host: false });
   room.me.set({ n: name, f: match.fighter });
   room.on("world", (data: { w: World }) => game.heardWorld(data.w, performance.now()));

@@ -9,6 +9,7 @@ import { healthOf } from "../../gen/app.ts";
 import { type Bout, type Event as BoutEvent, alive, enabled as boutAllows, fighterOf, initial as noBout, over, step as boutStep } from "../../gen/app__bout.ts";
 import { type Event as LobbyEvent, type Kind as TableKind, type Lobby, enabled as lobbyAllows, hasRoom, initial as noLobby, kindAt, seatsAt, step as lobbyStep } from "../../gen/app__lobby.ts";
 import { type BoutWord, type Fields, type FromGame, type Kind, type ToGame, fromGame } from "./protocol.ts";
+import { striking } from "../game/figure.ts";
 import type { Hurt, Shared } from "../game/sim.ts";
 import { type Level, createLevel } from "./level.ts";
 import { type Run, createRun } from "./run.ts";
@@ -138,10 +139,10 @@ export function createArena(options: Options = {}) {
   const tellBout = (table: Table) => { if (table.kind === "duel") tell(table, { t: "bout", bout: boutWord(table) }); };
 
   /** Seats `p` at `table`, which the lobby has just seated it at. */
-  function sitDown(p: Player, table: Table, most: number, fighter = 0) {
+  function sitDown(p: Player, table: Table, most: number, fighter = 0, day = 0) {
     p.table = table;
     if (table.kind === "duel") inBout(table, { type: "sit", id: p.num, most }, p.num);
-    if (table.kind === "run" && !table.run) startRun(p, table, most, fighter);
+    if (table.kind === "run" && !table.run) startRun(p, table, most, fighter, day);
     p.send({ t: "seated", id: p.id, key: p.key, code: table.code, kind: table.kind, pro: table.pro !== null });
     p.send({ t: "state", players: everyone(table) });
     table.changed = true;
@@ -202,11 +203,11 @@ export function createArena(options: Options = {}) {
     sitDown(p, tables.get(table) ?? openTable(ask.kind, newCode(), null), most);
   }
   // spec/app/lobby.md, "A player with an invitation opens a private table, or sits at the table it names while it has a free seat"
-  function atCode(p: Player, code: string, kind: Kind, most: number, pro: number | null, fighter = 0) {
+  function atCode(p: Player, code: string, kind: Kind, most: number, pro: number | null, fighter = 0, day = 0) {
     const at = codes.get(code);
     if (at === undefined) {
       if (!inLobby({ type: "host", kind: kindOf(kind) }, p.num)) return p.send({ t: "refused", why: "bad", message: "No seat could be found." });
-      return sitDown(p, openTable(kind, code, pro), most, fighter);
+      return sitDown(p, openTable(kind, code, pro), most, fighter, day);
     }
     const table = tables.get(at)!;
     if (table.kind !== kind) return p.send({ t: "refused", why: "bad", message: "That code is another kind of table." });
@@ -234,7 +235,7 @@ export function createArena(options: Options = {}) {
     const w = unpack(f);
     if (!w) return;
     const t = now(), was = p.at, { x, y, guard } = w, special = !!w.special;
-    const attacking = "move" in w.at || special ? t : was?.attacking ?? 0;
+    const attacking = striking(w.at) || special ? t : was?.attacking ?? 0;
     // The guard mends while it is not held, at the game's pace, and gives way only to what it takes (`strike`).
     const guardLeft = was ? Math.min(GUARD.most, was.guardLeft + (guard ? 0 : (t - was.heard) * GUARD.mendPerMs)) : GUARD.most;
     // Seen back on the islands from far below them, the fighter fell; seen somewhere it could not have got to, it leapt.
@@ -363,12 +364,15 @@ export function createArena(options: Options = {}) {
     if (!players.has(p.num) || p.table) return;
     if (!ok || taken()) return p.send({ t: "refused", why: "pro", message: "That run cannot be played: it is not paid, not yours, or already over." });
     p.entry = entry;
-    atCode(p, `run${entry}`, "run", most, null, ask.fighter);
+    // On the stage of the day the game began it on, if that is today or a day either side of it here: the day's best
+    // is fought for on the day's stage, and a game's clock may be a little out at midnight.
+    const here = Math.floor(now() / 86_400_000), day = ask.day !== undefined && Math.abs(ask.day - here) <= 1 ? ask.day : here;
+    atCode(p, `run${entry}`, "run", most, null, ask.fighter, day);
   }
   /** The run of `p`'s paid entry, played from now on at `table`. */
-  function startRun(p: Player, table: Table, most: number, fighter = 0) {
+  function startRun(p: Player, table: Table, most: number, fighter: number, day: number) {
     const entry = p.entry!;
-    table.run = createRun(fighter, most - healthOf(fighter), {
+    table.run = createRun(fighter, most - healthOf(fighter), day, {
       landed: (blow) => { const at = players.get(p.num); at?.send({ t: "said", type: "hit", from: "arena", data: { ...blow, to: at.id } }); },
       ended: (result) => {
         const at = players.get(p.num);

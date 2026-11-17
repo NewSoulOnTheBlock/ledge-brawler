@@ -135,7 +135,7 @@ export async function joinTogether(code: string | undefined, name: string, game:
     epoch: () => epoch,
   };
 
-  const versus = await joinVersus(code, name, null, game, rules, (standing) => on.standing(standing), undefined, link);
+  const versus = await joinVersus(code, name, false, game, rules, (standing) => on.standing(standing), undefined, link);
 
   return {
     versus,

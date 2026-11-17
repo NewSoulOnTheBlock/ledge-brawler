@@ -1,0 +1,40 @@
+{
+  "name": "The Firstborn of Water #318",
+  "description": "The Firstborn of Water: one of five. A god sealed in a blade, and the Seeker who carries it. From Five Blades.",
+  "image": "ipfs://__IMAGES_CID__/318.png",
+  "external_url": "https://ledge-brawler.vercel.app",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Firstborn"
+    },
+    {
+      "trait_type": "Frame",
+      "value": "Celestial"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Obsidian"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Cyan"
+    },
+    {
+      "trait_type": "Stance",
+      "value": "Invoke"
+    },
+    {
+      "trait_type": "Blade",
+      "value": "Water"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "Halo"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "1 of 1"
+    }
+  ]
+}

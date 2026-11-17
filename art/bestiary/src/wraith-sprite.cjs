@@ -1,0 +1,14 @@
+const P=require(process.env.HOME+"/.claude/skills/codixel/core/pixel.js");const shrink=require("./shrink.cjs");
+const ink=P.hueRamp(5,{hue:265,sat:0.22,light:[0.04,0.34],shift:30});
+const gold=P.hueRamp(5,{hue:42,sat:0.85,light:[0.28,0.8]});
+const isAccent=c=>{const [h,s,l]=P.toHsl(c);return s>0.45&&l>0.22&&h>15&&h<70;};
+const src=P.load("work/wraith-cut.png");
+const H=+process.argv[2]||34;
+let b=shrink(src,H,{body:ink,accent:gold,isAccent});
+b=P.cleanup(b,{tol:18,keepLone:true});b=P.smoothEdge(b);
+P.save(b,`work/wraith-px.png`);
+module.exports={ink,gold};
+const hero=P.crop(P.load("../../apps/app/src/game/seeker/Ember/Seeker_Ember_Idle_30x30_24f.png"),0,0,30,30);
+const sel=P.selout(b,ink[2],ink[0]);
+P.save(P.sheet([{buf:src,label:"ref",fit:280},{buf:b,label:H+"px",scale:8},{buf:sel,label:"+selout",scale:8},{buf:hero,label:"hero",scale:8},{buf:b,label:"1x",scale:1},{buf:sel,label:"1x",scale:1},{buf:hero,label:"1x",scale:1}],{cols:4}),"work/wraith-px-view.png");
+console.log(JSON.stringify(P.edgeCheck(b)).slice(0,200), P.colorCount(b).slice(0,4).map(c=>c.share.toFixed(2)).join(" "));

@@ -1,0 +1,178 @@
+{ "frames": [
+   {
+    "filename": "molten-pool 0.aseprite",
+    "frame": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 80
+   },
+   {
+    "filename": "molten-pool 1.aseprite",
+    "frame": { "x": 80, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 80
+   },
+   {
+    "filename": "molten-pool 2.aseprite",
+    "frame": { "x": 160, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 80
+   },
+   {
+    "filename": "molten-pool 3.aseprite",
+    "frame": { "x": 240, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 80
+   },
+   {
+    "filename": "molten-pool 4.aseprite",
+    "frame": { "x": 320, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 80
+   },
+   {
+    "filename": "molten-pool 5.aseprite",
+    "frame": { "x": 400, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 6.aseprite",
+    "frame": { "x": 480, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 7.aseprite",
+    "frame": { "x": 560, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 8.aseprite",
+    "frame": { "x": 640, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 9.aseprite",
+    "frame": { "x": 720, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 10.aseprite",
+    "frame": { "x": 800, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 11.aseprite",
+    "frame": { "x": 880, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 12.aseprite",
+    "frame": { "x": 960, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 120
+   },
+   {
+    "filename": "molten-pool 13.aseprite",
+    "frame": { "x": 1040, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 110
+   },
+   {
+    "filename": "molten-pool 14.aseprite",
+    "frame": { "x": 1120, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 110
+   },
+   {
+    "filename": "molten-pool 15.aseprite",
+    "frame": { "x": 1200, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 110
+   },
+   {
+    "filename": "molten-pool 16.aseprite",
+    "frame": { "x": 1280, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 110
+   },
+   {
+    "filename": "molten-pool 17.aseprite",
+    "frame": { "x": 1360, "y": 0, "w": 80, "h": 20 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 80, "h": 20 },
+    "sourceSize": { "w": 80, "h": 20 },
+    "duration": 110
+   }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.18.6-x64",
+  "image": "check.png",
+  "format": "RGBA8888",
+  "size": { "w": 1440, "h": 20 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "poolSpread", "from": 0, "to": 4, "direction": "forward", "color": "#000000ff" },
+   { "name": "poolLoop", "from": 5, "to": 12, "direction": "forward", "color": "#000000ff" },
+   { "name": "poolFade", "from": 13, "to": 17, "direction": "forward", "color": "#000000ff" }
+  ]
+ }
+}

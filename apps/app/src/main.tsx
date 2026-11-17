@@ -24,9 +24,13 @@ const root = (
         appId={privyAppId}
         config={{
           loginMethods: ["email", "google", "twitter"],
-          appearance: { theme: "dark", accentColor: "#d63c28" },
+          // No outside wallets on the sign-in screen: listing any makes Privy fetch WalletConnect's 1.2 MB directory on every visit.
+          appearance: { theme: "dark", accentColor: "#d63c28", walletList: [] },
           // A Solana wallet for everyone who signs in: pro entries are paid from it (pro.ts).
           embeddedWallets: { solana: { createOnLogin: "all-users" }, showWalletUIs: false },
+          // Players sign in by email or a social account and pay from the embedded wallet; no outside wallet is linked,
+          // so WalletConnect is not started either.
+          externalWallets: { walletConnect: { enabled: false } },
         }}
       >
         <AuthGate>{game}</AuthGate>

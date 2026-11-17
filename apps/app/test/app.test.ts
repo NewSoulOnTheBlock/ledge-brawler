@@ -12,7 +12,7 @@ import type { BoutWord } from "../src/arena/protocol.ts";
 import type { RunWord } from "../src/arena/run.ts";
 import type { Pro } from "../src/arena/arena.ts";
 import { serve } from "../src/arena/serve.ts";
-import { DUEL, allLevels, levelById } from "../src/game/levels.ts";
+import { DUEL, SURVIVAL_STAGES, allLevels, levelById } from "../src/game/levels.ts";
 import { type Paid, joinRun } from "../src/run.ts";
 import { PROTAGONISTS } from "../src/story/canon.ts";
 import { type Together, joinTogether } from "../src/together.ts";
@@ -334,9 +334,11 @@ async function until<T>(seen: () => T, what: string): Promise<NonNullable<T>> {
   throw new Error(`never: ${what}`);
 }
 
-/** An arena on its own clock, and players who sit down at it as the game would. */
+/** An arena on its own clock, and players who sit down at it as the game would. Its clock is set to a day whose
+ *  stage of the fight of waves is the islands (levels.ts, `survivalStage`), so that a run is laid out the same any day. */
 async function arenaServer(pro?: Pro) {
-  const clock = { ahead: 0 }, now = () => Date.now() + clock.ahead;
+  const day = Math.floor(Date.now() / 86_400_000), length = SURVIVAL_STAGES.length, shift = (SURVIVAL_STAGES.indexOf(null) - (day % length) + length) % length;
+  const clock = { ahead: shift * 86_400_000 }, now = () => Date.now() + clock.ahead;
   const serving = await serve(0, { now, pro });
   servers.push(serving);
   const url = `ws://localhost:${serving.port}/play`;
@@ -352,7 +354,7 @@ async function arenaServer(pro?: Pro) {
   /** Where a fighter says it is, packed as versus.ts packs it: in the middle of a jab, or of a special, or guarding. */
   const at = (room: Room, x: number, how: { special?: boolean; guard?: boolean } = {}) =>
     room.me.set({ s: [x, 600, 0, 0, 1, 100, 3, 1, 0, how.guard ? 1 : 0, 1, 0, "m:jab:3", 0, how.special ? "0:5::" : "", now()].join(",") });
-  return { url, player, at, later: (ms: number) => { clock.ahead += ms; } };
+  return { url, player, at, later: (ms: number) => { clock.ahead += ms; }, islands: day + shift };
 }
 
 // spec/app/lobby.md, "Story: Find a match"
@@ -555,7 +557,7 @@ it("Fight other players: two games at the arena start the server's round togethe
     const game = createGame(rules, ui);
     rules.send({ type: "enter" }); rules.send({ type: "duel" }); game.begin(DUEL);
     const seen = { standing: { rivals: [], status: "joining" } as Standing };
-    net = await joinVersus(undefined, name, DUEL, game, rules, (standing) => { seen.standing = standing; });
+    net = await joinVersus(undefined, name, true, game, rules, (standing) => { seen.standing = standing; });
     const playing = net;
     servers.push({ close: () => Promise.resolve(playing.leave()) });
     return { rules, game, net: playing, seen, hero: () => game.scene.hero! };
@@ -575,18 +577,21 @@ it("Fight other players: two games at the arena start the server's round togethe
   await play(() => ada.seen.standing.status === "starting" && bo.seen.standing.status === "starting", "the round announced");
   later(3_000);
   await play(() => ada.seen.standing.status === "fighting" && bo.seen.standing.status === "fighting" && ada.seen.standing.rivals.length === 2, "the round begun");
-  // Face to face on the middle ledge, Bo standing still.
-  const stand = (p: typeof ada, x: number, facing: number) => { Matter.Body.setPosition(p.hero().body, { x, y: 600 }); Matter.Body.setVelocity(p.hero().body, { x: 0, y: 0 }); p.hero().facing = facing; };
+  // Face to face where the round's place has its first start, Bo standing still: both games are in the same place.
+  const place = ada.game.scene.level!;
+  expect(bo.game.scene.level!.id).toBe(place.id);
+  const start = place.starts?.[0] ?? place.spawn;
+  const stand = (p: typeof ada, x: number, facing: number) => { Matter.Body.setPosition(p.hero().body, { x, y: start.y }); Matter.Body.setVelocity(p.hero().body, { x: 0, y: 0 }); p.hero().facing = facing; };
   const full = bo.rules.get().hp;
-  await play(() => { stand(bo, 560, -1); stand(ada, 500, 1); return ada.game.scene.enemies.some((E) => E.peer && Math.abs(E.body.position.x - 560) < 2); }, "Bo seen where Bo is");
+  await play(() => { stand(bo, start.x + 60, -1); stand(ada, start.x, 1); return ada.game.scene.enemies.some((E) => E.peer && Math.abs(E.body.position.x - start.x - 60) < 2); }, "Bo seen where Bo is");
   // Put there in an instant, as no game could be: the server lands no blow of Ada's for a moment.
   later(1_100);
   // spec/app/bout.md, "A blow lands only between two different fighters who are both standing, in a round that is not over, and does from 1 to 60"
-  await play(() => { stand(bo, 560, -1); ada.game.press("punch"); ada.game.release("punch"); return bo.rules.get().hp < full; }, "a punch landing", 300);
+  await play(() => { stand(bo, start.x + 60, -1); stand(ada, start.x, 1); ada.game.press("punch"); ada.game.release("punch"); return bo.rules.get().hp < full; }, "a punch landing", 300);
   const punched = bo.rules.get().hp;
   expect(punched).toBeGreaterThan(full - 60);
   // spec/app/bout.md, "A fall off the islands costs a standing fighter 25 health, and may knock it out, with no knockout scored"
-  Matter.Body.setPosition(bo.hero().body, { x: 560, y: 1750 });
+  Matter.Body.setPosition(bo.hero().body, { x: start.x + 60, y: bo.game.scene.voidY + 50 });
   await play(() => bo.rules.get().hp <= punched - 25, "the fall");
   // The server took the same: its word does not lower Bo's health further.
   await play(() => false, "", 30).catch(() => undefined);
@@ -598,14 +603,14 @@ it("Fight other players: two games at the arena start the server's round togethe
 // player's lands only near its enemy, a fall costs what it costs, and the run's end is the score the site is told.
 it("Fight the waves: a paid run is played at the arena, which lands only the player's blows that could land, takes its falls, and tells the site the score", async () => {
   const { asked, pro } = await sitePot();
-  const { url, later } = await arenaServer(pro);
+  const { url, later, islands } = await arenaServer(pro);
   /** Lets the run play on, the clock moved ahead a little at a time, until `seen` holds. */
   async function ahead<T>(seen: () => T, what: string): Promise<NonNullable<T>> {
     for (let i = 0; i < 400; i++) { const v = seen(); if (v) return v; later(80); await new Promise((done) => setTimeout(done, 15)); }
     throw new Error(`never: ${what}`);
   }
-  await expect(joinArena({ kind: "run", name: "Thief", fighter: 0, vigor: 0, pro: { entry: 22, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
-  const room = await joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" } }, url);
+  await expect(joinArena({ kind: "run", name: "Thief", fighter: 0, vigor: 0, pro: { entry: 22, token: "good" }, day: islands }, url)).rejects.toMatchObject({ why: "pro" });
+  const room = await joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" }, day: islands }, url);
   servers.push({ close: () => room.leave() });
   const seen = { run: null as RunWord | null, world: null as World | null, hits: 0 };
   room.onRun((run) => { seen.run = run; });
@@ -643,7 +648,7 @@ it("Fight the waves: a paid run is played at the arena, which lands only the pla
   expect([seen.run!.alive, seen.run!.kos >= 1]).toEqual([false, true]);
   // One entry is one run.
   await room.leave();
-  await expect(joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" } }, url)).rejects.toMatchObject({ why: "pro" });
+  await expect(joinArena({ kind: "run", name: "Ada", fighter: 2, vigor: 10, pro: { entry: 21, token: "good" }, day: islands }, url)).rejects.toMatchObject({ why: "pro" });
 });
 
 // spec/app/index.md, "Story: Fight the waves"; spec/app/index.md, "Story: Stay alive"
@@ -652,7 +657,7 @@ it("Fight the waves: a paid run is played at the arena, which lands only the pla
 // server's.
 it("Fight the waves: a paid run's game fights the server's enemies, its punch knocks one out there, and its health and its end are the server's", async () => {
   const { asked, pro } = await sitePot();
-  const { url, later } = await arenaServer(pro);
+  const { url, later, islands } = await arenaServer(pro);
   vi.stubEnv("VITE_ARENA_URL", url);
   const rules = rulesOf(runtimeOn(KeyValueStore.layerMemory));
   let paid: Paid | null = null, run: RunWord | null = null;
@@ -660,7 +665,7 @@ it("Fight the waves: a paid run's game fights the server's enemies, its punch kn
   const ui: Ui = { sfx: silent, banner: () => undefined, callout: () => undefined, foeHit: (uid, blow) => paid?.foeHit(uid, blow), shot: (orb) => paid?.shot(orb), fell: () => paid?.fell(), lost: (wave, kos) => ended.push([wave, kos]) };
   const game = createGame(rules, ui);
   rules.send({ type: "enter" }); rules.send({ type: "focus", pick: 2 }); rules.send({ type: "fight" }); game.begin();
-  paid = await joinRun({ entry: 21, token: "good" }, "Ada", game, rules, (said) => { run = said; });
+  paid = await joinRun({ entry: 21, token: "good" }, islands, "Ada", game, rules, (said) => { run = said; });
   const playing = paid;
   servers.push({ close: () => Promise.resolve(playing.leave()) });
   const hero = () => game.scene.hero!;

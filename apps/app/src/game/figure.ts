@@ -157,6 +157,11 @@ function moveFrame(move: string, t: number): Frame | null {
 const FLOURISH = 70;
 
 /** The frame that shows what `F` is doing at `time` seconds. */
+/** The animations a blow is struck in (`MOVE_ANIM`, and the swings and the bow of `frameOf`): what the arena server
+ *  takes as a fighter in the middle of an attack, whose blow may land (arena/arena.ts). */
+const STRIKING = new Set<AnimName>([...Object.values(MOVE_ANIM), "swing", "backswing", "bow"]);
+export const striking = (at: Frame) => "move" in at || STRIKING.has(at.anim);
+
 export function frameOf(F: Fighter, time: number): Frame {
   const vx = F.body.velocity.x, vy = F.body.velocity.y, id = F.char?.id;
   // A fighter with a move list plays each move's own animation.

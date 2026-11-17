@@ -1,11 +1,10 @@
 // spec/app/index.md, "Story: Choose a fighter"; spec/app/index.md, "Story: Learn the moves"
 import { cn } from "@repo/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, type JSX, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fighters } from "../gen/app.ts";
 import { chaptersDone } from "../gen/app__saga.ts";
 import { KitButton, KitWord } from "./kit.tsx";
 import { CampaignScreen, ChapterClear, Ending, GuideTalk, Prelude } from "./Campaign.tsx";
-import { CoopParty, CoopTable, Wiped } from "./Coop.tsx";
 import { type Table, type TalkWord, type Together, joinTogether } from "./together.ts";
 import { unend } from "./story/endings.ts";
 import { DILEMMAS, PARLEY, keepRank, rankOf, repliesOf, type Stance, stand, choose, echoOf, forget, give, memoryOf, reckoning, remember, specialsOf } from "./story/parley.ts";
@@ -20,12 +19,12 @@ import { CHARS, MOVES_TO_FIND } from "./game/data.ts";
 import { createPost } from "./game/post/post.ts";
 import { createView, isCalm, setCalm } from "./game/render.ts";
 import { skyIsDark } from "./game/sky.ts";
-import { DUEL, type Level, hasLevel, levelById, levelOf } from "./game/levels.ts";
+import { type Level, hasLevel, levelById, levelOf, survivalStage, today } from "./game/levels.ts";
 import { type Sample, playSample } from "./game/samples.ts";
 import { type Button, type Game, type Ui, createGame } from "./game/sim.ts";
 import { Combo, Hud, TouchPad, TOUCH_SEEN, TOUCH_SIZES, setTouchFit, touchFit } from "./Hud.tsx";
 import { BigButton, MoveList, SelectScreen, SmallButton, TitleBackdrop, TitleScreen, VolumeSliders } from "./screens.tsx";
-import { Profile } from "./Profile.tsx";
+import { type PauseAction, type PausePage, PauseMenu } from "./Pause.tsx";
 import type { Runtime } from "./runtime.ts";
 import { type FactId, HEROES, PROTAGONISTS, factNumber, type Hero } from "./story/canon.ts";
 import { KitIcon } from "./kit.tsx";
@@ -42,7 +41,17 @@ import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor
 import { type Entry, proSeat, proWithdraw } from "./pro.ts";
 import { type Paid, joinRun } from "./run.ts";
 import type { RunWord } from "./arena/run.ts";
-import { ProEntry } from "./ProEntry.tsx";
+/** A screen loaded the first time it is shown, not with the game: paying (Solana and the wallet's own module), the
+ *  profile, and playing together (the multiplayer client). Nothing shows while it loads, for the moment it takes. */
+const later = <P extends object>(load: () => Promise<ComponentType<P>>) => {
+  const Loaded = lazy(() => load().then((component) => ({ default: component })));
+  return (props: P & JSX.IntrinsicAttributes) => <Suspense fallback={null}><Loaded {...props} /></Suspense>;
+};
+const ProEntry = later(() => import("./ProEntry.tsx").then((m) => m.ProEntry));
+const Profile = later(() => import("./Profile.tsx").then((m) => m.Profile));
+const CoopTable = later(() => import("./Coop.tsx").then((m) => m.CoopTable));
+const CoopParty = later(() => import("./Coop.tsx").then((m) => m.CoopParty));
+const Wiped = later(() => import("./Coop.tsx").then((m) => m.Wiped));
 
 const KEYMAP: Record<string, Button> = {
   ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowDown: "down", KeyS: "down",
@@ -592,21 +601,21 @@ export function App({ runtime }: { runtime: Runtime }) {
     send({ type: "train", vigor: 10 * build.health, learned: granted && !proOn.current ? 5 : saga ? Math.min(5, chaptersDone(HEROES.indexOf(hero), saga)) : 0 });
     return [specialsOf(hero, fighter), build] as const;
   }, [rules, send, saga, granted]);
-  /** A paid run, just begun here, played at the arena server from now on; one it cannot reach does not count, and its
-   *  entry is kept for the next. */
-  const runAtArena = useCallback(() => {
+  /** A paid run, just begun here on the stage of `day`, played at the arena server from now on; one it cannot reach
+   *  does not count, and its entry is kept for the next. */
+  const runAtArena = useCallback((day: number) => {
     paidRun.current?.leave(); paidRun.current = null; runSaid.current = null; setRunWord(null);
     const paid = paidIn.current;
     if (paid?.mode !== "survival") return;
     const heard = (run: RunWord) => { runSaid.current = run; setRunWord(run); };
-    void proSeat(paid).then((seat) => joinRun(seat, lastName() || nameFor(rules.get().fighter), game, rules, heard))
+    void proSeat(paid).then((seat) => joinRun(seat, day, lastName() || nameFor(rules.get().fighter), game, rules, heard))
       .then((run) => { if (paidIn.current === paid) paidRun.current = run; else run.leave(); }, (error: unknown) => {
         console.warn("run:", error);
         if (paidIn.current === paid) { paidIn.current = null; ready.current = paid; }
         setProNote("The arena could not be reached, so this run does not count. Your entry is kept for your next run.");
       });
   }, [game, rules]);
-  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); game.begin(null, ...mine); runAtArena(); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter, runAtArena]);
+  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); const day = today(); game.begin(survivalStage(day), ...mine); runAtArena(day); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter, runAtArena]);
   // A paid run is left with the fight against the waves.
   const waves = match?.screen === "Play" && !match.duel && !match.quest;
   useEffect(() => { if (!waves) { paidRun.current?.leave(); paidRun.current = null; } }, [waves]);
@@ -617,7 +626,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     setStanding({ rivals: [], status: "joining" }); setDuelTable("");
     const paid = paidIn.current?.mode === "versus" ? paidIn.current : null;
     void (paid ? proSeat(paid) : Promise.resolve(undefined))
-      .then((seat) => joinVersus(seat ? undefined : roomCode(), lastName() || nameFor(rules.get().fighter), DUEL, game, rules, setStanding, seat))
+      .then((seat) => joinVersus(seat ? undefined : roomCode(), lastName() || nameFor(rules.get().fighter), true, game, rules, setStanding, seat))
       .then((room) => { if (rules.get().duel && !net.current) { net.current = room; setDuelTable(room.code); } else room.leave(); })
       .catch((error: unknown) => { console.warn("versus:", error); setStanding({ rivals: [], status: error instanceof Error && error.message === "full" ? "full" : "offline" }); });
   }, [game, rules]);
@@ -626,7 +635,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     const mine = built();
     if (!send({ type: "duel" })) return;
     setLevel(null);
-    game.begin(stageFor(DUEL, roomCode(), 0), ...mine); began.current = performance.now();
+    game.begin(stageFor(roomCode(), 0), ...mine); began.current = performance.now();
     track("versus_start", { fighter: rules.get().fighter, pro: proOn.current, room: roomCode() });
     connect(); sideways();
   }, [send, game, connect, rules]);
@@ -854,6 +863,10 @@ export function App({ runtime }: { runtime: Runtime }) {
   }, [level, counts, tell, send, rules, game, awaken, group, backToTable, select]);
   useEffect(() => { if (match?.screen !== "Play") setAwakening(null); }, [match?.screen]);
   const toggleMoves = useCallback(() => { if (send({ type: "openMoves" }) || send({ type: "closeMoves" })) game.clearInput(); }, [send, game]);
+  // Which page of the pause is up (Pause.tsx). Escape steps back a page, and from the first one resumes.
+  const [pausePage, setPausePage] = useState<PausePage>("menu"), pageNow = useRef<PausePage>("menu");
+  const toPage = useCallback((page: PausePage) => { pageNow.current = page; setPausePage(page); }, []);
+  const pause = useCallback((page: PausePage) => { toPage(page); if (send({ type: "openMoves" })) game.clearInput(); }, [toPage, send, game]);
   const toggleMute = useCallback(() => setMuted(audio.toggleMute()), [audio]);
 
   useEffect(() => {
@@ -876,7 +889,8 @@ export function App({ runtime }: { runtime: Runtime }) {
       if (knocked.current) return;
       if (talking.current) { if (CONFIRM.includes(code)) take(() => { sound("ui"); hear(); }); else if (code === "Escape") take(hush); return; }
       if (code === "KeyM") return toggleMute();
-      if (code === "KeyH" || (code === "Escape" && now.paused)) return take(toggleMoves);
+      if (code === "Escape") return take(() => { if (!now.paused) pause("menu"); else if (pageNow.current !== "menu") toPage("menu"); else toggleMoves(); });
+      if (code === "KeyH") return take(() => (now.paused ? toggleMoves() : pause("moves")));
       const key = KEYMAP[code];
       if (now.paused || !key) return;
       event.preventDefault();
@@ -886,7 +900,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     const blur = () => (["left", "right", "up", "jump", "down", "grab", "charge", "guard"] as const).forEach(game.release);
     addEventListener("keydown", down); addEventListener("keyup", up); addEventListener("blur", blur);
     return () => { removeEventListener("keydown", down); removeEventListener("keyup", up); removeEventListener("blur", blur); };
-  }, [audio, rules, send, game, select, fight, brawl, toggleMoves, toggleMute, hear, hush, sound]);
+  }, [audio, rules, send, game, select, fight, brawl, toggleMoves, toggleMute, hear, hush, sound, pause, toPage]);
 
   // Whoever opens an invitation is taken straight to choosing a fighter for it.
   const invited = useRef(false);
@@ -895,6 +909,16 @@ export function App({ runtime }: { runtime: Runtime }) {
     invited.current = true;
     setCampaign(false); setVersus(true); setPro(false); select("enter");
   }, [match?.screen, select]);
+
+  /** What the pause offers besides resuming, its pages and settings: the level again from its start (alone, on a
+   *  quest), another fighter or chapter, and the main menu, which leaves a duel or a table the way their own buttons do. */
+  const pauseActions = (): PauseAction[] => {
+    const now = rules.get(), out: PauseAction[] = [];
+    if (now.quest && level && !group) out.push({ label: "Restart level", act: () => { if (send({ type: "change" })) embark(level); } });
+    if (!now.duel) out.push({ label: now.quest ? "Choose chapter" : "Change fighter", act: () => select("change") });
+    out.push({ label: "Main menu", act: () => { if (now.duel) leaveMatch(); else { if (group) standUp(); select("change"); } send({ type: "back" }); } });
+    return out;
+  };
 
   const leaveMatch = () => {
     // A pro seat left before anyone else joined its match gets its fee back (server/api/_pro.js, withdraw).
@@ -908,10 +932,10 @@ export function App({ runtime }: { runtime: Runtime }) {
   // Looking away from a fight against the game stops it: the move list comes up, as if H had been pressed. A duel
   // goes on, since the other players do.
   useEffect(() => {
-    const away = () => { audio.sleep(document.hidden); const now = rules.get(); if (document.hidden && now.screen === "Play" && !now.duel && !now.paused && send({ type: "openMoves" })) game.clearInput(); };
+    const away = () => { audio.sleep(document.hidden); const now = rules.get(); if (document.hidden && now.screen === "Play" && !now.duel && !now.paused) pause("menu"); };
     document.addEventListener("visibilitychange", away);
     return () => document.removeEventListener("visibilitychange", away);
-  }, [rules, send, game]);
+  }, [rules, pause]);
   // What a controller is for just now (gamepad.ts): the fight while there is one to fight and nothing over it to
   // read or press, the fighter select, or whatever else is on the page.
   const padMode = useRef<PadMode>("menu");
@@ -931,12 +955,12 @@ export function App({ runtime }: { runtime: Runtime }) {
       const now = rules.get();
       if (now.screen === "Title") return;
       history.pushState({ five: true }, "");
-      if (now.screen === "Play" && !talking.current && !document.querySelector('[aria-label="Before it begins"]')) { if (send({ type: now.paused ? "closeMoves" : "openMoves" })) game.clearInput(); }
+      if (now.screen === "Play" && !talking.current && !document.querySelector('[aria-label="Before it begins"]')) { if (now.paused) toggleMoves(); else pause("menu"); }
       else window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape", key: "Escape", bubbles: true, cancelable: true }));
     };
     addEventListener("popstate", back);
     return () => removeEventListener("popstate", back);
-  }, [offTitle, rules, send, game]);
+  }, [offTitle, rules, toggleMoves, pause]);
   // While a fight is on, the screen is kept awake: a thumb on the glass is not what a phone counts as being used.
   const awake = match?.screen === "Play" && !match.paused;
   useEffect(() => {
@@ -1018,12 +1042,12 @@ export function App({ runtime }: { runtime: Runtime }) {
           <div className="absolute right-4 bottom-3.5 flex gap-2 pointer-coarse:top-[62px] pointer-coarse:bottom-auto">
             {match.quest ? (
               <>
-                <KitIcon icon="moves" label="Moves" onClick={toggleMoves} />
+                <KitIcon icon="moves" label="Pause" onClick={() => pause("menu")} />
                 <KitIcon icon={muted ? "muted" : "sound"} label={`Sound ${muted ? "off" : "on"}`} aria-pressed={muted} onClick={toggleMute} />
               </>
             ) : (
               <>
-                <SmallButton className="border font-mono font-medium text-muted-foreground" onClick={toggleMoves}>Moves</SmallButton>
+                <SmallButton className="border font-mono font-medium text-muted-foreground" onClick={() => pause("menu")}>Pause</SmallButton>
                 <SmallButton className="border font-mono font-medium text-muted-foreground" aria-pressed={muted} onClick={toggleMute}>Sound {muted ? "off" : "on"}</SmallButton>
               </>
             )}
@@ -1033,7 +1057,7 @@ export function App({ runtime }: { runtime: Runtime }) {
             <span className="bg-background/85 px-2 py-1 box-decoration-clone">{caption.text}</span>
           </p>
           {talk && match.quest && !match.paused && <GuideTalk who={talk.voice && talk.at + 1 === talk.lines.length ? talk.voice : talk.who} end={talk.end} choices={talk.at + 1 < talk.lines.length ? undefined : talk.voice ? [{ say: "Heed the Reaper", pick: () => heeding("reaper") }, { say: `Heed ${talk.voice}`, pick: () => heeding("voice") }] : talk.boss && level ? repliesOf(level.id).map((each) => ({ say: each.say, pick: () => answering(each.how) })) : undefined} line={talk.lines[talk.at]} at={talk.at} of={talk.lines.length} onNext={hear} onSkip={hush} />}
-          {lost && !match.quest && !match.duel && !match.paused && <KnockedOut lost={lost} fighter={match.fighter} went={{ seconds: lasted, best: match.best, found: match.found.length }} onAgain={() => start(() => { setLost(null); began.current = performance.now(); game.again(); runAtArena(); })} onLeave={() => { setLost(null); send({ type: "openMoves" }); select("change"); }} />}
+          {lost && !match.quest && !match.duel && !match.paused && <KnockedOut lost={lost} fighter={match.fighter} went={{ seconds: lasted, best: match.best, found: match.found.length }} onAgain={() => start(() => { setLost(null); began.current = performance.now(); game.again(); runAtArena(today()); })} onLeave={() => { setLost(null); send({ type: "openMoves" }); select("change"); }} />}
           {match.quest && !match.alive && match.lives === 1 && !match.paused && level && !match.spared && !refused && saga && !(group && party.rivals.length > 1) && <Bargain memory={memoryOf(level.hero)} strength={canPay(level.hero, chaptersDone(HEROES.indexOf(level.hero), saga))} onGive={bargain} onRefuse={() => setRefused(true)} />}
           {match.quest && !match.alive && match.lives === 1 && !match.paused && level && (match.spared || refused) && !(group && party.rivals.length > 1) && <GameOver level={level} onAgain={() => { send({ type: "openMoves" }); send({ type: "change" }); embark(level); }} onLeave={() => { send({ type: "openMoves" }); select("change"); }} />}
           {awakening && !talk && !match.paused && (
@@ -1044,12 +1068,12 @@ export function App({ runtime }: { runtime: Runtime }) {
             </p>
           )}
           {(match.cleared || teamCleared) && level && <ChapterClear ask={!group || group.host} level={level} counts={counts} went={went} onContinue={(from) => void carryOn(from)} />}
-          {match.paused && <MoveList match={match} specials={game.specials()} onResume={toggleMoves} onChange={() => select("change")} extra={
-            <Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)}>
-              {/* What else a pause is for: the level again from its start, and the whole screen. */}
-              {match.quest && level && <SmallButton onClick={() => { if (send({ type: "change" })) embark(level); }}>Restart level</SmallButton>}
-              <SmallButton onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => undefined)}>Fullscreen</SmallButton>
-            </Preferences>} />}
+          {match.paused && (pausePage === "moves"
+            ? <MoveList match={match} specials={game.specials()} onResume={toggleMoves} onChange={() => select("change")} extra={<SmallButton className="mt-4" onClick={() => toPage("menu")}>Back</SmallButton>} />
+            : <PauseMenu page={pausePage} onPage={toPage} onResume={toggleMoves} actions={pauseActions()} settings={
+              <Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)}>
+                <SmallButton onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => undefined)}>Fullscreen</SmallButton>
+              </Preferences>} />)}
         </>
       )}
       {match.screen === "Play" && lost && pro && proNote && <p role="status" className="absolute inset-x-0 top-6 z-30 mx-auto w-fit border-2 border-foreground bg-card px-3 py-1 text-[13px]">{proNote}</p>}

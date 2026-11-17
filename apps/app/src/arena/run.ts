@@ -5,6 +5,7 @@
 // A blow of the player's on an enemy is that game's to find and this one's to land (`foe`). So the waves reached and
 // the enemies knocked out, which decide the day's pot, are what the server saw.
 import { type Event, type Match, enabled, full, initial, step } from "../../gen/app.ts";
+import { survivalStage } from "../game/levels.ts";
 import { type Hurt, type Sfx, type Ui, type World, createGame } from "../game/sim.ts";
 import { type Word, peerOf } from "./word.ts";
 
@@ -16,9 +17,9 @@ export interface RunWord { hp: number; most: number; wave: number; kos: number; 
 const silent = new Proxy({}, { get: () => () => undefined }) as Sfx;
 
 /** A run of `fighter`, trained by `vigor` (at most what training gives, spec/app/index.md, "A fighter can be trained
- *  for up to 50 more health, on the select screen"): `landed` tells its player's game of a blow on its fighter, and
- *  `ended` of the run's end, once. */
-export function createRun(fighter: number, vigor: number, on: { landed(blow: Hurt): void; ended(result: RunWord): void }) {
+ *  for up to 50 more health, on the select screen"), on the stage of the UTC day `day`: `landed` tells its player's
+ *  game of a blow on its fighter, and `ended` of the run's end, once. */
+export function createRun(fighter: number, vigor: number, day: number, on: { landed(blow: Hurt): void; ended(result: RunWord): void }) {
   let match: Match = initial, over = false;
   const rules = { get: () => match, send: (event: Event) => (enabled(match, event) ? (match = step(match, event)) : undefined) };
   const ui: Ui = {
@@ -33,7 +34,7 @@ export function createRun(fighter: number, vigor: number, on: { landed(blow: Hur
   rules.send({ type: "train", vigor: Math.max(0, Math.min(50, vigor)), learned: 5 });
   rules.send({ type: "fight" });
   game.coop({ host: true });
-  game.begin(null);
+  game.begin(survivalStage(day));
   const word = (): RunWord => ({ hp: match.hp, most: full(match), wave: match.wave, kos: match.kos, alive: match.alive, over });
   return {
     game,

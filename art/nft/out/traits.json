@@ -1,0 +1,71 @@
+{
+  "collection": "Five Blades: Seekers",
+  "supply": 333,
+  "traits": {
+    "background": {
+      "Rising Sun": 53,
+      "Pale Moon": 32,
+      "Misty Peaks": 43,
+      "Ink Wash": 42,
+      "Bauhaus": 33,
+      "Dusk": 25,
+      "Niche": 30,
+      "Monolith": 35,
+      "Eclipse": 22,
+      "Kintsugi": 13,
+      "Firstborn": 5
+    },
+    "frame": {
+      "Ivory & Gold": 95,
+      "Ivory & Silver": 66,
+      "Ink & Gold": 50,
+      "Ink & Silver": 53,
+      "Bone & Oxblood": 32,
+      "Onyx & Platinum": 32,
+      "Celestial": 5
+    },
+    "cloak": {
+      "Obsidian": 54,
+      "Crimson": 41,
+      "Sapphire": 42,
+      "Amethyst": 29,
+      "Emerald": 33,
+      "Midnight": 23,
+      "Ash": 41,
+      "Rose": 20,
+      "Ivory": 16,
+      "Void": 16,
+      "Royal Gold": 8,
+      "Pearl": 10
+    },
+    "eyes": {
+      "Gold": 62,
+      "Ember": 62,
+      "Cyan": 51,
+      "Violet": 58,
+      "Jade": 37,
+      "Blood": 33,
+      "Rose": 19,
+      "Divine White": 11
+    },
+    "stance": {
+      "Ready": 114,
+      "Channel": 91,
+      "Invoke": 78,
+      "Strike": 50
+    },
+    "blade": {
+      "Ink": 61,
+      "Fire": 58,
+      "Water": 73,
+      "Volt": 77,
+      "Leaf": 64
+    },
+    "aura": {
+      "None": 163,
+      "Glow": 54,
+      "Halo": 64,
+      "Motes": 52
+    }
+  }
+}

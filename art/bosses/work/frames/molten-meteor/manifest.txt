@@ -1,0 +1,12 @@
+meteorFall meteorFall_00.png 70
+meteorFall meteorFall_01.png 70
+meteorFall meteorFall_02.png 70
+meteorFall meteorFall_03.png 70
+meteorImpact meteorImpact_00.png 70
+meteorImpact meteorImpact_01.png 70
+meteorImpact meteorImpact_02.png 70
+meteorImpact meteorImpact_03.png 70
+meteorImpact meteorImpact_04.png 70
+meteorImpact meteorImpact_05.png 70
+meteorImpact meteorImpact_06.png 70
+meteorImpact meteorImpact_07.png 70
