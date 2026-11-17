@@ -26,7 +26,9 @@ players and says who won, always on the arena server's word ([`spec/app/bout.md`
     If the site goes away, no fee is stuck.
   - The owner (a safe, not a hot key) can change the referee and the fee. It can `sweep` tokens sent to the contract
     by mistake, but never a fee held for a pot.
-  - Pots are named by the site: `keccak256("versus:<match id>")` and `keccak256("survival:<UTC day number>")`.
+  - Pots are named by the site: `keccak256("<site>:versus:<match id>")` and `keccak256("<site>:survival:<UTC day
+    number>")`. `<site>` is a random id that the site's database makes once. A reset database, or a preview sharing
+    the contract, never opens a pot that was already used.
 - **`contracts/test/TestBlades.sol`**: a stand-in for $BLADES, for tests and the testnet only. It has permits, and
   anyone may mint it.
 - **`test/pot.test.ts`**: the pot on Hardhat's simulated network. **`testing.ts`**: a chain of a test's own, with
@@ -55,6 +57,17 @@ Keys never go in the code. Hardhat reads `DEPLOYER_PRIVATE_KEY` and `ETHERSCAN_A
 npx hardhat ignition deploy ignition/modules/Testnet.ts --network robinhoodTestnet --verify
 ```
 
+**Sepolia.** The same module, deployed with `--network sepolia`. The pot here was tried end to end with the site's
+own `_pro.js`: two Versus entries, the whole pot paid to the arena's winner, a lone seat refunded, and a day's
+Survival pot paid to its best run. The players held no ETH; the referee paid every gas. Source verified on
+Blockscout and Sourcify.
+
+| | Sepolia (11155111) |
+|---|---|
+| TestBlades | [`0xc0EaDc34afE8980D0f91442d8A6c660Cc58f8B40`](https://eth-sepolia.blockscout.com/address/0xc0EaDc34afE8980D0f91442d8A6c660Cc58f8B40) |
+| BladesPot (fee 50,000) | [`0xb9B4D8fF699bf90303Fc385983A78Da13aD1aC17`](https://eth-sepolia.blockscout.com/address/0xb9B4D8fF699bf90303Fc385983A78Da13aD1aC17) |
+| Owner and referee | `0x9D1236f89C5f680B6d380612F2b4f210F668Bb1a` |
+
 **Mainnet.** Once $BLADES is launched:
 
 1. Copy `ignition/parameters/robinhood.example.json` to `robinhood.json`.
@@ -75,11 +88,11 @@ Set these on the Vercel project. Pro mode stays closed until the first three are
 | `BLADES_TOKEN` | the $BLADES token's address |
 | `BLADES_POT` | the pot's address |
 | `REFEREE_KEY` | the referee's private key; the account needs ETH for gas |
-| `CHAIN_ID` | `4663` (the default), or `46630` for the testnet |
+| `CHAIN_ID` | `4663` (the default); `46630` for the testnet, `11155111` for Sepolia |
 | `CHAIN_RPC` | the RPC, such as Alchemy's |
 | `PRO_SIGNING_KEY`, `DATABASE_URL` | as before |
 
-For a testnet build of the game, set `VITE_CHAIN_ID=46630`.
+For a test build of the game, set `VITE_CHAIN_ID` to the same id as `CHAIN_ID`.
 
 The schema in [`apps/app/server/pro.sql`](../apps/app/server/pro.sql) is additive. Run it again against the
 database before deploying.

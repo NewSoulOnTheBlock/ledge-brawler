@@ -1,5 +1,5 @@
-// Robinhood Chain Testnet only: a stand-in for $BLADES (contracts/test/TestBlades.sol) and a pot taking it, owned and
-// refereed by `referee` (the site's REFEREE_KEY on its testnet build), each entry costing `fee` base units.
+// A test network only (Robinhood Chain Testnet, Sepolia): a stand-in for $BLADES (contracts/test/TestBlades.sol) and a
+// pot taking it, owned and refereed by `referee` (the site's REFEREE_KEY on its test build), each entry costing `fee` base units.
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 export default buildModule("Testnet", (m) => {

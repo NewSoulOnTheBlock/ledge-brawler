@@ -16,11 +16,11 @@
 //   BLADES_POT         the pot contract's address (contracts/README.md)
 //   REFEREE_KEY        the pot's referee's private key (0x…): it seats players, pays pots out, and pays the gas in ETH
 //   PRO_SIGNING_KEY    any long random string: signs what is handed out to be signed
-//   CHAIN_ID           4663, Robinhood Chain (the default); 46630, its testnet
+//   CHAIN_ID           4663, Robinhood Chain (the default); 46630, its testnet; 11155111, Sepolia, for trying it out
 //   CHAIN_RPC          an RPC endpoint, such as Alchemy's (defaults to the chain's public one, which is rate limited)
 const { createHmac, randomBytes, timingSafeEqual } = require("node:crypto");
 const viem = require("viem");
-const { robinhood, robinhoodTestnet } = require("viem/chains");
+const { robinhood, robinhoodTestnet, sepolia } = require("viem/chains");
 const { privateKeyToAccount } = require("viem/accounts");
 
 const SEATS = 5;
@@ -28,6 +28,8 @@ const SEATS = 5;
 const RUN_HOURS = 2, GRACE_HOURS = 3;
 /** How long a permit handed out lasts, in seconds; how long a transaction is waited for, and given up on, in milliseconds. */
 const PERMIT_FOR = 30 * 60, RECEIPT_WAIT = 60_000, LOST_AFTER = 3 * 60_000;
+/** How often a call the pot refused, or whose nonce was taken, is tried, and how much longer each wait before it is (ms). */
+const ASKS = 5, LAG = 2000;
 
 const POT = viem.parseAbi([
   "function fee() view returns (uint256)",
@@ -52,15 +54,19 @@ const PERMIT = { Permit: [{ name: "owner", type: "address" }, { name: "spender",
 
 const enabled = () => !!(process.env.BLADES_TOKEN && process.env.BLADES_POT && process.env.REFEREE_KEY && process.env.PRO_SIGNING_KEY && process.env.DATABASE_URL);
 
-/** A pot's name in the contract: a Versus match's by its number, a Survival day's by its days since 1970 (UTC). */
-const potOf = (kind, n) => viem.keccak256(viem.stringToHex(`${kind}:${n}`));
+/** A pot's name in the contract: this database's (pro_site), then a Versus match's number, or a Survival day's days
+ *  since 1970 (UTC). */
+async function potOf(sql, kind, n) {
+  const [{ id }] = await sql`SELECT id FROM pro_site`;
+  return viem.keccak256(viem.stringToHex(`${id}:${kind}:${n}`));
+}
 
 let cached = null;
 /** The chain, the referee's account, the token and the pot as they are on chain: the token's decimals, and how it
  *  takes a permit (its EIP-712 domain), or null if it takes none and an allowance must be given instead. */
 async function chain() {
   if (cached) return cached;
-  const id = Number(process.env.CHAIN_ID ?? robinhood.id), known = [robinhood, robinhoodTestnet].find((c) => c.id === id);
+  const id = Number(process.env.CHAIN_ID ?? robinhood.id), known = [robinhood, robinhoodTestnet, sepolia].find((c) => c.id === id);
   const rpc = process.env.CHAIN_RPC || known?.rpcUrls.default.http[0];
   const network = viem.defineChain({ name: "Local", nativeCurrency: robinhood.nativeCurrency, ...known, id, rpcUrls: { default: { http: [rpc] } } });
   const account = privateKeyToAccount(process.env.REFEREE_KEY.trim());
@@ -89,13 +95,19 @@ async function permitDomain(read, token, chainId) {
 }
 
 /**
- * Has the referee call the pot: refused before anything is sent if the pot would refuse it (it throws); otherwise
- * signed, its hash given to `keep` to write down, then broadcast, and signed again with a fresh nonce if another of
- * the referee's transactions took that one. Answers the hash, or null if the broadcast failed and nothing went out.
+ * Has the referee call the pot: refused before anything is sent if the pot would refuse it (it throws), asked again
+ * first, a little later, in case the node asked had not yet seen the transaction before (an RPC's nodes lag one
+ * another); otherwise signed, its hash given to `keep` to write down, then broadcast, and signed again with a fresh
+ * nonce if another of the referee's transactions took that one. Answers the hash, or null if the broadcast failed and
+ * nothing went out.
  */
 async function transact(c, call, keep) {
   for (let tries = 1; ; tries++) {
-    const request = await c.writer.prepareTransactionRequest({ to: c.pot, data: viem.encodeFunctionData({ abi: POT, ...call }) });
+    const request = await c.writer.prepareTransactionRequest({ to: c.pot, data: viem.encodeFunctionData({ abi: POT, ...call }) }).catch(async (error) => {
+      if (tries >= ASKS) throw error;
+      await new Promise((done) => setTimeout(done, LAG * tries));
+    });
+    if (!request) continue;
     const raw = await c.writer.signTransaction(request), hash = viem.keccak256(raw);
     await keep(hash);
     try {
@@ -103,7 +115,7 @@ async function transact(c, call, keep) {
       return hash;
     } catch (error) {
       if (await c.reader.getTransaction({ hash }).catch(() => null)) return hash;
-      if (tries < 5 && /nonce|underpriced|already known/i.test(`${error?.details} ${error?.message}`)) continue;
+      if (tries < ASKS && /nonce|underpriced|already known/i.test(`${error?.details} ${error?.message}`)) continue;
       console.error(error);
       return null;
     }
@@ -179,13 +191,13 @@ async function enter(sql, userId, mode, wallet, signature, token, deadline, nonc
 async function seat(sql, row) {
   if (row.mode === "survival") {
     const [{ n }] = await sql`SELECT ((now() AT TIME ZONE 'utc')::date - date '1970-01-01') AS n`;
-    const [seated] = await sql`UPDATE pro_entries SET day = date '1970-01-01' + ${n}::int, pot = ${potOf("survival", n)} WHERE id = ${row.id} RETURNING *`;
+    const [seated] = await sql`UPDATE pro_entries SET day = date '1970-01-01' + ${n}::int, pot = ${await potOf(sql, "survival", n)} WHERE id = ${row.id} RETURNING *`;
     return seated;
   }
   let [match] = await sql`UPDATE pro_matches SET seats = seats + 1 WHERE id = (
       SELECT id FROM pro_matches WHERE status = 'open' AND seats < ${SEATS} ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id`;
   if (!match) [match] = await sql`INSERT INTO pro_matches (seats) VALUES (1) RETURNING id`;
-  const [seated] = await sql`UPDATE pro_entries SET match_id = ${match.id}, pot = ${potOf("versus", Number(match.id))} WHERE id = ${row.id} RETURNING *`;
+  const [seated] = await sql`UPDATE pro_entries SET match_id = ${match.id}, pot = ${await potOf(sql, "versus", Number(match.id))} WHERE id = ${row.id} RETURNING *`;
   return seated;
 }
 

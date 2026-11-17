@@ -7,6 +7,8 @@ import { configVariable, defineConfig } from "hardhat/config";
 
 export const ROBINHOOD = { id: 4663, rpc: "https://rpc.mainnet.chain.robinhood.com" };
 export const ROBINHOOD_TESTNET = { id: 46630, rpc: "https://rpc.testnet.chain.robinhood.com" };
+/** Ethereum's test network, the testnet's parent chain: the pot and TestBlades are tried there too. */
+export const SEPOLIA = { id: 11155111, rpc: "https://ethereum-sepolia-rpc.publicnode.com" };
 
 export default defineConfig({
   plugins: [hardhatToolboxViem],
@@ -24,6 +26,11 @@ export default defineConfig({
     robinhoodTestnet: {
       type: "http", chainType: "generic", chainId: ROBINHOOD_TESTNET.id,
       url: process.env.ROBINHOOD_TESTNET_RPC_URL ?? ROBINHOOD_TESTNET.rpc,
+      accounts: [configVariable("DEPLOYER_PRIVATE_KEY")],
+    },
+    sepolia: {
+      type: "http", chainType: "l1", chainId: SEPOLIA.id,
+      url: process.env.SEPOLIA_RPC_URL ?? SEPOLIA.rpc,
       accounts: [configVariable("DEPLOYER_PRIVATE_KEY")],
     },
   },

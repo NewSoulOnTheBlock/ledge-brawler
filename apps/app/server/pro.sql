@@ -73,6 +73,14 @@ ALTER TABLE pro_entries ADD COLUMN IF NOT EXISTS chain_entry numeric(78, 0);
 ALTER TABLE pro_entries ALTER COLUMN amount TYPE numeric(78, 0);
 ALTER TABLE pro_payouts ALTER COLUMN amount TYPE numeric(78, 0);
 
+-- This database's name for itself in the pot contract, made once: every pot it opens is named with it, so a pot of a
+-- reset database, or of a preview sharing the contract, is never one this database already opened or paid.
+CREATE TABLE IF NOT EXISTS pro_site (
+  one  boolean PRIMARY KEY DEFAULT true CHECK (one),
+  id   text NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text)
+);
+INSERT INTO pro_site DEFAULT VALUES ON CONFLICT DO NOTHING;
+
 -- Survival days whose pot has been decided.
 CREATE TABLE IF NOT EXISTS pro_days (
   day         date PRIMARY KEY,

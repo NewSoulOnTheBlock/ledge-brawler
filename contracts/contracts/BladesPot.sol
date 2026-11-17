@@ -13,7 +13,8 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// own entrants, when the game's referee (the site, on the arena server's word: spec/app/bout.md) says who won it.
 /// A fee goes into a pot and nowhere else but to that pot's winner or back to whoever paid it: neither the referee nor
 /// the owner can send one anywhere else, and a player whose pot is never paid out takes their fee back themselves.
-/// @dev A pot is named by the site: keccak256("versus", match id) or keccak256("survival", UTC day) (apps/app/server/api/_pro.js).
+/// @dev A pot is named by the site: keccak256("<site>:versus:<match>") or keccak256("<site>:survival:<UTC day>"), where
+/// <site> names the site's database once (apps/app/server/api/_pro.js), so no two databases share a pot.
 contract BladesPot is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
