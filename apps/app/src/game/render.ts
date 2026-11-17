@@ -234,6 +234,8 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
   /** A level of rooms: the dim back wall of each room, so that inside reads as inside, then the dressed tops of its rock and its spikes. */
   function drawRooms(under: boolean) {
     const L = S.level, T = theme();
+    // Spikes are drawn wherever there are any, on a stage of slabs as much as in a level of rooms: what hurts is seen.
+    if (L && !under && !L.rooms) for (const hz of L.hazards ?? []) if (onScreen({ x: hz.x - hz.w / 2, y: hz.y - 40 }, { x: hz.x + hz.w / 2, y: hz.y })) drawSpikes(ctx, hz.x - hz.w / 2 - 6, hz.y, hz.w + 12);
     if (!L?.rooms || !T) return;
     const rw = 26 * 64, rh = 14 * 64;
     if (under) {

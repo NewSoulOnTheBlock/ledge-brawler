@@ -266,7 +266,7 @@ const spikes = (x: number, top: number, w: number, dmg = 12) => ({ x, y: top, w,
 // The fights of waves: arenas made for lasting. Foes drop in near the fighter, so each arena gives the fighter what a
 // long fight needs: gaps to knock foes out through, spikes to knock them into (which hurt foes as well, outside a
 // campaign), high ground and springs to break away from a crowd, crates to throw, and ground uneven enough that no two
-// fights look alike. Islands (the arena with no level) are the third; which of the three is the day's is `survivalStage`.
+// fights look alike. Islands (the arena with no level) are one more; which is the day's is `survivalStage`.
 
 /** A broken bridge between a cliff and a stair down into spikes. */
 export const SUNKEN_BRIDGE: Level = {
@@ -309,8 +309,43 @@ export const THE_WELL: Level = {
   ambushes: [], clues: [], effects: [],
 };
 
-/** The arenas of the fight of waves; with the islands, one of the three is the day's, the same for everyone that day. */
-export const SURVIVAL_STAGES: (Level | null)[] = [null, SUNKEN_BRIDGE, THE_WELL];
+/** An open yard with no walls at its ends: every edge and both gaps knock foes out, and a scaffold stands in the middle. */
+export const GALLOWS_YARD: Level = {
+  id: "gallows-yard", hero: "forbidden", chapter: -1, name: "The Gallows Yard", region: "crownlands", theme: "village", brief: "",
+  spawn: { x: 520, y: 600 }, exit: { x: 0, y: -99999 }, span: [-1500, 2300],
+  slabs: [
+    // Three yards, the middle one the widest, with a gap either side of it and nothing at the outer ends.
+    ground(-1300, -500, 700), ground(-350, 1150, 680), ground(1300, 2100, 700),
+    // The scaffold, climbed up and across; a short post to kick off by the right-hand gap.
+    ledge(250, 520, 220), ledge(560, 380, 220), ledge(300, 230, 220), post(760, 680, 150),
+    // Perches out over the drops: a pair over the left gap, one over the right yard's open end.
+    ledge(-900, 540, 260), ledge(-600, 380, 180), ledge(1700, 540, 260), ledge(2000, 400, 200),
+  ],
+  hazards: [spikes(150, 680, 120), spikes(1000, 680, 140)],
+  springs: [{ x: -1150, y: 700 }, { x: 870, y: 680 }],
+  crates: [[-1100, 672, 50], [20, 654, 52], [640, 656, 48], [1620, 672, 56]],
+  ambushes: [], clues: [], effects: [],
+};
+
+/** A staircase of furnace floors rising to the right, a spike pit at its foot and a long drop past its summit. */
+export const FURNACE_STEPS: Level = {
+  id: "furnace-steps", hero: "forbidden", chapter: -1, name: "The Furnace Steps", region: "crownlands", theme: "ember", brief: "",
+  spawn: { x: 460, y: 600 }, exit: { x: 0, y: -99999 }, span: [-780, 2350],
+  slabs: [
+    // The pit at the foot, walled behind; then the steps, one with a gap to cross; then the summit, open past its edge.
+    ground(-700, -300, 860), post(-720, 860, 700), ground(-300, 300, 760), ground(300, 650, 680), ground(650, 1000, 600),
+    ground(1110, 1500, 520), ground(1500, 1850, 440), ground(1850, 2150, 360),
+    // A ledge over each of four steps, each reached from the step below it.
+    ledge(0, 590, 240), ledge(820, 430, 220), ledge(1300, 340, 220), ledge(1700, 260, 200), ledge(2060, 200, 160),
+  ],
+  hazards: [spikes(-500, 860, 400)],
+  springs: [{ x: 200, y: 760 }, { x: 1450, y: 520 }],
+  crates: [[-150, 734, 50], [480, 654, 52], [1300, 494, 48], [1940, 334, 46]],
+  ambushes: [], clues: [], effects: [],
+};
+
+/** The arenas of the fight of waves; with the islands, one of them is the day's, the same for everyone that day. */
+export const SURVIVAL_STAGES: (Level | null)[] = [null, SUNKEN_BRIDGE, THE_WELL, GALLOWS_YARD, FURNACE_STEPS];
 /** The arena of the fight of waves for the day `day` (days since 1970, in UTC): the same for everyone, so that the
  *  day's best score is fought for in one place (pro.ts). */
 export const survivalStage = (day = Math.floor(Date.now() / 86400000)) => SURVIVAL_STAGES[day % SURVIVAL_STAGES.length];
@@ -360,8 +395,44 @@ export const THE_SPIRE: Level = {
   crates: [], ambushes: [], clues: [], effects: [],
 };
 
+/** Two towers joined by a lower bridge, spiked at its middle, and an upper one broken there, with a stone to cross by. */
+export const TWIN_BRIDGES: Level = {
+  id: "twin-bridges", hero: "forbidden", chapter: -1, name: "The Twin Bridges", region: "crownlands", theme: "fields", brief: "",
+  spawn: { x: 800, y: 600 }, exit: { x: 0, y: -99999 }, span: [-700, 2300],
+  starts: [{ x: -150, y: 500 }, { x: 1750, y: 500 }, { x: 400, y: 340 }, { x: 1200, y: 340 }, { x: 300, y: 660 }, { x: 1300, y: 660 }],
+  slabs: [
+    // The towers, walled behind, and the gap below each one's edge.
+    ground(-500, 0, 560), ground(1600, 2100, 560), post(-520, 560, 700), post(2120, 560, 700),
+    // The lower bridge, and a ledge over its spikes that leads up to the upper one.
+    ground(150, 1450, 720), ledge(800, 560, 300),
+    // The upper bridge in two halves, the stone between them, and a lookout over each half.
+    ledge(330, 400, 420), ledge(1270, 400, 420), ledge(800, 300, 280), ledge(400, 220, 200), ledge(1200, 220, 200),
+  ],
+  hazards: [spikes(800, 720, 160, 10)],
+  springs: [{ x: -250, y: 560 }, { x: 1850, y: 560 }],
+  crates: [], ambushes: [], clues: [], effects: [],
+};
+
+/** A walled bowl with no way to fall out of it: every life here is lost in the fight. A spike pit at its heart, and a
+ *  ring of ledges climbing to a crown over it. */
+export const HOLLOW_PIT: Level = {
+  id: "hollow-pit", hero: "forbidden", chapter: -1, name: "The Hollow Pit", region: "crownlands", theme: "fungal", brief: "",
+  spawn: { x: 800, y: 600 }, exit: { x: 0, y: -99999 }, span: [-100, 1700],
+  starts: [{ x: 200, y: 660 }, { x: 1400, y: 660 }, { x: 300, y: 500 }, { x: 1300, y: 500 }, { x: 550, y: 360 }, { x: 1050, y: 360 }],
+  slabs: [
+    // The floor: two rims and the sunken heart between them; walls at both ends.
+    ground(100, 600, 720), ground(1000, 1500, 720), ground(600, 1000, 800), post(80, 720, 600), post(1520, 720, 600),
+    // The ring: up off each rim, in toward the middle, and up to the crown; a ledge over the spikes.
+    ledge(300, 560, 220), ledge(1300, 560, 220), ledge(230, 400, 140), ledge(1370, 400, 140),
+    ledge(550, 420, 180), ledge(1050, 420, 180), ledge(800, 600, 200), ledge(800, 280, 220),
+  ],
+  hazards: [spikes(800, 800, 160, 10)],
+  springs: [{ x: 660, y: 800 }, { x: 940, y: 800 }],
+  crates: [], ambushes: [], clues: [], effects: [],
+};
+
 /** The places of duels; a room's round is fought in one of them, the same for every player in it (versus.ts). */
-export const VERSUS_STAGES: Level[] = [DUEL, THE_CROSSING, THE_SPIRE];
+export const VERSUS_STAGES: Level[] = [DUEL, THE_CROSSING, THE_SPIRE, TWIN_BRIDGES, HOLLOW_PIT];
 
 /** The level of a protagonist's chapter, if it has been built. */
 /** A chapter's id and name, without laying the level out (co-op's table lists them: Coop.tsx). */

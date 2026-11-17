@@ -36,4 +36,15 @@ it("Choose a fighter, start the fight, and open the move list", async () => {
   await expect.poll(() => match().paused).toBe(false);
   // spec/app/index.md, "The next wave starts only when no enemy is left, and brings one more enemy than its number, eight at most"
   await expect.poll(() => match().wave, { timeout: 8000 }).toBe(1);
+  // Escape brings up the pause and puts it away again (Pause.tsx).
+  // spec/app/index.md, "The move list opens only during a fight and pauses it; closing it resumes"
+  await act(() => userEvent.keyboard("{Escape}"));
+  await expect.poll(() => match().paused).toBe(true);
+  await act(() => userEvent.keyboard("{Escape}"));
+  await expect.poll(() => match().paused).toBe(false);
+  // From the pause, the main menu: another fighter, then the title.
+  // spec/app/index.md, "From the open move list the player can go back to choose another fighter"; spec/app/index.md, "The title screen leads to the select screen, and back"
+  await act(() => userEvent.keyboard("{Escape}"));
+  await act(() => userEvent.click(page.getByRole("button", { name: "Main menu" })));
+  await expect.poll(() => [match().screen, match().paused]).toEqual(["Title", false]);
 });

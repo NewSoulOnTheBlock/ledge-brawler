@@ -1,0 +1,36 @@
+{
+  "name": "Seeker #157",
+  "description": "One of 333 Seekers from Five Blades: five Firstborn gods, sealed in five blades, carried by those who seek them.",
+  "image": "ipfs://__IMAGES_CID__/157.png",
+  "external_url": "https://ledge-brawler.vercel.app",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Pale Moon"
+    },
+    {
+      "trait_type": "Frame",
+      "value": "Ivory & Silver"
+    },
+    {
+      "trait_type": "Cloak",
+      "value": "Sapphire"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Jade"
+    },
+    {
+      "trait_type": "Stance",
+      "value": "Channel"
+    },
+    {
+      "trait_type": "Blade",
+      "value": "Water"
+    },
+    {
+      "trait_type": "Aura",
+      "value": "None"
+    }
+  ]
+}
