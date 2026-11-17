@@ -4,14 +4,14 @@ import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { PGlite } from "@electric-sql/pglite";
-import * as spl from "@solana/spl-token";
-import * as web3 from "@solana/web3.js";
-import bs58 from "bs58";
 import { Effect, Redacted } from "effect";
 import * as KeyValueStore from "effect/persistence/KeyValueStore";
 import { FetchHttpClient } from "effect/http";
 import Matter from "matter-js";
+import { type Address, createPublicClient, erc20Abi, http, parseUnits } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, expect, it, vi } from "vitest";
+import { keyOf, localChain } from "@repo/contracts/testing";
 import { type Room, Refused, joinArena } from "../src/arena/link.ts";
 import { pot } from "../src/arena/pot.vibe";
 import type { BoutWord } from "../src/arena/protocol.ts";
@@ -830,39 +830,8 @@ it("Play a level of a campaign: a group's games find each other, set out togethe
 });
 
 // ---------- the site's pot (server/api/_pro.js) ----------
-// On a real Postgres (PGlite) laid out by server/pro.sql, with the Solana network faked at its RPC boundary, since a
-// transfer there cannot be undone: it holds every account, confirms every transaction it is sent, and keeps them.
-
-/** A Solana RPC that confirms whatever it is sent: the mint's account, every wallet's balance, and each transaction. */
-async function solana() {
-  const sent: web3.Transaction[] = [], data = Buffer.alloc(spl.MINT_SIZE);
-  spl.MintLayout.encode({ mintAuthorityOption: 0, mintAuthority: web3.PublicKey.default, supply: 10n ** 15n, decimals: 6, isInitialized: true, freezeAuthorityOption: 0, freezeAuthority: web3.PublicKey.default }, data);
-  const context = { slot: 1 }, answers: Record<string, (params: unknown[]) => unknown> = {
-    getAccountInfo: () => ({ context, value: { data: [data.toString("base64"), "base64"], executable: false, lamports: 1_000_000_000, owner: spl.TOKEN_PROGRAM_ID.toBase58(), rentEpoch: 0, space: spl.MINT_SIZE } }),
-    getTokenAccountBalance: () => ({ context, value: { amount: "1000000000000", decimals: 6, uiAmount: 1_000_000, uiAmountString: "1000000" } }),
-    getLatestBlockhash: () => ({ context, value: { blockhash: web3.Keypair.generate().publicKey.toBase58(), lastValidBlockHeight: 1_000 } }),
-    getBlockHeight: () => 10,
-    sendTransaction: (params) => { const tx = web3.Transaction.from(Buffer.from(String(params[0]), "base64")); sent.push(tx); return bs58.encode(tx.signature!); },
-    getSignatureStatuses: (params) => ({ context, value: (params[0] as string[]).map(() => ({ slot: 1, confirmations: null, err: null, confirmationStatus: "confirmed" })) }),
-  };
-  const rpc = createServer((req, res) => {
-    let body = "";
-    req.on("data", (chunk) => { body += chunk; });
-    req.on("end", () => {
-      const ask = JSON.parse(body) as { id: number; method: string; params?: unknown[] };
-      res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ jsonrpc: "2.0", id: ask.id, result: answers[ask.method]?.(ask.params ?? []) ?? null }));
-    });
-  });
-  await new Promise<void>((done) => rpc.listen(0, done));
-  servers.push({ close: () => new Promise((done) => rpc.close(() => done())) });
-  const address = rpc.address();
-  /** What the transactions sent moved: from which token account, to which, how much. */
-  const moved = () => sent.flatMap((tx) => tx.instructions.filter((ix) => ix.programId.equals(spl.TOKEN_PROGRAM_ID) && ix.data[0] === 12).map((ix) => {
-    const { keys, data: d } = spl.decodeTransferCheckedInstruction(ix);
-    return { from: keys.source.pubkey.toBase58(), to: keys.destination.pubkey.toBase58(), amount: d.amount };
-  }));
-  return { url: `http://localhost:${typeof address === "object" && address ? address.port : 0}`, moved };
-}
+// On a real Postgres (PGlite) laid out by server/pro.sql, and the real contracts (contracts/) on a chain of the test's
+// own: Hardhat's simulated network, reached over JSON-RPC as Robinhood Chain is.
 
 /** The site's database as server/api reaches it, neon's tagged template, on PGlite. */
 function pgSql(db: PGlite) {
@@ -874,36 +843,39 @@ function pgSql(db: PGlite) {
 
 // spec/app/bout.md, "Story: Fight for the pot"; spec/app/index.md, "Story: Fight the waves"
 it("Fight for the pot: the site takes entry fees, and pays a match's pot and a day's best run once each, on the arena's word", async () => {
-  const pot = web3.Keypair.generate(), mint = web3.Keypair.generate().publicKey, chain = await solana();
-  Object.assign(process.env, { BLADES_MINT: mint.toBase58(), POT_SECRET: JSON.stringify([...pot.secretKey]), PRO_SIGNING_KEY: "a long random string", SOLANA_RPC: chain.url, DATABASE_URL: "pglite" });
+  const fee = parseUnits("50000", 18), chain = await localChain(fee);
+  servers.push(chain);
+  Object.assign(process.env, { BLADES_TOKEN: chain.token, BLADES_POT: chain.pot, REFEREE_KEY: keyOf(1), PRO_SIGNING_KEY: "a long random string", CHAIN_ID: String(chain.chainId), CHAIN_RPC: chain.url, DATABASE_URL: "pglite" });
   const db = new PGlite();
   await db.exec(readFileSync(new URL("../server/pro.sql", import.meta.url), "utf8"));
   const sql = pgSql(db);
   type Out = Record<string, unknown> & { entry?: Record<string, unknown> };
-  const pro = createRequire(import.meta.url)("../server/api/_pro.js") as Record<string, (...args: unknown[]) => Promise<Out>> & { FEE_TOKENS: bigint };
-  const fee = pro.FEE_TOKENS * 10n ** 6n, ata = (owner: web3.PublicKey) => spl.getAssociatedTokenAddressSync(mint, owner, true).toBase58();
+  const pro = createRequire(import.meta.url)("../server/api/_pro.js") as Record<string, (...args: unknown[]) => Promise<Out>>;
+  const reader = createPublicClient({ transport: http(chain.url) });
+  const held = (who: Address) => reader.readContract({ address: chain.token, abi: erc20Abi, functionName: "balanceOf", args: [who] });
   /** What the site answers when it will not do what was asked: an error, with a reason. */
   const refused: object = { error: expect.any(String) as unknown };
 
-  /** A player paying `mode`'s fee from their wallet: the site builds the transaction, the wallet signs it, the site sends it. */
-  async function pays(user: string, mode: "versus" | "survival") {
-    const wallet = web3.Keypair.generate(), quote = await pro.quote(user, mode, wallet.publicKey.toBase58());
-    const tx = web3.Transaction.from(Buffer.from(String(quote.tx), "base64"));
-    tx.partialSign(wallet);
-    const out = await pro.enter(sql, user, mode, wallet.publicKey.toBase58(), tx.serialize({ requireAllSignatures: false }).toString("base64"), quote.token, quote.lastValid);
-    return { wallet, entry: out.entry! };
+  /** A player with $BLADES and no ETH paying `mode`'s fee: the site hands out a permit, the wallet signs it, the site has the pot take the fee. */
+  async function pays(user: string, mode: "versus" | "survival", wallet = privateKeyToAccount(generatePrivateKey())) {
+    await chain.mint(wallet.address, fee);
+    const quote = await pro.quote(user, mode, wallet.address) as { permit: Parameters<typeof wallet.signTypedData>[0]; token: string; deadline: string; nonce: string };
+    const enter = async () => pro.enter(sql, user, mode, wallet.address, await wallet.signTypedData(quote.permit), quote.token, quote.deadline, quote.nonce);
+    return { wallet, entry: (await enter()).entry!, again: enter };
   }
-  // A: two entries for Versus, paid from their wallets into the pot, are seated in one match.
+  // A: two entries for Versus, paid by permit from their wallets into the pot, are seated in one match.
   const ada = await pays("ada", "versus"), bo = await pays("bo", "versus");
   expect([ada.entry.status, bo.entry.status, ada.entry.match_id === bo.entry.match_id]).toEqual(["paid", "paid", true]);
-  expect(chain.moved()).toEqual([{ from: ata(ada.wallet.publicKey), to: ata(pot.publicKey), amount: fee }, { from: ata(bo.wallet.publicKey), to: ata(pot.publicKey), amount: fee }]);
-  // A transaction changed after the site built it is not sent.
-  const quote = await pro.quote("cy", "versus", ada.wallet.publicKey.toBase58()), forged = web3.Transaction.from(Buffer.from(String(quote.tx), "base64"));
-  // Paying a little less than the fee: a byte of the amount the site asked for, changed.
-  forged.instructions[1].data[2] ^= 0xff;
-  forged.partialSign(ada.wallet);
-  expect(await pro.enter(sql, "cy", "versus", ada.wallet.publicKey.toBase58(), forged.serialize({ requireAllSignatures: false }).toString("base64"), quote.token, quote.lastValid)).toMatchObject(refused);
-  expect(chain.moved().length).toBe(2);
+  expect([await held(ada.wallet.address), await held(bo.wallet.address), await held(chain.pot)]).toEqual([0n, 0n, 2n * fee]);
+  // The same entry sent again is the same entry, and takes nothing more.
+  expect((await ada.again()).entry).toMatchObject({ id: ada.entry.id, status: "paid" });
+  // A permit signed by another wallet, or for another wallet's fee, is not sent.
+  const cy = privateKeyToAccount(generatePrivateKey());
+  await chain.mint(cy.address, fee);
+  const quote = await pro.quote("cy", "versus", cy.address) as { permit: Parameters<typeof cy.signTypedData>[0]; token: string; deadline: string; nonce: string };
+  expect(await pro.enter(sql, "cy", "versus", cy.address, await ada.wallet.signTypedData(quote.permit), quote.token, quote.deadline, quote.nonce)).toMatchObject(refused);
+  expect(await pro.enter(sql, "eve", "versus", cy.address, await cy.signTypedData(quote.permit), quote.token, quote.deadline, quote.nonce)).toMatchObject(refused);
+  expect([await held(cy.address), await held(chain.pot)]).toEqual([fee, 2n * fee]);
   // The arena seats each only in its own match, only its owner, while it is to be fought.
   const match = Number(ada.entry.match_id);
   expect([await pro.seatOf(sql, "ada", ada.entry.id), await pro.seatOf(sql, "bo", ada.entry.id)]).toEqual([{ match }, refused]);
@@ -911,13 +883,17 @@ it("Fight for the pot: the site takes entry fees, and pays a match's pot and a d
   // C: the arena says Bo won: the whole pot goes to Bo's wallet, at once and once, however often it is told.
   expect(await pro.decided(sql, match, Number(bo.entry.id))).toBe("paid");
   expect(await pro.decided(sql, match, Number(ada.entry.id))).toBe(null);
-  expect(chain.moved().slice(2)).toEqual([{ from: ata(pot.publicKey), to: ata(bo.wallet.publicKey), amount: 2n * fee }]);
+  expect([await held(bo.wallet.address), await held(ada.wallet.address), await held(chain.pot)]).toEqual([2n * fee, 0n, 0n]);
   expect(await pro.seatOf(sql, "bo", bo.entry.id)).toMatchObject(refused);
   // A match the arena saw no one win is held for the operator, and pays nothing.
-  const cy = await pays("cy", "versus");
+  const cyEntry = await pays("cy", "versus", cy);
   await pays("di", "versus");
-  expect(await pro.decided(sql, Number(cy.entry.match_id), null)).toBe("held");
-  expect(chain.moved().length).toBe(5);
+  expect(await pro.decided(sql, Number(cyEntry.entry.match_id), null)).toBe("held");
+  expect(await held(chain.pot)).toBe(2n * fee);
+  // A lone entrant leaves before anyone joins: their fee comes back.
+  const hal = await pays("hal", "versus");
+  expect(await pro.withdraw(sql, "hal", hal.entry.id)).toMatchObject({ refunded: { status: "sent" } });
+  expect([await held(hal.wallet.address), await held(chain.pot)]).toEqual([fee, 2n * fee]);
 
   // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
   // B: paid runs, each played once at the arena; the day's pot goes to the best of them once the day is done.
@@ -933,7 +909,7 @@ it("Fight for the pot: the site takes entry fees, and pays a match's pot and a d
   expect(await pro.daily(sql)).toMatchObject({ days: [] });
   await sql`UPDATE pro_entries SET day = (now() AT TIME ZONE 'utc')::date - 2 WHERE mode = 'survival'`;
   expect(await pro.daily(sql)).toMatchObject({ days: [{ entries: 3, winner: Number(fay.entry.id) }] });
-  expect(chain.moved().slice(8)).toEqual([{ from: ata(pot.publicKey), to: ata(fay.wallet.publicKey), amount: 3n * fee }]);
+  expect([await held(fay.wallet.address), await held(chain.pot)]).toEqual([3n * fee, 2n * fee]);
   expect(await pro.daily(sql)).toMatchObject({ days: [] });
-  expect(chain.moved().length).toBe(9);
+  expect(await held(chain.pot)).toBe(2n * fee);
 });

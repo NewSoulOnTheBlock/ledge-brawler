@@ -1,4 +1,5 @@
--- Pro mode: paid entries in $BLADES, the pots they make and what is paid out of them (api/_pro.js).
+-- Pro mode: paid entries in $BLADES on Robinhood Chain, the pots they make and what is paid out of them (api/_pro.js;
+-- the money itself is held by the pot contract, contracts/contracts/BladesPot.sol).
 -- Additive only; safe to run more than once against the "five-blades" Neon database.
 
 -- A pro Versus match: one table of the arena server (`pro<id>`), up to five paid seats.
@@ -16,7 +17,8 @@ CREATE TABLE IF NOT EXISTS pro_matches (
   note        text
 );
 
--- One paid entry: a Survival run, or a seat in a Versus match. `signature` is the entry transaction's.
+-- One paid entry: a Survival run, or a seat in a Versus match. `signature` keys it by what the site handed out to be
+-- signed (a hash of its token), so the same entry sent twice is one row.
 CREATE TABLE IF NOT EXISTS pro_entries (
   id             bigserial PRIMARY KEY,
   user_id        text   NOT NULL,
@@ -43,7 +45,8 @@ CREATE TABLE IF NOT EXISTS pro_entries (
 CREATE INDEX IF NOT EXISTS pro_entries_day   ON pro_entries (day)      WHERE mode = 'survival';
 CREATE INDEX IF NOT EXISTS pro_entries_match ON pro_entries (match_id) WHERE mode = 'versus';
 
--- Everything paid out of the pot wallet. (kind, ref) is unique, so nothing can be paid twice:
+-- Everything paid out of the pot contract. (kind, ref) is unique, so nothing is asked twice (and the contract pays a
+-- pot once and gives an entry back once, whatever is asked). `signature` is the payout transaction's hash:
 --   survival  ref = the day (YYYY-MM-DD)     versus  ref = the match id     refund  ref = the entry id
 --   status    held -> approved -> sending -> sent      (or failed; or void when the operator cancels)
 CREATE TABLE IF NOT EXISTS pro_payouts (
@@ -55,12 +58,20 @@ CREATE TABLE IF NOT EXISTS pro_payouts (
   amount      bigint NOT NULL,
   status      text   NOT NULL,
   signature   text,
-  last_valid  bigint,
+  last_valid  bigint,                                  -- no longer written: a Solana transaction's
   error       text,
   created_at  timestamptz NOT NULL DEFAULT now(),
   sent_at     timestamptz,
   UNIQUE (kind, ref)
 );
+
+-- On Robinhood Chain: an entry's transaction, the contract's name for its pot and its number for the entry; and
+-- amounts in the token's base units, which with 18 decimals outgrow a bigint.
+ALTER TABLE pro_entries ADD COLUMN IF NOT EXISTS tx text;
+ALTER TABLE pro_entries ADD COLUMN IF NOT EXISTS pot text;
+ALTER TABLE pro_entries ADD COLUMN IF NOT EXISTS chain_entry numeric(78, 0);
+ALTER TABLE pro_entries ALTER COLUMN amount TYPE numeric(78, 0);
+ALTER TABLE pro_payouts ALTER COLUMN amount TYPE numeric(78, 0);
 
 -- Survival days whose pot has been decided.
 CREATE TABLE IF NOT EXISTS pro_days (

@@ -25,3 +25,7 @@ shots/
 deploy/
 apps/app/.env.local
 .boost/
+contracts/artifacts/
+contracts/cache/
+contracts/ignition/deployments/chain-31337/
+contracts/.testnet.env

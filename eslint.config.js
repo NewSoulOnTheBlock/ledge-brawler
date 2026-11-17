@@ -14,9 +14,9 @@ const stack = 'AGENTS.md, "The stack"'
 const monorepo = 'SPEC.md, "One spec tree"'
 const banned = ["redux", "react-redux", "zustand", "mobx", "jotai", "recoil", "valtio", "xstate", "vue", "svelte", "jest"]
 const scopes = ["reduxjs", "angular", "xstate", "vue", "sveltejs", "jest"]
-// Each workspace package's `exports` beyond its root: "@repo/design-system/theme.css".
-const exported = readdirSync("packages").flatMap((dir) => {
-  const { name, exports = {} } = JSON.parse(readFileSync(`packages/${dir}/package.json`, "utf8"))
+// Each workspace package's `exports` beyond its root: "@repo/design-system/theme.css", "@repo/contracts/testing".
+const exported = [...readdirSync("packages").map((dir) => `packages/${dir}`), "contracts"].flatMap((dir) => {
+  const { name, exports = {} } = JSON.parse(readFileSync(`${dir}/package.json`, "utf8"))
   return Object.keys(exports).filter((key) => key !== ".").map((key) => RegExp.escape(`${name}/${key.slice(2)}`))
 })
 const imports = {
@@ -38,7 +38,7 @@ const loose = Object.fromEntries(["no-explicit-any", "no-unsafe-argument", "no-u
 
 export default defineConfig(
   // Generated or disposable, and .claude/worktrees holds other checkouts of this repository.
-  globalIgnores(["**/gen/", "**/.vibe/", "**/dist/", "**/.cache/", "**/.spec-cache/", "**/generated/", "**/storybook-static/", "**/test/fixtures/", "vibestack/examples/", "vibestack/fixtures/", ".claude/", ".lemmascript/", ".studio/", ".turbo/", "_apalache-out/"]),
+  globalIgnores(["**/gen/", "**/.vibe/", "**/dist/", "**/.cache/", "**/.spec-cache/", "**/generated/", "**/storybook-static/", "**/test/fixtures/", "contracts/artifacts/", "contracts/cache/", "contracts/ignition/deployments/", "vibestack/examples/", "vibestack/fixtures/", ".claude/", ".lemmascript/", ".studio/", ".turbo/", "_apalache-out/"]),
   { linterOptions: { reportUnusedDisableDirectives: "error", reportUnusedInlineConfigs: "error" } },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

@@ -41,7 +41,7 @@ import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor
 import { type Entry, proSeat, proWithdraw } from "./pro.ts";
 import { type Paid, joinRun } from "./run.ts";
 import type { RunWord } from "./arena/run.ts";
-/** A screen loaded the first time it is shown, not with the game: paying (Solana and the wallet's own module), the
+/** A screen loaded the first time it is shown, not with the game: paying (the wallet's own module), the
  *  profile, and playing together (the multiplayer client). Nothing shows while it loads, for the moment it takes. */
 const later = <P extends object>(load: () => Promise<ComponentType<P>>) => {
   const Loaded = lazy(() => load().then((component) => ({ default: component })));

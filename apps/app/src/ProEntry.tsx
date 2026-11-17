@@ -1,11 +1,10 @@
-// Pro mode's way in: the rules of the pot, the fee, and paying it from the player's Privy wallet (pro.ts).
+// Pro mode's way in: the rules of the pot, the fee, and paying it from the player's Privy wallet on Robinhood Chain (pro.ts).
 import { useEffect, useState } from "react";
-import { useCreateWallet, useSignTransaction, useWallets } from "@privy-io/react-auth/solana";
+import { useCreateWallet, useSendTransaction, useSignTypedData, useWallets } from "@privy-io/react-auth";
 import { cn } from "@repo/ui";
 import { useAuth } from "./auth.tsx";
 import { type Entry, type ProInfo, type ProMode, payEntry, proInfo, tokens } from "./pro.ts";
 import { BigButton, SmallButton } from "./screens.tsx";
-import { checkTokenGate } from "./token-gate.ts";
 
 const RULES: Record<ProMode, string[]> = {
   survival: [
@@ -30,7 +29,7 @@ export function ProEntry({ mode, onPaid, onCancel }: { mode: ProMode; onPaid: (e
   return (
     <div className="absolute inset-0 z-40 grid [place-items:safe_center] bg-background/80 px-4 py-4">
       <section aria-labelledby="proTitle" className={card}>
-        <p className="text-xs tracking-[0.2em] text-destructive uppercase">Pro · entry {info ? tokens(info.fee) : "50,000"} $BLADES</p>
+        <p className="text-xs tracking-[0.2em] text-destructive uppercase">Pro · entry {info?.fee ? `${tokens(info.fee, info.decimals)} ` : ""}$BLADES</p>
         <h2 id="proTitle" className="font-sans text-2xl font-bold tracking-[0.1em] uppercase">Pro {mode === "survival" ? "Survival" : "Versus"}</h2>
         <ul className="grid list-disc gap-1 pl-5 text-[13px] leading-snug">{RULES[mode].map((line) => <li key={line}>{line}</li>)}</ul>
         {mode === "survival" && info?.survival && (
@@ -48,29 +47,32 @@ export function ProEntry({ mode, onPaid, onCancel }: { mode: ProMode; onPaid: (e
   );
 }
 
-/** The signed-in player's Solana wallet, what it holds, and the button that pays. Only rendered under PrivyProvider. */
+/** The signed-in player's embedded wallet, what it holds, and the button that pays. Only rendered under PrivyProvider. */
 function Pay({ mode, info, onPaid }: { mode: ProMode; info: ProInfo; onPaid: (entry: Entry) => void }) {
-  const { ready, wallets } = useWallets(), { createWallet } = useCreateWallet(), { signTransaction } = useSignTransaction();
-  const wallet = wallets[0];
-  const [held, setHeld] = useState<number | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  useEffect(() => { if (wallet) void checkTokenGate(wallet.address, info.mint).then((gate) => setHeld(gate.balance)); }, [wallet, info.mint]);
-  const fee = Number(info.fee), short = held !== null && held < fee;
+  const { ready, wallets } = useWallets(), { createWallet } = useCreateWallet();
+  const { signTypedData } = useSignTypedData(), { sendTransaction } = useSendTransaction();
+  const wallet = wallets.find((w) => w.walletClientType === "privy");
+  const [held, setHeld] = useState<bigint | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  useEffect(() => { if (wallet) void proInfo(wallet.address).then((seen) => setHeld(BigInt(seen.held ?? "0")), () => setHeld(null)); }, [wallet]);
+  const fee = BigInt(info.fee ?? "0"), short = held !== null && held < fee, amount = tokens(fee.toString(), info.decimals);
   if (!ready) return <p className="text-[13px] text-muted-foreground">Loading your wallet…</p>;
   if (!wallet) return <BigButton onClick={() => void createWallet().catch((e: unknown) => setError(String((e as Error)?.message ?? e)))}>Create my wallet</BigButton>;
   const pay = async () => {
     setBusy(true); setError("");
     try {
-      onPaid(await payEntry(mode, wallet.address, async (transaction) => (await signTransaction({ transaction, wallet })).signedTransaction));
+      onPaid(await payEntry(mode, wallet.address,
+        async (permit) => (await signTypedData(permit, { address: wallet.address })).signature,
+        (approval) => sendTransaction({ to: approval.to, data: approval.data, chainId: approval.chainId }, { address: wallet.address })));
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
   return (
     <div className="grid gap-2 text-[13px]">
       <p>Paying from <span className="font-mono select-all" title={wallet.address}>{wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}</span>
-        {held !== null && <> · holds <b className="tabular-nums">{Math.floor(held).toLocaleString("en-US")}</b> $BLADES</>}</p>
-      {short && <p className="text-destructive">This wallet needs {fee.toLocaleString("en-US")} $BLADES. Send some to the address above first.</p>}
-      <BigButton disabled={busy || short} className={cn(busy && "opacity-60")} onClick={() => void pay()}>{busy ? "Paying…" : `Pay ${fee.toLocaleString("en-US")} $BLADES and enter`}</BigButton>
-      <p className="text-[11px] text-muted-foreground">The game pays the network fee. Entry fees are not refunded once your run or match has started.</p>
+        {held !== null && <> · holds <b className="tabular-nums">{tokens(held.toString(), info.decimals)}</b> $BLADES</>}</p>
+      {short && <p className="text-destructive">This wallet needs {amount} $BLADES on Robinhood Chain. Send some to the address above first.</p>}
+      <BigButton disabled={busy || short} className={cn(busy && "opacity-60")} onClick={() => void pay()}>{busy ? "Paying…" : `Pay ${amount} $BLADES and enter`}</BigButton>
+      <p className="text-[11px] text-muted-foreground">You sign; the game pays the network fee. Entry fees are not refunded once your run or match has started.</p>
       {error && <p role="alert" className="text-destructive">{error}</p>}
     </div>
   );
