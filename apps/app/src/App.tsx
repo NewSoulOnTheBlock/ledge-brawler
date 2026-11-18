@@ -37,7 +37,7 @@ import { track } from "./track.ts";
 import { unlock } from "./achievements.ts";
 import { useSaga } from "./useSaga.ts";
 import { type Rival, type Standing, type Versus, inviteLink, joinVersus, nameFor, roomCode, stageFor } from "./versus.ts";
-import { type Entry, proSeat, proWithdraw } from "./pro.ts";
+import { type Entry, proInfo, proSeat, proWithdraw, tokens } from "./pro.ts";
 import { type Paid, joinRun } from "./run.ts";
 import type { RunWord } from "./arena/run.ts";
 /** A screen loaded the first time it is shown, not with the game: paying (the wallet's own module), the
@@ -212,7 +212,23 @@ function MatchPicker() {
 }
 
 /** Survival or Versus, as chosen on the title: Casual, for nothing, or Pro, for an entry fee in $BLADES (pro.ts). */
+/** The Pro entry fee as the pot contract charges it ("500 $BLADES"), read once from /api/pro; "" until it answers. */
+let entryFee = "";
+function useEntryFee(): string {
+  const [fee, setFee] = useState(entryFee);
+  useEffect(() => {
+    if (entryFee) return;
+    proInfo().then((info) => {
+      if (!info.fee) return;
+      entryFee = `${tokens(info.fee, info.decimals ?? 18)} $BLADES`;
+      setFee(entryFee);
+    }).catch(() => {});
+  }, []);
+  return fee;
+}
+
 function TierChoice({ mode, onPick, onBack }: { mode: "Survival" | "Versus"; onPick: (pro: boolean) => void; onBack: () => void }) {
+  const fee = useEntryFee();
   const tier = "grid cursor-pointer gap-1 border-2 border-foreground bg-background px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:bg-muted";
   return (
     <div className="absolute inset-0 z-40 grid [place-items:safe_center] bg-background/80 px-4 py-4">
@@ -225,7 +241,7 @@ function TierChoice({ mode, onPick, onBack }: { mode: "Survival" | "Versus"; onP
           </button>
           <button type="button" className={cn(tier, "border-destructive")} onClick={() => onPick(true)}>
             <b className="font-sans text-lg tracking-[0.12em] text-destructive uppercase">Pro</b>
-            <span className="text-[12.5px] text-muted-foreground">50,000 $BLADES to enter. {mode === "Survival" ? "The day's best run takes the day's pot." : "Last one standing takes the pot."}</span>
+            <span className="text-[12.5px] text-muted-foreground">{fee || "A $BLADES fee"} to enter. {mode === "Survival" ? "The day's best run takes the day's pot." : "Last one standing takes the pot."}</span>
           </button>
         </div>
         <SmallButton className="justify-self-start" onClick={onBack}>Back</SmallButton>
@@ -489,6 +505,7 @@ function VersusPanel({ standing, onInvite, onLeave, code, pro = false }: { stand
  */
 export function App({ runtime }: { runtime: Runtime }) {
   const { getAccessToken, authenticated, user } = useAuth();
+  const proFee = useEntryFee();
   // An account that has been given every ability (granted.ts) fights with all five, whatever its campaigns have taught it.
   const [granted, setGranted] = useState(false);
   useEffect(() => { let live = true; void grantedAll(user?.email).then((yes) => { if (live) setGranted(yes); }); return () => { live = false; }; }, [user?.email]);
@@ -1045,7 +1062,7 @@ export function App({ runtime }: { runtime: Runtime }) {
           onLeave={() => { if (table) standUp(); else { setCoopOpen(false); if (coopWay.current) { coopWay.current = false; send({ type: "back" }); } } }} />
       )}
       {match.screen === "Select" && !campaign && <SelectScreen match={match} mine={{ specials: specialsOf(heroOf(match.fighter), match.fighter), learned: granted && !pro ? 5 : Math.min(5, chaptersDone(HEROES.indexOf(heroOf(match.fighter)), saga)), build: buildOf(heroOf(match.fighter)) }} onFocus={(pick) => send({ type: "focus", pick })} onFight={() => start(versus ? brawl : fight)} onBack={() => send({ type: "back" })} go={pro ? "Pay & enter" : versus ? "Enter match" : "Fight"}
-        extra={pro ? <p className="border-2 border-destructive bg-card px-4.5 py-3 text-[12.5px]"><b className="font-sans tracking-[0.12em] uppercase">Pro {versus ? "Versus" : "Survival"}</b> · 50,000 $BLADES entry{proNote && <span role="status" className="mt-1 block text-muted-foreground">{proNote}</span>}</p> : versus ? <MatchPicker /> : undefined} />}
+        extra={pro ? <p className="border-2 border-destructive bg-card px-4.5 py-3 text-[12.5px]"><b className="font-sans tracking-[0.12em] uppercase">Pro {versus ? "Versus" : "Survival"}</b> · {proFee || "$BLADES"} entry{proNote && <span role="status" className="mt-1 block text-muted-foreground">{proNote}</span>}</p> : versus ? <MatchPicker /> : undefined} />}
       {match.screen === "Play" && (
         <>
           <Hud match={paidRun.current && runWord ? { ...match, wave: runWord.wave, kos: runWord.kos } : match} keys={keys} />
