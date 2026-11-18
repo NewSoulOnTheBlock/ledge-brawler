@@ -303,15 +303,12 @@ export function createArena(options: Options = {}) {
   }
 
   // spec/app/bout.md, "A round is over when at most one fighter has lives left"
-  /** What follows the end of a round, once: the table takes players again, and a pro match's pot is settled. */
+  /** What follows the end of a round, once: a pro match's pot is settled. */
   function settle(table: Table) {
     if (table.kind !== "duel" || !over(table.bout) || table.ended === table.bout.round) return;
     table.ended = table.bout.round;
     table.down.clear();
-    if (table.pro === null) {
-      if (lobby.listed.includes(table.num)) inLobby({ type: "reopen", table: table.num }, -1);
-      return;
-    }
+    if (table.pro === null) return;
     const left = table.bout.seated.find((num) => alive(num, table.bout));
     void options.pro?.result(table.pro, left === undefined ? null : players.get(left)?.entry ?? null).catch(() => undefined);
   }
@@ -493,8 +490,9 @@ export function createArena(options: Options = {}) {
     if (idle && (table.pro === null || !table.fought) && b.seated.length >= 2) {
       if (table.next === null) { table.next = t + (table.pro !== null ? PRO_GATHER : b.round ? BETWEEN : GATHER); tellBout(table); }
       else if (t >= table.next && inBout(table, { type: "begin" }, -1)) {
+        // The table goes on taking players looking for a duel, who wait for the next round (spec/app/lobby.md, "A co-op
+        // table stops taking players from matchmaking while its group plays a level, and takes them again once it is done").
         table.next = null; table.fought = true;
-        if (lobby.open.includes(table.num)) inLobby({ type: "close", table: table.num }, -1);
         for (const p of seatedAt(table)) if (p.at) Object.assign(p.at, { guardLeft: GUARD.most, guardBroken: 0, specialSince: null });
         if (table.pro !== null) void options.pro?.fight(table.pro).catch(() => undefined);
         tellBout(table);

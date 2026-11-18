@@ -30,6 +30,8 @@ export interface Room {
   /** A paid run's table: how the server says the run stands. */
   onRun(handler: (run: RunWord) => void): void;
   onDisconnect(handler: () => void): void; onReconnect(handler: () => void): void;
+  /** The seat could not be taken back after a dropped connection: the table is full or gone, or the pro match over. */
+  onLost(handler: () => void): void;
   onLeave(handler: (id: string) => void): void;
   /** This fighter has fallen off the islands. */
   fell(): void;
@@ -49,7 +51,7 @@ export interface Seek { kind: Kind; name: string; fighter: number; vigor: number
 export function joinArena(seek: Seek, url = arena()): Promise<Room> {
   const handlers = new Map<string, ((data: never, from: string) => void)[]>();
   const stateHandlers: ((state: { entities?: { players?: Players } }) => void)[] = [], boutHandlers: ((bout: BoutWord) => void)[] = [], runHandlers: ((run: RunWord) => void)[] = [];
-  const down: (() => void)[] = [], up: (() => void)[] = [], gone: ((id: string) => void)[] = [];
+  const down: (() => void)[] = [], up: (() => void)[] = [], lost: (() => void)[] = [], gone: ((id: string) => void)[] = [];
   let socket: WebSocket, key = "", left = false, tries = 0, online = false;
   /** The last of the bout and the run the server told, for a handler that comes after them: the words that follow a
    *  seat may all be heard before the game that asked for it has had a moment to listen. */
@@ -66,7 +68,7 @@ export function joinArena(seek: Seek, url = arena()): Promise<Room> {
     onState: (handler) => { stateHandlers.push(handler); if (room.state) handler(room.state); },
     onBout: (handler) => { boutHandlers.push(handler); if (lastBout) handler(lastBout); },
     onRun: (handler) => { runHandlers.push(handler); if (lastRun) handler(lastRun); },
-    onDisconnect: (handler) => { down.push(handler); }, onReconnect: (handler) => { up.push(handler); },
+    onDisconnect: (handler) => { down.push(handler); }, onReconnect: (handler) => { up.push(handler); }, onLost: (handler) => { lost.push(handler); },
     onLeave: (handler) => { gone.push(handler); },
     fell: () => say({ t: "fell" }),
     again: () => say({ t: "again" }),
@@ -86,8 +88,10 @@ export function joinArena(seek: Seek, url = arena()): Promise<Room> {
           if (!again) { seated = true; clearTimeout(timer); resolve(room); } else up.forEach((handler) => handler());
           return;
         }
+        // Refused a first seat, or the seat back after a dropped connection: either way there is nothing to try again.
         case "refused":
-          if (!seated) { left = true; clearTimeout(timer); socket.close(); reject(new Refused(said.why, said.message)); }
+          left = true; clearTimeout(timer); socket.close();
+          if (!seated) reject(new Refused(said.why, said.message)); else lost.forEach((handler) => handler());
           return;
         case "state":
           room.state = { entities: { players: said.players } };
