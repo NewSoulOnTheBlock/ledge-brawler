@@ -721,6 +721,7 @@ it("Play a level of a campaign: the arena hosts a group's level, springs its amb
     room.on("hit", (data: { round?: number }, from) => seen.hits.push({ from, round: data.round }));
     room.on("lvl", () => seen.said.push("lvl"));
     room.on("go", () => seen.said.push("go"));
+    room.on("talk", () => seen.said.push("talk"));
     return { room, seen };
   };
   const host = await seat("Ada"), guest = await seat("Bo");
@@ -746,7 +747,10 @@ it("Play a level of a campaign: the arena hosts a group's level, springs its amb
   expect(sprung.length).toBe(3);
   // While the guide talks the level holds still.
   host.room.send("talk", { ep: 1, t: { lines: ["Listen."], at: 0 } });
-  await ahead(() => host.seen.worlds > 0, "");
+  // The server holds the level before it tells the others of the talk (arena.ts, `group`): a world told after that is held.
+  await until(() => guest.seen.said.includes("talk"), "the talk told");
+  const before = host.seen.worlds;
+  await ahead(() => host.seen.worlds > before, "a world told while the guide talks");
   const held = JSON.stringify(host.seen.world!.foes.map((f) => [f[0], f[2], f[3]]));
   for (let i = 0; i < 10; i++) { later(60); await new Promise((done) => setTimeout(done, 20)); }
   expect(JSON.stringify(host.seen.world!.foes.map((f) => [f[0], f[2], f[3]]))).toBe(held);
