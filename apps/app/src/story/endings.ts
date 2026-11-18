@@ -82,5 +82,3 @@ const read = (): Partial<Record<Hero, number>> => { try { return JSON.parse(loca
 export const endedBy = (hero: Hero): number | null => read()[hero] ?? null;
 /** Keeps the way `hero` chose. */
 export function end(hero: Hero, which: number) { track("ending", { hero, which }); try { localStorage.setItem("endings", JSON.stringify({ ...read(), [hero]: which })); } catch { /* Private browsing may refuse: it may choose again. */ } }
-/** Forgets every ending, as when the saga is begun again. */
-export const unend = () => { try { localStorage.removeItem("endings"); } catch { /* Nothing was kept. */ } };

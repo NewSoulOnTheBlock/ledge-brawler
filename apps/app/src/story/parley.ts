@@ -270,5 +270,3 @@ export function keepRank(id: string, rank: Rank) {
   if (best && RANKS.indexOf(best) <= RANKS.indexOf(rank)) return;
   try { localStorage.setItem("ranks", JSON.stringify({ ...ranks(), [id]: rank })); } catch { /* Private browsing may refuse: it is not kept. */ }
 }
-/** Forgets every choice and every level, as when the saga is begun again. */
-export const forget = () => { try { localStorage.removeItem("specials"); localStorage.removeItem("journal"); localStorage.removeItem("given"); localStorage.removeItem("truths"); localStorage.removeItem("stances"); localStorage.removeItem("ranks"); } catch { /* Nothing was kept. */ } };

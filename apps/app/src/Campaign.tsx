@@ -27,7 +27,7 @@ function Rise({ on, className, children }: { on: unknown; className?: string; ch
   return <div ref={box} className={className}>{children}</div>;
 }
 /** A fighter's colour as it shows on the kit's dark plates: ink, which would not, becomes bone. */
-const lit = (colour: string) => (parseInt(colour.slice(1, 3), 16) + parseInt(colour.slice(3, 5), 16) + parseInt(colour.slice(5, 7), 16) < 150 ? "#dfe3e0" : colour);
+export const lit = (colour: string) => (parseInt(colour.slice(1, 3), 16) + parseInt(colour.slice(3, 5), 16) + parseInt(colour.slice(5, 7), 16) < 150 ? "#dfe3e0" : colour);
 /** The kit's four small frames, one to a campaign in turn. */
 const FRAMES = Object.values(import.meta.glob<string>("./game/packs/ui/frame*.png", { eager: true, query: "?url", import: "default" }));
 
@@ -48,10 +48,8 @@ function RelicIcon({ kind }: { kind: RelicKind }) {
   );
 }
 
-export function CampaignScreen({ saga, canBeginAgain, onPlay, onEnding, onBack, onBeginAgain }: { saga: Saga; canBeginAgain: boolean; onPlay: (hero: Hero, chapter: number) => void; /** Opens the ending of a campaign whose chapters are all finished. */ onEnding: (hero: Hero) => void; onBack: () => void; onBeginAgain: () => void }) {
-  const [chosen, setChosen] = useState(0), [knowing, setKnowing] = useState(false), [sure, setSure] = useState(false);
-  const found = relicCounts();
-  const fresh = TRUTHS.filter((truth) => truth.halves.every((half) => playerKnows(factNumber(half), saga)) && !wasRead(truth.id)).length;
+export function CampaignScreen({ saga, onPlay, onEnding }: { saga: Saga; onPlay: (hero: Hero, chapter: number) => void; /** Opens the ending of a campaign whose chapters are all finished. */ onEnding: (hero: Hero) => void }) {
+  const [chosen, setChosen] = useState(0);
   const hero = PROTAGONISTS[chosen], colour = lit(CHARS[hero.fighter].color), done = chaptersDone(chosen, saga);
   return (
     <section aria-label="Campaign" className="dark absolute inset-0 grid place-items-center overflow-y-auto bg-[#0b1114]/94 px-4 py-6 text-foreground">
@@ -114,64 +112,68 @@ export function CampaignScreen({ saga, canBeginAgain, onPlay, onEnding, onBack, 
             })}
           </ol>
         </KitPanel>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-5 gap-y-2 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-          {MEASURES.map((measure) => (
-            <div key={measure.key} className="grid gap-1">
-              <span>{measure.name}</span>
-              <div role="meter" aria-label={measure.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={saga[measure.key]} className="h-2 border-[1.5px] border-foreground bg-background">
-                <i className="block h-full bg-foreground" style={{ width: `${saga[measure.key]}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-        {turnsOf(saga).length > 0 && (
-          <ul aria-label="How the world has turned" className="grid gap-0.5 text-[12.5px]">
-            {turnsOf(saga).map((turn) => <li key={turn.key}><b className="font-medium text-[#e0b84a]">{turn.name}.</b> <span className="text-muted-foreground">{turn.does}</span></li>)}
-          </ul>
-        )}
-        {/* The puzzle: the five before the throne, cut in twenty-five, one piece in each level, a protagonist to a row
-            and a chapter to a column. A found piece shows its part of the picture; the rest are dark, numbered by chapter. */}
-        <figure aria-label={`The puzzle: ${found.puzzle} of 25 pieces found`} className="grid gap-1.5">
-          <div className="grid aspect-[16/9] w-full max-w-[420px] grid-cols-5 gap-px bg-border/60 p-px">
-            {HEROES.flatMap((who, row) => [0, 1, 2, 3, 4].map((col) => {
-              const got = isFound("puzzle", `${who}-${col + 1}`);
-              return (
-                <i key={`${who}-${col}`} title={`${PROTAGONISTS[row].title}, chapter ${col + 1}${got ? "" : ": not yet found"}`}
-                  className="grid place-items-center bg-[#0b1114] text-[9px] text-muted-foreground not-italic"
-                  style={got ? { backgroundImage: `url(${HOME})`, backgroundSize: "500% 500%", backgroundPosition: `${col * 25}% ${row * 25}%` } : undefined}>
-                  {!got && col + 1}
-                </i>
-              );
-            }))}
-          </div>
-          <figcaption className="text-[11px] text-muted-foreground">A piece of this picture is hidden in every level.</figcaption>
-        </figure>
-        {/* What has been found besides the keys, in all five campaigns, and what enough of each earns (relics.ts). */}
-        <ul aria-label="Found in the campaigns" className="grid gap-2 sm:grid-cols-3">
-          {RELIC_KINDS.map((kind) => {
-            const def = RELICS[kind], count = Math.min(found[kind], def.need), done = count >= def.need;
-            return (
-              <li key={kind} className="flex items-center gap-2.5 text-[12px]">
-                <RelicIcon kind={kind} />
-                <span className="grid">
-                  <b className="font-medium" style={{ color: def.colour }}>{def.plural} <span className="tabular-nums">{count} / {def.need}</span></b>
-                  <span className={done ? "text-[#e0b84a]" : "text-muted-foreground"}>{done ? "Earned: " : ""}{def.reward}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="flex flex-wrap justify-end gap-3">
-          <KitButton className="px-3 py-1.5" onClick={() => setKnowing(true)}>What is known{fresh > 0 && <b className="ml-2 text-[#e0b84a]">{fresh} new</b>}</KitButton>
-          {/* Beginning again forgets everything, for all five: it is asked for twice. */}
-          {canBeginAgain && (sure
-            ? <span role="alertdialog" aria-label="Begin again?" className="flex flex-wrap items-center gap-2 text-[12.5px] text-destructive">Forget every chapter, build and ending, for all five?<KitButton autoFocus className="px-3 py-1.5" onClick={() => setSure(false)}>Keep them</KitButton><KitButton className="px-3 py-1.5 text-destructive" onClick={() => { setSure(false); onBeginAgain(); }}>Forget everything</KitButton></span>
-            : <KitButton className="px-3 py-1.5 text-destructive" onClick={() => setSure(true)}>Begin again</KitButton>)}
-          <KitWord word="Back" onClick={onBack} />
-        </div>
       </div>
-      {knowing && <Known saga={saga} onClose={() => setKnowing(false)} />}
     </section>
+  );
+}
+
+/** The state of the world the five campaigns have made, the puzzle, what has been found in them, and what is known (Profile.tsx). */
+export function TheWorld({ saga }: { saga: Saga }) {
+  const [knowing, setKnowing] = useState(false);
+  const found = relicCounts();
+  const fresh = TRUTHS.filter((truth) => truth.halves.every((half) => playerKnows(factNumber(half), saga)) && !wasRead(truth.id)).length;
+  return (
+    <>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-5 gap-y-2 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+        {MEASURES.map((measure) => (
+          <div key={measure.key} className="grid gap-1">
+            <span>{measure.name}</span>
+            <div role="meter" aria-label={measure.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={saga[measure.key]} className="h-2 border-[1.5px] border-foreground bg-background">
+              <i className="block h-full bg-foreground" style={{ width: `${saga[measure.key]}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {turnsOf(saga).length > 0 && (
+        <ul aria-label="How the world has turned" className="grid gap-0.5 text-[12.5px]">
+          {turnsOf(saga).map((turn) => <li key={turn.key}><b className="font-medium text-[#e0b84a]">{turn.name}.</b> <span className="text-muted-foreground">{turn.does}</span></li>)}
+        </ul>
+      )}
+      {/* The puzzle: the five before the throne, cut in twenty-five, one piece in each level, a protagonist to a row
+          and a chapter to a column. A found piece shows its part of the picture; the rest are dark, numbered by chapter. */}
+      <figure aria-label={`The puzzle: ${found.puzzle} of 25 pieces found`} className="grid gap-1.5">
+        <div className="grid aspect-[16/9] w-full max-w-[420px] grid-cols-5 gap-px bg-border/60 p-px">
+          {HEROES.flatMap((who, row) => [0, 1, 2, 3, 4].map((col) => {
+            const got = isFound("puzzle", `${who}-${col + 1}`);
+            return (
+              <i key={`${who}-${col}`} title={`${PROTAGONISTS[row].title}, chapter ${col + 1}${got ? "" : ": not yet found"}`}
+                className="grid place-items-center bg-[#0b1114] text-[9px] text-muted-foreground not-italic"
+                style={got ? { backgroundImage: `url(${HOME})`, backgroundSize: "500% 500%", backgroundPosition: `${col * 25}% ${row * 25}%` } : undefined}>
+                {!got && col + 1}
+              </i>
+            );
+          }))}
+        </div>
+        <figcaption className="text-[11px] text-muted-foreground">A piece of this picture is hidden in every level.</figcaption>
+      </figure>
+      {/* What has been found besides the keys, in all five campaigns, and what enough of each earns (relics.ts). */}
+      <ul aria-label="Found in the campaigns" className="grid gap-2 sm:grid-cols-3">
+        {RELIC_KINDS.map((kind) => {
+          const def = RELICS[kind], count = Math.min(found[kind], def.need), done = count >= def.need;
+          return (
+            <li key={kind} className="flex items-center gap-2.5 text-[12px]">
+              <RelicIcon kind={kind} />
+              <span className="grid">
+                <b className="font-medium" style={{ color: def.colour }}>{def.plural} <span className="tabular-nums">{count} / {def.need}</span></b>
+                <span className={done ? "text-[#e0b84a]" : "text-muted-foreground"}>{done ? "Earned: " : ""}{def.reward}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <KitButton className="justify-self-start px-3 py-1.5" onClick={() => setKnowing(true)}>What is known{fresh > 0 && <b className="ml-2 text-[#e0b84a]">{fresh} new</b>}</KitButton>
+      {knowing && <Known saga={saga} onClose={() => setKnowing(false)} />}
+    </>
   );
 }
 
@@ -205,7 +207,7 @@ function Known({ saga, onClose }: { saga: Saga; onClose: () => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const has = (fact: (typeof FACTS)[number]["id"]) => playerKnows(factNumber(fact), saga);
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-[#05080a]/95 px-4 py-6">
+    <div className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-[#05080a]/95 px-4 py-6">
       <KitPanel aria-label="What is known" className="grid w-full max-w-[1040px] gap-x-6 gap-y-3 px-4 py-3 text-[12.5px] md:grid-cols-2">
         <div className="grid content-start gap-1">
           <h3 className={cn(display, "text-xl tracking-[0.12em] text-[#9fe3e6]")}>What is known</h3>

@@ -3,16 +3,15 @@ import { cn } from "@repo/ui";
 import { type ComponentType, type JSX, type ReactNode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fighters } from "../gen/app.ts";
 import { chaptersDone } from "../gen/app__saga.ts";
-import { KitButton, KitWord } from "./kit.tsx";
+import { KitWord } from "./kit.tsx";
 import { CampaignScreen, ChapterClear, Ending, GuideTalk, Prelude } from "./Campaign.tsx";
 import { type Table, type TalkWord, type Together, joinTogether } from "./together.ts";
-import { unend } from "./story/endings.ts";
-import { DILEMMAS, PARLEY, keepRank, rankOf, repliesOf, type Stance, stand, choose, echoOf, forget, give, memoryOf, reckoning, remember, specialsOf } from "./story/parley.ts";
-import { buildOf, canPay, heroOf, pay, unbuild } from "./story/build.ts";
+import { DILEMMAS, PARLEY, keepRank, rankOf, repliesOf, type Stance, stand, choose, echoOf, give, memoryOf, reckoning, remember, specialsOf } from "./story/parley.ts";
+import { buildOf, canPay, heroOf, pay } from "./story/build.ts";
 import { crossing } from "./story/crossings.ts";
 import { WATCHED, through } from "./story/prelude.ts";
 import { WHY, within } from "./story/within.ts";
-import { REAPER_UNHEEDED, VOICES, heed, unheed } from "./story/voices.ts";
+import { REAPER_UNHEEDED, VOICES, heed } from "./story/voices.ts";
 import { shaped, turnsOf } from "./story/world.ts";
 import { TRACKS, createAudio } from "./game/audio.ts";
 import { CHARS, MOVES_TO_FIND } from "./game/data.ts";
@@ -496,7 +495,7 @@ export function App({ runtime }: { runtime: Runtime }) {
   useEffect(() => { setTokenProvider(getAccessToken); }, [getAccessToken]);
   useEffect(() => { if (user?.id) track("signin"); }, [user?.id]);
   const { match, rules, send } = useMatch(runtime);
-  const { saga, can: sagaCan, send: tell } = useSaga(runtime);
+  const { saga, send: tell } = useSaga(runtime);
   const cloudChecked = useRef(false);
   useEffect(() => {
     if (cloudChecked.current || !authenticated || saga === undefined) return;
@@ -770,7 +769,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     const code = invitedTo.current;
     invitedTo.current = null;
     setCampaign(true); setVersus(false); setPro(false); select("enter");
-    setCoopOpen(true); void sit(code);
+    coopWay.current = true; setCoopOpen(true); void sit(code);
   }, [match?.screen, select, sit]);
   const standUp = useCallback(() => { together.current?.leave(); together.current = null; mySeat.current = null; setTable(null); setGroup(null); game.coop(null); }, [game]);
   /** Back at the table after a level played with the group, however it ended. */
@@ -1013,7 +1012,7 @@ export function App({ runtime }: { runtime: Runtime }) {
       <Arena game={game} before={tick} />
       <Curtain on={`${match.screen}${campaign ? " campaign" : ""} ${level?.id ?? ""}${awakening ? " within" : ""}`} />
       {match.screen === "Title" && <>
-        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onDaily={() => { dailyBoard().then((d) => { setDailyFighter(d.fighter); setCampaign(false); setVersus(false); setPro(false); send({ type: "focus", pick: d.fighter }); select("enter"); }).catch(() => {}); }} onProfile={authenticated ? () => setShowProfile(true) : undefined} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
+        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onDaily={() => { dailyBoard().then((d) => { setDailyFighter(d.fighter); setCampaign(false); setVersus(false); setPro(false); send({ type: "focus", pick: d.fighter }); select("enter"); }).catch(() => {}); }} onProfile={() => setShowProfile(true)} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
         {askParty && <PartyChoice onBack={() => setPartyChoice(false)} onPick={(coop) => { chime(); setPartyChoice(false); coopWay.current = coop; setCampaign(true); setVersus(false); setPro(false); select("enter"); if (coop) setCoopOpen(true); }} />}
         {choosing && <TierChoice mode={choosing} onBack={() => setChoosing(null)} onPick={(paid) => { chime(); setCampaign(false); setVersus(choosing === "Versus"); setPro(paid); setChoosing(null); select("enter"); }} />}
         {showProfile && saga && <Profile saga={saga} onClose={() => setShowProfile(false)} />}
@@ -1030,11 +1029,10 @@ export function App({ runtime }: { runtime: Runtime }) {
           </div>
         )}
       </>}
-      {match.screen === "Select" && campaign && <CampaignScreen saga={saga} canBeginAgain={sagaCan({ type: "beginAgain" })} onPlay={play} onEnding={setEnding} onBack={() => send({ type: "back" })} onBeginAgain={() => { forget(); unbuild(); unheed(); unend(); void tell({ type: "beginAgain" }).then(() => syncSagaToCloud()); }} />}
+      {match.screen === "Select" && campaign && <CampaignScreen saga={saga} onPlay={play} onEnding={setEnding} />}
       {match.screen === "Select" && campaign && prelude && <Prelude hero={prelude} onDone={() => { const hero = prelude; setPrelude(null); open(hero, 0); }} />}
       {match.screen === "Select" && campaign && shut && <p role="alert" className="dark absolute inset-x-0 bottom-6 z-50 mx-auto w-fit border-2 border-destructive bg-[#05080a] px-4 py-2 text-center text-sm text-foreground">That chapter cannot be opened just now. Try another, or come back to it.</p>}
       {match.screen === "Select" && campaign && ending && <Ending hero={ending} onDone={() => setEnding(null)} />}
-      {match.screen === "Select" && campaign && !coopOpen && !prelude && !ending && <KitButton className="absolute right-4 bottom-4 z-20 px-4 py-2" onClick={() => setCoopOpen(true)}>{table ? `Table ${table.code}` : "Play together"}</KitButton>}
       {match.screen === "Select" && campaign && coopOpen && (
         <CoopTable table={table} saga={saga} error={coopError} onJoin={(code) => void sit(code)}
           onSeat={(hero) => { mySeat.current = hero; together.current?.seat(hero); }} onReady={(on) => together.current?.ready(on)}

@@ -45,5 +45,3 @@ const read = (): Heeded => { try { return JSON.parse(localStorage.getItem("heede
 export function heed(hero: Hero, id: string, whom: "reaper" | "voice") { try { localStorage.setItem("heeded", JSON.stringify({ ...read(), [hero]: { ...read()[hero], [id]: whom } })); } catch { /* Private browsing may refuse: it is not kept. */ } }
 /** In how many levels `hero` heeded the Reaper, and in how many its other voice. */
 export function heededBy(hero: Hero) { const all = Object.values(read()[hero] ?? {}); return { reaper: all.filter((whom) => whom === "reaper").length, voice: all.filter((whom) => whom === "voice").length }; }
-/** Forgets whom everyone heeded, as when the saga is begun again. */
-export const unheed = () => { try { localStorage.removeItem("heeded"); } catch { /* Nothing was kept. */ } };

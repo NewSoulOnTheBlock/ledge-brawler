@@ -4,9 +4,10 @@ import { chaptersDone, type Saga } from "../gen/app__saga.ts";
 import { useAuth } from "./auth.tsx";
 import { CHARS } from "./game/data.ts";
 import { type Board, type GameStats, loadStats, standingOf, syncSagaToCloud } from "./scores.ts";
-import { SmallButton, BigButton } from "./screens.tsx";
 import { HEROES, PROTAGONISTS } from "./story/canon.ts";
 import { WalletAddress } from "./WalletAddress.tsx";
+import { TheWorld, lit } from "./Campaign.tsx";
+import { KitButton, KitPanel } from "./kit.tsx";
 import { ACHIEVEMENTS, unlocked as getUnlocked } from "./achievements.ts";
 
 const display = "font-display font-bold uppercase";
@@ -32,19 +33,22 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
   };
 
   return (
-    <div className="absolute inset-0 z-20 grid [place-items:safe_center] overflow-y-auto bg-background/85 px-4 py-6">
-      <section aria-labelledby="profile" className="grid w-full max-w-[520px] gap-4 border-2 border-foreground bg-card px-6 py-5 shadow-[6px_6px_0_var(--foreground)]">
-        <header className="flex items-center justify-between gap-3">
-          <h2 id="profile" className={cn(display, "text-2xl tracking-[0.12em]")}>Profile</h2>
-          <SmallButton onClick={onClose}>Close</SmallButton>
+    <section aria-labelledby="profile" className="dark absolute inset-0 z-20 overflow-y-auto bg-[#0b1114] px-4 py-6 text-foreground">
+      <div className="mx-auto grid w-full max-w-[1040px] gap-5">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="profile" className={cn(display, "text-[clamp(26px,4vw,40px)] tracking-widest text-[#9fe3e6]")}>Profile</h2>
+          <KitButton className="px-4 py-1.5" onClick={onClose}>Close</KitButton>
         </header>
 
-        <div className="grid gap-1.5 text-[13px]">
-          {user?.name && <p><b className="font-medium text-foreground">{user.name}</b></p>}
-          {user?.email && <p className="text-muted-foreground">{user.email}</p>}
-          {user?.wallet && <p className="flex items-center gap-1.5 text-muted-foreground">Wallet <WalletAddress address={user.wallet} /></p>}
-        </div>
+        {user && (
+          <div className="grid gap-1.5 text-[13px]">
+            {user.name && <p><b className="font-medium text-foreground">{user.name}</b></p>}
+            {user.email && <p className="text-muted-foreground">{user.email}</p>}
+            {user.wallet && <p className="flex items-center gap-1.5 text-muted-foreground">Wallet <WalletAddress address={user.wallet} /></p>}
+          </div>
+        )}
 
+        <KitPanel className="grid gap-x-8 gap-y-5 px-4 py-3 md:grid-cols-2">
         <div>
           <h3 className={cn(display, "mb-2 text-[11px] tracking-[0.2em] text-destructive")}>Campaign progress</h3>
           <div className="grid gap-1.5">
@@ -55,13 +59,13 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
               return (
                 <div key={hero} className="grid grid-cols-[1fr_auto] items-center gap-3 text-[12.5px]">
                   <div className="flex items-center gap-2">
-                    <span className="inline-block size-2.5 rounded-full" style={{ background: c.color }} />
-                    <span className="font-medium" style={{ color: c.color }}>{c.name}</span>
+                    <span className="inline-block size-2.5 rounded-full" style={{ background: lit(c.color) }} />
+                    <span className="font-medium" style={{ color: lit(c.color) }}>{c.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="flex gap-0.5">
                       {Array.from({ length: CHAPTERS_PER_HERO }, (_, j) => (
-                        <b key={j} className="block size-2" style={{ background: j < done ? c.color : "var(--border)" }} />
+                        <b key={j} className="block size-2" style={{ background: j < done ? lit(c.color) : "var(--border)" }} />
                       ))}
                     </span>
                     <span className="w-8 text-right text-[11px] text-muted-foreground tabular-nums">{done}/{CHAPTERS_PER_HERO}</span>
@@ -84,8 +88,8 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
             <div className="mt-2 grid gap-1">
               {CHARS.map((c, i) => stats.highestWave[i] > 0 ? (
                 <div key={i} className="flex items-center gap-2 text-[11px]">
-                  <span className="inline-block size-2 rounded-full" style={{ background: c.color }} />
-                  <span style={{ color: c.color }}>{c.name}</span>
+                  <span className="inline-block size-2 rounded-full" style={{ background: lit(c.color) }} />
+                  <span style={{ color: lit(c.color) }}>{c.name}</span>
                   <span className="text-muted-foreground ml-auto tabular-nums">best wave {stats.highestWave[i]} · {stats.fighterPlays[i]} plays</span>
                 </div>
               ) : null)}
@@ -115,7 +119,7 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
               {board.top.slice(0, 5).map((row, i) => (
                 <li key={row.id} className="grid grid-cols-[2em_1fr_auto_auto] gap-3">
                   <span className="text-right text-muted-foreground">{i + 1}</span>
-                  <b className="truncate font-medium" style={{ color: CHARS[row.fighter].color }}>{row.name}</b>
+                  <b className="truncate font-medium" style={{ color: lit(CHARS[row.fighter].color) }}>{row.name}</b>
                   <span>wave {row.wave}</span>
                   <span>{row.kos} K.O.</span>
                 </li>
@@ -124,13 +128,22 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <SmallButton onClick={handleSync} disabled={syncing} className="text-[12px] disabled:opacity-50">
-            {syncing ? "Syncing…" : synced ? "Synced to cloud" : "Sync to cloud"}
-          </SmallButton>
-          <SmallButton onClick={() => void logout()} className="text-[12px] text-red-500">Sign out</SmallButton>
-        </div>
-      </section>
-    </div>
+        </KitPanel>
+
+        <section aria-label="The world" className="grid gap-4">
+          <h3 className={cn(display, "text-[11px] tracking-[0.2em] text-destructive")}>The world</h3>
+          <TheWorld saga={saga} />
+        </section>
+
+        {user && (
+          <div className="flex flex-wrap items-center gap-3">
+            <KitButton onClick={handleSync} disabled={syncing} className="px-3 py-1 text-[12px] disabled:opacity-50">
+              {syncing ? "Syncing…" : synced ? "Synced to cloud" : "Sync to cloud"}
+            </KitButton>
+            <KitButton onClick={() => void logout()} className="px-3 py-1 text-[12px] text-red-400">Sign out</KitButton>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
