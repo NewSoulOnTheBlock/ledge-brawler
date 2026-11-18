@@ -346,9 +346,11 @@ export const FURNACE_STEPS: Level = {
 
 /** The arenas of the fight of waves; with the islands, one of them is the day's, the same for everyone that day. */
 export const SURVIVAL_STAGES: (Level | null)[] = [null, SUNKEN_BRIDGE, THE_WELL, GALLOWS_YARD, FURNACE_STEPS];
+/** The number of the UTC day it is now. */
+export const today = () => Math.floor(Date.now() / 86400000);
 /** The arena of the fight of waves for the day `day` (days since 1970, in UTC): the same for everyone, so that the
  *  day's best score is fought for in one place (pro.ts). */
-export const survivalStage = (day = Math.floor(Date.now() / 86400000)) => SURVIVAL_STAGES[day % SURVIVAL_STAGES.length];
+export const survivalStage = (day = today()) => SURVIVAL_STAGES[day % SURVIVAL_STAGES.length];
 
 // Duels: places made to be fair. Up to five fighters start at once, so each place is the same on both sides, its
 // starts matched, and it has nothing that moves or breaks: everything in it is where it is in every player's game.
@@ -445,7 +447,7 @@ export function chapterById(id: string) {
   const brief = BRIEFS.find((each) => each.id === id);
   return brief && chapterOf(brief.hero, brief.chapter);
 }
-/** The level a co-op group has been told to play, by its id (coop.ts). */
+/** The level a co-op group has been told to play, by its id (together.ts). */
 export function levelById(id: string) {
   const brief = BRIEFS.find((each) => each.id === id);
   return brief && levelOf(brief.hero, brief.chapter);

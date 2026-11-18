@@ -1,0 +1,28 @@
+# The arena server behind Caddy, which gets and renews its HTTPS certificate and passes WebSockets through.
+# Run from this directory, with a .env beside it (README.md): docker compose up -d --build
+services:
+  arena:
+    build:
+      context: ../../..
+      dockerfile: apps/app/arena/Dockerfile
+    restart: unless-stopped
+    environment:
+      SITE: ${SITE:-https://ledge-brawler.vercel.app}
+      ARENA_SECRET: ${ARENA_SECRET:?set ARENA_SECRET in .env}
+    expose:
+      - "8787"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - arena
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ARENA_DOMAIN: ${ARENA_DOMAIN:?set ARENA_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+volumes:
+  caddy: {}

@@ -1,0 +1,15 @@
+# What the arena server's image (apps/app/arena/Dockerfile) is built without.
+**/node_modules
+**/dist
+**/build
+**/gen
+!vibestack/gen
+**/.spec-cache
+**/.vibe
+**/.turbo
+**/.cache
+.git
+art
+workbench
+mobile
+apps/app/public

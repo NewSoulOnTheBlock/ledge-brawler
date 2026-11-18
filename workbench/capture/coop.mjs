@@ -1,43 +1,22 @@
-// A co-op group on the running game (http://localhost:5199, or the address given), over the real relay, the real
-// engine and the real coop.ts: node coop.mjs [players 2-5] [address] [lag ms] [jitter ms].
-// Player A opens a table, the others come by its invite link, each takes a blade, A chooses chapter 1 of their
-// campaign and sets out. Then: everyone is in the same level and sees the others; A's game alone runs the enemies and
-// the others draw stand-ins for them in about the same places; a guest's blows land on A's enemies; a piece of the
-// key found by one is found for all; a fighter knocked out is revived by a teammate standing by it; and when one
-// reaches the way out the level is cleared for everyone. With lag, it is added to everything each page hears.
+// A co-op group on the running game (http://localhost:5199, or the address given), with the arena server running
+// beside it (apps/app/arena/README.md), over the real engine and the real together.ts: node coop.mjs [players 2-5] [address].
+// Each presses Play together and Find a group, and the arena should seat them all at one table; each takes a blade, A
+// (the first, who leads) chooses chapter 1 of their campaign and sets out. Then: everyone is in the same level and
+// sees the others; the arena runs the enemies, and every game, A's too, draws them where it says; a guest's blows land
+// on them; a piece of the key found by one is found for all; a fighter knocked out is revived by a teammate standing by
+// it; when A goes, the level and its enemies go on for the others; and when one reaches the way out the level is
+// cleared for everyone.
 import { chromium } from "playwright";
 const players = Math.max(2, Math.min(5, Number(process.argv[2] ?? 2)));
 const base = process.argv[3] ?? "http://localhost:5199/";
-const [lag = 0, jitter = 0] = process.argv.slice(4, 6).map(Number);
 const browser = await chromium.launch();
 const errors = [], out = {};
 const BLADES = ["The Forbidden", "The Ember", "The Exile", "The Hollow", "The Architect"];
-
-// As netlab.mjs: what the relay delivers comes `lag` plus up to `jitter` later, in order.
-const slow = ({ lag, jitter }) => {
-  if (!lag && !jitter) return;
-  let held;
-  Object.defineProperty(window, "MP", {
-    configurable: true, get: () => held,
-    set(mp) {
-      const join = mp.join.bind(mp);
-      held = { ...mp, join: async (options) => {
-        const room = await join(options);
-        let last = 0;
-        const later = (fn) => (...args) => { const at = Math.max(last, performance.now() + lag + Math.random() * jitter); last = at; setTimeout(() => fn(...args), at - performance.now()); };
-        const onState = room.onState.bind(room), on = room.on.bind(room);
-        room.onState = (fn) => onState(later(fn)); room.on = (type, fn) => on(type, later(fn));
-        return room;
-      } };
-    },
-  });
-};
 
 async function open(url, i) {
   const context = await browser.newContext({ viewport: { width: 1100, height: 640 } });
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(`${"ABCDE"[i]}: ${String(e).slice(0, 200)}`));
-  await page.addInitScript(slow, { lag, jitter });
   // A fresh campaign for each, with its first chapter of every protagonist open.
   await page.addInitScript(() => { try { localStorage.setItem("coached", "1"); } catch {} });
   await page.goto(url);
@@ -55,24 +34,29 @@ const state = (page) => page.evaluate(() => {
     talking: S.talking, keys: S.keys.map((k) => k.found), hero: S.hero && { x: Math.round(S.hero.body.position.x), y: Math.round(S.hero.body.position.y) } };
 });
 
-// A opens a table.
+/** Play together, and a group found by the arena's matchmaking. */
+async function find(page) {
+  await page.getByRole("button", { name: "Campaign" }).click();
+  await page.getByRole("button", { name: /Play together/ }).click();
+  await page.getByRole("button", { name: "Find a group" }).click();
+  return page.getByLabel("Invite link").inputValue({ timeout: 20000 });
+}
 const A = await open(base, 0);
-await A.getByRole("button", { name: "Campaign" }).click();
-await A.getByRole("button", { name: /Play together/ }).click();
-await A.getByRole("button", { name: "Open a new table" }).click();
-const link = await A.getByLabel("Invite link").inputValue({ timeout: 20000 });
+const link = await find(A);
 await A.getByRole("radio", { name: BLADES[0] }).click();
 await A.getByRole("radio", { name: /^1\./ }).first().click();
 out.link = link;
 
-// The others come by the link, each takes a blade and is ready.
-const pages = [A];
+// The others find the same group with no link, each takes a blade and is ready.
+const pages = [A], links = [link];
 for (let i = 1; i < players; i++) {
-  const P = await open(link, i);
+  const P = await open(base, i);
+  links.push(await find(P));
   await P.getByRole("radio", { name: BLADES[i] }).click({ timeout: 20000 });
   await P.getByRole("button", { name: "Ready" }).click();
   pages.push(P);
 }
+out.oneTable = links.every((each) => each === link);
 await A.getByRole("button", { name: "Set out" }).waitFor({ timeout: 20000 });
 await A.waitForTimeout(1500);
 await A.screenshot({ path: "shots/latest/coop-table.png" });
@@ -89,12 +73,13 @@ for (let i = 0; i < 15; i++) {
 await A.waitForTimeout(1500);
 out.started = await Promise.all(pages.map(state));
 
-// Everyone walks towards the first ambush; A's game springs it and runs its enemies.
-const walk = (page, ms) => page.evaluate((ms) => new Promise((done) => { const { game } = window.fiveBlades; game.press("right"); setTimeout(() => { game.release("right"); done(); }, ms); }), ms);
-for (let tries = 0; tries < 8 && !(await state(A)).foes.length; tries++) await Promise.all(pages.map((p) => walk(p, 1500)));
+// Everyone walks towards the first ambush; the arena springs it and runs its enemies.
+// Everyone is set down in the first ambush's room, where its enemies wait (levels.ts, forbidden-1).
+const room = await A.evaluate(() => { const L = window.fiveBlades.game.scene.level; return L.ambushes[0].foes[0]; });
+for (let tries = 0; tries < 20 && !(await state(A)).foes.length; tries++) { await Promise.all(pages.map((p, i) => place(p, room.x - 120 + i * 30, room.y - 40))); await A.waitForTimeout(300); }
 await A.waitForTimeout(1500);
 const [a, b] = await Promise.all([state(A), state(pages[1])]);
-// Where B draws each of A's enemies, against where A has it: the gap is the delay of the picture, a few frames.
+// Where B draws each enemy, against where A draws it: both draw the arena's, so the gap is the jitter between them.
 const gaps = a.foes.map((f) => { const g = b.foes.find((each) => each.uid === f.uid); return g ? [g.x - f.x, g.y - f.y] : null; });
 out.enemies = { host: a.foes.length, hostRemote: a.foes.filter((f) => f.remote).length, guest: b.foes.length, guestRemote: b.foes.filter((f) => f.remote).length, gaps };
 
@@ -140,13 +125,13 @@ if (downAt) {
 }
 
 await Promise.all(pages.map((p, i) => p.screenshot({ path: `shots/latest/coop-${"abcde"[i]}.png` })));
-// The host goes, without a word (its page closed): whoever sat down next takes the level over, and its enemies with it.
+// The leader goes, without a word (its page closed): the level and its enemies go on at the arena for the others.
 const beforeGo = await state(pages[1]);
 await A.context().close();
 const rest = pages.slice(1);
 await rest[0].waitForTimeout(10000);
 const after = await Promise.all(rest.map(state));
-out.handover = { foesBefore: beforeGo.foes.length, newHost: after.map((s) => s.coop?.host), foes: after.map((s) => ({ all: s.foes.length, remote: s.foes.filter((f) => f.remote).length })), allies: after.map((s) => s.allies) };
+out.handover = { foesBefore: beforeGo.foes.length, guests: after.map((s) => s.coop?.host === false), foes: after.map((s) => ({ all: s.foes.length, remote: s.foes.filter((f) => f.remote).length })), allies: after.map((s) => s.allies) };
 // The way out, reached by the new host: everyone left has the level cleared.
 // Whoever of them is still standing goes (in a fight of ten, a fighter standing still for the test is soon down).
 const standing = (await Promise.all(rest.map(async (p) => [p, (await state(p)).alive]))).find(([, up]) => up)?.[0] ?? rest[0];
@@ -155,5 +140,5 @@ const exit = await standing.evaluate(() => { const S = window.fiveBlades.game.sc
 await place(standing, exit.x, exit.y - 10);
 await standing.waitForTimeout(3000);
 out.cleared = await Promise.all(rest.map(async (p) => (await state(p)).cleared));
-console.log(JSON.stringify({ players, lag, jitter, ...out, errors: errors.filter((e) => !/privy|Content Security|403|iframe/i.test(e)) }, null, 1));
+console.log(JSON.stringify({ players, ...out, errors: errors.filter((e) => !/privy|Content Security|403|iframe/i.test(e)) }, null, 1));
 await browser.close();

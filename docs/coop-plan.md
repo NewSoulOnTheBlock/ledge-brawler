@@ -47,16 +47,33 @@ they do now; co-op is a separate path, switched on only inside a co-op room.
 | 5 | Hardening: host leaves (hand over to next player), reconnect, difficulty scaling, 5-browser + lag test (`netlab.mjs`) | ready to deploy |
 
 ## Status (2026-11-16) — built locally, not deployed
-All phases 0–5 are in. Code: `apps/app/src/coop.ts` (table, host election by seat time + 1 s heartbeat / 5 s silence,
+All phases 0–5 are in. Code: `apps/app/src/together.ts` (table, host election by seat time + 1 s heartbeat / 5 s silence,
 `go`/`world`/`foe`/`lvl`/`talk`/`hb` messages), `src/Coop.tsx` (table, party list, wiped panel), `versus.ts`
 (`RoomLink`: co-op rooms `ledge-coop-<code>`, level number in place of a duel's round), `game/sim.ts` (`sides`,
 `allies`, stand-ins `remote`/`uid`/`shown`, `world`/`heardWorld`/`hitFoe`/`shared`, `stepDown`/`riseHere`, `crowd`,
 seeded keys), `render.ts` (teammates, downed markers, minimap), App.tsx (`sit`, `embark(made, together)`,
 `backToTable`, `?together=<code>`).
-- Test: `node workbench/capture/coop.mjs [players 2-5] [address] [lag] [jitter]` — passes with 5 players at 120±60 ms:
+- Test (2026-11-16, over the relay): `node workbench/capture/coop.mjs [players 2-5] [address] [lag] [jitter]` — passed with 5 players at 120±60 ms:
   same level, 4 teammates each, enemy stand-ins in step, guest blows land, keys shared, revive, host leaves → next
   takes over every enemy, way out clears for all.
 - Message budget per second: host ≈ 20 words + 15 world (shots/effects/warnings batched inside) + 1 beat; guest ≈ 20 words
   + ≤12.5 blow batches + ≤20 effects + 1 beat (relay drops past 60).
 - Not done: joining mid-level (a late arrival waits at the table for the next level); the Reaper's bargain panel is
   replaced by teammate revives; story choices (boss replies, heeding) are the host's, guests watch them.
+
+## Status (2026-11-17) — on the arena server
+Tables are now the arena server's (`apps/app/src/arena/`, `spec/app/lobby.md`), not the Multiplayer Agent relay's:
+"Find a group" seats a player at any open co-op table with a free seat, a private table is reached by its code, and a
+table stops taking players from matchmaking while its group plays a level.
+
+The level's world is the arena's too (`apps/app/src/arena/level.ts`): when the host sets out (`go`), the server hosts
+the level in a headless `createGame` with no fighter of its own (`Game.haunt`), every fighter of the group a teammate
+placed where its game says. It springs the ambushes, runs the enemies and the boss, lands the group's blows (`foe`,
+judged as a duel's are), tells each game of the blows on its fighter, and holds still while the host's guide or boss
+talks (`talk`); the boss's coming is told to the host's game (`parley`), which sends back how it was answered
+(`answer`). Every game of the group is a guest; the host only leads the table and the talk, and no hand-over of the
+world is needed when it leaves. What each fighter meets itself (keys, traps, the way out) stays its own game's, told to
+all with `lvl`. A paid Survival run is played the same way (`run.ts`), its fighter a puppet of the player's game.
+
+The workbench check (`workbench/capture/coop.mjs`) needs the arena running beside the dev server
+(`apps/app/arena/README.md`, "On this machine").

@@ -4,8 +4,8 @@ export interface Ticker { symbol: string; where: string; chain: string; address:
 export interface Quote { usd: number; change: number | null; url: string }
 
 export const TICKERS: Ticker[] = [
-  // $BLADES: Solana, not launched yet. Its mint goes here once it is (the same as the server's BLADES_MINT).
-  { symbol: "$BLADES", where: "Solana", chain: "solana", address: null },
+  // $BLADES on Robinhood Chain, not launched yet. Its address goes here once it is (the same as the site's BLADES_TOKEN).
+  { symbol: "$BLADES", where: "Robinhood Chain", chain: "robinhood", address: null },
   // GameStop's Robinhood token on Robinhood Chain (4663).
   { symbol: "$GME", where: "Robinhood Chain", chain: "robinhood", address: "0x1b0E319c6A659F002271B69dB8A7df2F911c153E" },
 ];

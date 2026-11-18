@@ -60,14 +60,20 @@ self.addEventListener("fetch", (event) => {
 });
 `;
 
-export default defineConfig({
-  plugins: [vibelang(), react(), tailwindcss(), offline()],
-  resolve: {
-    alias: {
-      "@solana/kit/program-client-core": stubs + "solana-kit-program-client-core.ts",
-      "@solana-program/system": stubs + "solana-program-system.ts",
-      "@solana-program/token": stubs + "solana-program-token.ts",
-      "@solana-program/memo": stubs + "solana-program-memo.ts",
+/** Privy's Solana programs, which its main module imports and the game (paying on Robinhood Chain) never calls, stood in
+ *  for by src/stubs/: for the build and the tests alike. */
+export const solanaStubs: Plugin = {
+  name: "five-blades-solana-stubs",
+  config: () => ({
+    resolve: {
+      alias: {
+        "@solana/kit/program-client-core": stubs + "solana-kit-program-client-core.ts",
+        "@solana-program/system": stubs + "solana-program-system.ts",
+        "@solana-program/token": stubs + "solana-program-token.ts",
+        "@solana-program/memo": stubs + "solana-program-memo.ts",
+      },
     },
-  },
-});
+  }),
+};
+
+export default defineConfig({ plugins: [vibelang(), react(), tailwindcss(), offline(), solanaStubs] });

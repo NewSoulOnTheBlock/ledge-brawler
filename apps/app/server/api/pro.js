@@ -1,33 +1,21 @@
 // Pro mode for players (the money itself is in _pro.js; schema in server/pro.sql).
-//   GET  /api/pro                                        open or not, the fee, today's Survival pot and best runs
-//   POST /api/pro {action: "quote",  mode, wallet}       a transaction paying the fee, for the wallet to sign
-//   POST /api/pro {action: "enter",  mode, wallet, tx, token, lastValid}   the signed transaction: sent, and the entry kept
+//   GET  /api/pro[?wallet=0x…]                           open or not; the fee, the token and the pot on Robinhood Chain;
+//                                                        today's Survival pot and best runs; what `wallet` holds
+//   POST /api/pro {action: "quote",  mode, wallet}       the permit paying the fee, for the wallet to sign (or, for a
+//                                                        token without permits, the approval to send first)
+//   POST /api/pro {action: "enter",  mode, wallet, signature, token, deadline, nonce}   the signed permit: the pot takes
+//                                                        the fee, the site paying the gas, and the entry is kept
 //   POST /api/pro {action: "check",  entry}              an entry left pending, looked at again
-//   POST /api/pro {action: "result", entry, wave, kos, fighter, name}     a paid Survival run's end, once
-//   POST /api/pro {action: "fight",  entry}              a Versus match's fight has started: no more seats
-//   POST /api/pro {action: "report", entry, winner}      who this seat's game says won (an entry id, or null)
 //   POST /api/pro {action: "withdraw", entry}            a lone seat's fee back, while nobody else has joined
+// A Versus match's fight and its end, and a Survival run's end, are the arena server's to tell (pro-arena.js), not a
+// player's game's.
 // Every POST needs Authorization: Bearer <privy-token>.
 const { neon } = require("@neondatabase/serverless");
 const pro = require("./_pro.js");
-const { named } = require("./_names.js");
-
-let privy = null;
-const getPrivy = async () => {
-  if (!privy && process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET) {
-    try { const { PrivyClient } = await import("@privy-io/node"); privy = new PrivyClient({ appId: process.env.PRIVY_APP_ID, appSecret: process.env.PRIVY_APP_SECRET }); }
-    catch (error) { console.error(error); }
-  }
-  return privy;
-};
-async function userOf(req) {
-  const header = req.headers.authorization, client = await getPrivy();
-  if (!header?.startsWith("Bearer ") || !client) return null;
-  try { return (await client.utils().auth().verifyAccessToken(header.slice(7))).user_id; } catch { return null; }
-}
+const { userIdOf } = require("./_privy.js");
 
 const MODES = new Set(["survival", "versus"]);
-const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const WALLET = /^0x[0-9a-fA-F]{40}$/;
 const id = (value) => { const n = Number(value); return Number.isSafeInteger(n) && n > 0 ? n : null; };
 /** An entry as the page sees it. */
 const shown = (e) => ({ id: Number(e.id), mode: e.mode, status: e.status, match: e.match_id ? Number(e.match_id) : null, day: e.day ? new Date(e.day).toISOString().slice(0, 10) : null });
@@ -38,13 +26,17 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (!pro.enabled()) return res.status(200).json({ open: false, fee: pro.FEE_TOKENS.toString() });
+  if (!pro.enabled()) return res.status(200).json({ open: false });
   const sql = neon(process.env.DATABASE_URL);
   try {
     const c = await pro.chain();
-    if (req.method === "GET") return res.status(200).json({ open: true, fee: pro.FEE_TOKENS.toString(), mint: c.mint.toBase58(), decimals: c.decimals, pot: c.pot.publicKey.toBase58(), survival: await pro.survivalBoard(sql, c) });
+    if (req.method === "GET") {
+      const wallet = WALLET.test(req.query?.wallet ?? "") ? req.query.wallet : null;
+      return res.status(200).json({ open: true, fee: (await pro.feeOf(c)).toString(), decimals: c.decimals, token: c.token, pot: c.pot, chainId: c.id,
+        survival: await pro.survivalBoard(sql), ...(wallet && { held: await pro.heldBy(c, wallet) }) });
+    }
     if (req.method !== "POST") return res.status(405).json({ error: "Only GET and POST." });
-    const userId = await userOf(req);
+    const userId = await userIdOf(req);
     if (!userId) return res.status(401).json({ error: "Sign in first." });
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body ?? {};
     const answer = (out) => res.status(out.error ? 400 : 200).json(out);
@@ -54,8 +46,8 @@ module.exports = async (req, res) => {
         if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "")) return answer({ error: "Pick a mode and a wallet." });
         return answer(await pro.quote(userId, body.mode, body.wallet));
       case "enter": {
-        if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "") || typeof body.tx !== "string" || typeof body.token !== "string") return answer({ error: "That entry is incomplete." });
-        const out = await pro.enter(sql, userId, body.mode, body.wallet, body.tx, body.token, body.lastValid);
+        if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "") || typeof body.token !== "string" || !/^\d{1,78}$/.test(`${body.deadline}`) || !/^\d{1,78}$/.test(`${body.nonce}`)) return answer({ error: "That entry is incomplete." });
+        const out = await pro.enter(sql, userId, body.mode, body.wallet, body.signature, body.token, `${body.deadline}`, `${body.nonce}`);
         return answer(out.entry ? { entry: shown(out.entry) } : out);
       }
       case "check": {
@@ -63,15 +55,6 @@ module.exports = async (req, res) => {
         if (!row) return answer({ error: "That entry was not found." });
         return answer({ entry: shown(await pro.recheck(sql, row)) });
       }
-      case "result":
-        return answer(await pro.result(sql, userId, id(body.entry), { wave: body.wave, kos: body.kos, fighter: Number.isInteger(body.fighter) ? body.fighter : null, name: named(body.name) || "Player" }));
-      case "fight": {
-        const [row] = await sql`SELECT match_id FROM pro_entries WHERE id = ${id(body.entry)} AND user_id = ${userId} AND mode = 'versus' AND status = 'paid'`;
-        if (row) await pro.lock(sql, row.match_id);
-        return answer({ ok: !!row });
-      }
-      case "report":
-        return answer(await pro.report(sql, userId, id(body.entry), body.winner === null ? null : id(body.winner)));
       case "withdraw":
         return answer(await pro.withdraw(sql, userId, id(body.entry)));
       default:

@@ -1,0 +1,37 @@
+// spec/app/bout.md, "Story: Fight for the pot"
+// The pot of every pro match and paid run, kept by the site (server/api/pro-arena.js) and asked for the arena (arena.ts, `Pro`).
+
+import type { Pro } from "./arena.ts"
+
+/** The site did not answer, or answered with an error. */
+export error Unanswered { cause: unknown }
+
+schema Seat { readonly match: number }
+schema Ok { readonly ok: boolean }
+
+/** The pot of pro matches, asked of the site at `site` with `secret`. */
+export effect function pot(site: string, secret: Redacted.Redacted) {
+  const client = HttpClient.mapRequest(HttpClient.filterStatusOk(try HttpClient.HttpClient),
+    (request) => HttpClientRequest.setHeader(HttpClientRequest.prependUrl(request, site), "authorization", `Bearer ${Redacted.value(secret)}`))
+  /** One action of server/api/pro-arena.js, and what it answered. */
+  effect function ask(body: Record<string, unknown>) {
+    const answered = try timeout(client.execute(try HttpClientRequest.bodyJson(HttpClientRequest.post("/api/pro-arena"), body)), "15 seconds")
+    return try answered.json
+  }
+  const asked = <A>(work: A!unknown) => runPromise(mapError(work, (cause) => new Unanswered({ cause })))
+  const pro: Pro = {
+    seat: (entry, token) => asked(effect {
+      const said = try ask({ action: "seat", entry, token })
+      return Schema.is(Seat)(said) ? { match: said.match } : null
+    }),
+    fight: (match) => asked(effect { try ask({ action: "fight", match }) }),
+    // A result the site did not take is told again: the pot must not wait for the operator for want of a word.
+    result: (match, winner) => asked(retry(effect { try ask({ action: "result", match, winner }) }, { schedule: Schedule.exponential("2 seconds"), times: 8 })),
+    run: (entry, token) => asked(effect {
+      const said = try ask({ action: "run", entry, token })
+      return Schema.is(Ok)(said) && said.ok
+    }),
+    kept: (entry, result) => asked(retry(effect { try ask({ action: "kept", entry, ...result }) }, { schedule: Schedule.exponential("2 seconds"), times: 8 })),
+  }
+  return pro
+}

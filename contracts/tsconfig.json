@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "hardhat.config.ts",
+    "vitest.config.ts",
+    "testing.ts",
+    "test",
+    "ignition/modules",
+    "artifacts/**/*.d.ts"
+  ]
+}
