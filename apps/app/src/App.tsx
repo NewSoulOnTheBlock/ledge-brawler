@@ -65,9 +65,9 @@ const CONFIRM = ["Enter", "Space", "KeyJ", "NumpadEnter"];
 /** The engine's hints name the keyboard's keys. Said to a player holding a controller, or a phone, they name what is in
  *  that player's hands instead. */
 const IN_HAND: Record<string, [pad: string, touch: string]> = {
-  "Hold U to charge": ["Hold LT to charge", "Hold Charge"],
-  "W up · S down · F to land": ["Stick up and down · D-pad down to land", "Stick up and down · Fly to land"],
-  "T to use, R to choose": ["R3 to use, L3 to choose", "Item to use, Next to choose"],
+  "Hold U to charge": ["Hold LT to charge", "Hold Aura to charge"],
+  "W up · S down · F to land": ["Stick up and down · D-pad down to land", "Stick up and down · Aura and Fly to land"],
+  "T to use, R to choose": ["R3 to use, L3 to choose", "Arts and Item to use, Arts and Next to choose"],
 };
 function inHand(sub: string) {
   const pad = [...(navigator.getGamepads?.() ?? [])].some((each) => each?.connected), touch = matchMedia("(pointer: coarse)").matches;

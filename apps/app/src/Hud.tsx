@@ -110,13 +110,18 @@ export function setTouchFit(fit: { size: number; seen: number }) { try { localSt
 const tick = () => { try { navigator.vibrate?.(8); } catch { /* A browser may refuse. */ } };
 const pad = cn(display, "absolute touch-none rounded-full border-2 border-foreground/80 bg-background/55 p-0 text-[10px] tracking-wider backdrop-blur-[2px] transition-transform duration-75 select-none [-webkit-touch-callout:none] active:scale-90 active:bg-foreground active:text-background");
 
-/** A button held for as long as a thumb is on it, wherever on the screen the thumb then slides. */
-function Hold({ game, k, className, children, label, style }: { game: Game; k: Button; className?: string; children: ReactNode; label?: string; style?: CSSProperties }) {
+/**
+ * A button held for as long as a thumb is on it, wherever on the screen the thumb then slides: `press` is called as
+ * the thumb comes down, and what it returns as the thumb lifts.
+ */
+function Hold({ press, className, children, label, style }: { press: () => () => void; className?: string; children: ReactNode; label?: string; style?: CSSProperties }) {
+  const liftRef = useRef<(() => void) | null>(null);
+  const up = () => { liftRef.current?.(); liftRef.current = null; };
   return (
     <button
       type="button" aria-label={label} className={cn(pad, className)} style={style}
-      onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); tick(); game.press(k); }}
-      onPointerUp={() => game.release(k)} onPointerCancel={() => game.release(k)} onLostPointerCapture={() => game.release(k)}
+      onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); tick(); up(); liftRef.current = press(); }}
+      onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up}
       onContextMenu={(event) => event.preventDefault()}
     >
       {children}
@@ -177,34 +182,68 @@ function Stick({ game }: { game: Game }) {
   );
 }
 
+type Shape = "triangle" | "square" | "circle" | "cross";
+/** Where each face button sits in its diamond, from the cluster's top left, and the mark it is known by. */
+const FACES: [Shape, left: number, top: number, mark: ReactNode][] = [
+  ["triangle", 52, 38, <path key="m" d="M12 4.5 20.5 19h-17Z" />], ["square", 0, 90, <rect key="m" x="5" y="5" width="14" height="14" />],
+  ["circle", 104, 90, <circle key="m" cx="12" cy="12" r="7.5" />], ["cross", 52, 142, <path key="m" d="m6 6 12 12M18 6 6 18" />],
+];
+/** What the face buttons and the right shoulder press on each page: as they are, with Aura held, with Arts held. */
+const PAGES: Record<Shape | "shoulder", [Button, Button, Button]> = {
+  triangle: ["kick", "s2", "s5"], square: ["punch", "s1", "s4"], circle: ["blast", "s3", "s6"], cross: ["jump", "fly", "item"], shoulder: ["dash", "dash", "next"],
+};
+const NAMES: Partial<Record<Button, string>> = { punch: "Punch", kick: "Kick", blast: "Blast", jump: "Jump", fly: "Fly", item: "Item", next: "Next", dash: "Dash", guard: "Guard", grab: "Hold" };
+
 /**
- * The controls for a touch screen, shown only where the pointer is coarse and the screen is on its side: the stick
- * under the left thumb, and under the right the buttons in the order a thumb reaches them, the most used the largest.
+ * The controls for a touch screen, shown only where the pointer is coarse and the screen is on its side, kept to a
+ * corner each so that the fight stays in sight. Under the left thumb the stick, and over it Aura, which charges while
+ * held, and Arts; under the right a diamond of four and two shoulders. Aura or Arts held turns the face buttons into
+ * the specials or the greater arts, flight and the bag, and each button names what it does on the page in play.
  */
-export function TouchPad({ game, fighter }: { game: Game; fighter: number }) {
-  const energy = "border-warn", hit = "border-destructive text-destructive";
-  const at = (right: number, bottom: number, size: number): CSSProperties => ({ right, bottom, width: size, height: size });
+export function TouchPad({ game }: { game: Game; fighter: number }) {
+  // `fighter` draws the controls again when the fighter, and so its specials, changes.
+  // A special is named in full to a screen reader, and by its first word on the button.
+  const specials = game.specials(), name = (k: Button) => NAMES[k] ?? specials[Number(k.slice(1)) - 1]?.name ?? "";
+  // The page is read as a face button comes down, from `pageRef`, which changes the moment a thumb lands on Aura or Arts.
+  const [page, setPage] = useState<0 | 1 | 2>(0), pageRef = useRef<0 | 1 | 2>(0);
+  const turn = (to: 0 | 1 | 2) => { pageRef.current = to; setPage(to); };
+  const hold = (k: Button) => { game.press(k); return () => game.release(k); };
+  // The shoulder on the left guards on the ground and holds a wall in the air: it says which it is about to do.
+  const [air, setAir] = useState(false);
+  useEffect(() => { const timer = window.setInterval(() => setAir(game.scene.hero?.grounded === false), 150); return () => window.clearInterval(timer); }, [game]);
   // The buttons grow or shrink from the corner each cluster sits in, so that they stay under the thumb.
   const fit = touchFit(), grow = (corner: string): CSSProperties => ({ transform: `scale(${fit.size})`, transformOrigin: corner });
+  const shift = (to: 1 | 2, left: number, label: string, also?: Button) => (
+    <Hold
+      label={label} className={cn("size-11", to === 1 && "border-warn", page === to && "bg-foreground text-background")}
+      style={{ left: `calc(max(24px, env(safe-area-inset-left)) + ${left}px)`, bottom: 232, ...grow("bottom left") }}
+      press={() => { turn(to); if (also) game.press(also); return () => { turn(0); if (also) game.release(also); }; }}
+    >
+      {label}
+    </Hold>
+  );
+  const shoulder = "h-7 w-16 text-[9px]", guard: Button = air ? "grab" : "guard";
   return (
     <div aria-label="Touch controls" className="pointer-events-none absolute inset-0 hidden pointer-coarse:block [&>*]:pointer-events-auto" style={{ opacity: fit.seen }}>
       <Stick game={game} />
-      {/* The bag, over the stick, for the left thumb: the right has its hands full. */}
-      <Hold game={game} k="item" label="Use item" style={{ left: "max(24px, env(safe-area-inset-left))", bottom: 232, width: 46, height: 46, ...grow("bottom left") }}>Item</Hold>
-      <Hold game={game} k="next" label="Next item" style={{ left: "calc(max(24px, env(safe-area-inset-left)) + 56px)", bottom: 238, width: 38, height: 38, ...grow("bottom left") }}>Next</Hold>
-      <div className="absolute right-[max(10px,env(safe-area-inset-right))] bottom-[max(8px,env(safe-area-inset-bottom))] h-[230px] w-[236px] !pointer-events-none [&>*]:pointer-events-auto" style={grow("bottom right")}>
-        <Hold game={game} k="jump" style={at(0, 0, 78)} className="text-xs">Jump</Hold>
-        <Hold game={game} k="punch" style={at(86, 0, 66)} className={hit}>Punch</Hold>
-        <Hold game={game} k="kick" style={at(4, 86, 66)} className={hit}>Kick</Hold>
-        <Hold game={game} k="dash" style={at(80, 74, 56)}>Dash</Hold>
-        <Hold game={game} k="blast" style={at(160, 2, 54)} className={energy}>Blast</Hold>
-        <Hold game={game} k="guard" style={at(144, 64, 50)}>Guard</Hold>
-        <Hold game={game} k="grab" style={at(10, 160, 50)}>Hold</Hold>
-        <Hold game={game} k="charge" style={at(72, 138, 50)} className={energy}>Charge</Hold>
-        <Hold game={game} k="fly" style={at(132, 122, 46)} className={energy}>Fly</Hold>
-        <div className="absolute right-[64px] bottom-[196px] grid w-[172px] grid-cols-3 gap-1">
-          {game.specials().map((special, i) => <Hold key={special.name} game={game} k={`s${i + 1}` as Button} label={special.name} className={cn(energy, "!static h-[26px] overflow-hidden rounded-md text-[9px]")}>{special.name.split(" ")[0]}</Hold>)}
-        </div>
+      {shift(1, 0, "Aura", "charge")}
+      {shift(2, 54, "Arts")}
+      <div className="absolute right-[max(12px,env(safe-area-inset-right))] bottom-[max(10px,env(safe-area-inset-bottom))] h-[194px] w-[156px] !pointer-events-none [&>*]:pointer-events-auto" style={grow("bottom right")}>
+        <Hold label={name(guard)} className={cn(shoulder, "top-0 left-0")} press={() => hold(game.scene.hero?.grounded === false ? "grab" : "guard")}>{name(guard)}</Hold>
+        <Hold label={name(PAGES.shoulder[page])} className={cn(shoulder, "top-0 right-0")} press={() => hold(PAGES.shoulder[pageRef.current])}>{name(PAGES.shoulder[page])}</Hold>
+        {FACES.map(([shape, left, top, mark]) => {
+          const k = PAGES[shape][page];
+          return (
+            <Hold
+              key={shape} label={name(k)} style={{ left, top }} press={() => hold(PAGES[shape][pageRef.current])}
+              className="flex size-[52px] flex-col items-center justify-center gap-0.5 overflow-hidden text-[8px] tracking-normal"
+            >
+              {/* The mark in the colour of what the button does: a blow, aura spent, or a jump. */}
+              <svg viewBox="0 0 24 24" aria-hidden="true" className={cn("size-4 shrink-0 fill-none stroke-current stroke-[2.2]", page > 0 || shape === "circle" ? "text-warn" : shape !== "cross" && "text-destructive")}>{mark}</svg>
+              <span className="max-w-full truncate px-0.5">{name(k).split(" ")[0]}</span>
+            </Hold>
+          );
+        })}
       </div>
     </div>
   );
