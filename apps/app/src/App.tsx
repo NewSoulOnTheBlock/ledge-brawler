@@ -32,7 +32,7 @@ import { useAuth } from "./auth.tsx";
 import { type PadMode, useGamepad } from "./gamepad.ts";
 import { Coach } from "./Coach.tsx";
 import { grantedAll } from "./granted.ts";
-import { type Board, type ConflictInfo, type DailyBoard, dailyBoard, keep, keepDaily, lastName, loadStats, pullCloudSaga, recordSurvival, rememberName, resolveConflict, setTokenProvider, standingOf, syncSagaToCloud } from "./scores.ts";
+import { type Board, type ConflictInfo, keep, lastName, loadStats, pullCloudSaga, recordSurvival, rememberName, resolveConflict, setTokenProvider, standingOf, syncSagaToCloud } from "./scores.ts";
 import { track } from "./track.ts";
 import { unlock } from "./achievements.ts";
 import { useSaga } from "./useSaga.ts";
@@ -510,7 +510,6 @@ export function App({ runtime }: { runtime: Runtime }) {
   const [caption, sayCaption] = useSaid(7000);
   const [showProfile, setShowProfile] = useState(false);
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
-  const [dailyFighter, setDailyFighter] = useState<number | null>(null);
   // Which way in was taken, and the level of the campaign in play: the page's own, not the match's.
   const [campaign, setCampaign] = useState(false);
   const [level, setLevel] = useState<Level | null>(null);
@@ -639,7 +638,7 @@ export function App({ runtime }: { runtime: Runtime }) {
         setProNote("The arena could not be reached, so this run does not count. Your entry is kept for your next run.");
       });
   }, [game, rules]);
-  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); const day = today(); game.begin(survivalStage(day), ...mine); runAtArena(day); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current, daily: dailyFighter !== null }); } }, [send, game, built, rules, dailyFighter, runAtArena]);
+  const fight = useCallback(() => { const mine = built(); if (send({ type: "fight" })) { setLevel(null); const day = today(); game.begin(survivalStage(day), ...mine); runAtArena(day); began.current = performance.now(); sideways(); track("survival_start", { fighter: rules.get().fighter, pro: proOn.current }); } }, [send, game, built, rules, runAtArena]);
   // A paid run is left with the fight against the waves.
   const waves = match?.screen === "Play" && !match.duel && !match.quest;
   useEffect(() => { if (!waves) { paidRun.current?.leave(); paidRun.current = null; } }, [waves]);
@@ -1012,7 +1011,7 @@ export function App({ runtime }: { runtime: Runtime }) {
       <Arena game={game} before={tick} />
       <Curtain on={`${match.screen}${campaign ? " campaign" : ""} ${level?.id ?? ""}${awakening ? " within" : ""}`} />
       {match.screen === "Title" && <>
-        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onDaily={() => { dailyBoard().then((d) => { setDailyFighter(d.fighter); setCampaign(false); setVersus(false); setPro(false); send({ type: "focus", pick: d.fighter }); select("enter"); }).catch(() => {}); }} onProfile={() => setShowProfile(true)} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
+        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onProfile={() => setShowProfile(true)} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
         {askParty && <PartyChoice onBack={() => setPartyChoice(false)} onPick={(coop) => { chime(); setPartyChoice(false); coopWay.current = coop; setCampaign(true); setVersus(false); setPro(false); select("enter"); if (coop) setCoopOpen(true); }} />}
         {choosing && <TierChoice mode={choosing} onBack={() => setChoosing(null)} onPick={(paid) => { chime(); setCampaign(false); setVersus(choosing === "Versus"); setPro(paid); setChoosing(null); select("enter"); }} />}
         {showProfile && saga && <Profile saga={saga} onClose={() => setShowProfile(false)} />}

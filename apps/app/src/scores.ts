@@ -117,26 +117,6 @@ export function resolveConflict(keep: "local" | "cloud", conflict: ConflictInfo)
   syncSagaToCloud();
 }
 
-// --- Daily challenge ---
-const DAILY_API = /^(localhost|127\.|192\.168\.)/.test(location.hostname) ? "https://ledge-brawler.vercel.app/api/daily" : "/api/daily";
-export interface DailyBoard extends Board { seed: number; fighter: number }
-
-export const dailyBoard = async (wave?: number, kos?: number): Promise<DailyBoard> => {
-  const params: string[] = [];
-  if (wave !== undefined) params.push(`wave=${wave}`, `kos=${kos ?? 0}`);
-  const url = params.length ? `${DAILY_API}?${params.join("&")}` : DAILY_API;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Daily challenge not available.");
-  return res.json() as Promise<DailyBoard>;
-};
-
-export const keepDaily = async (name: string, wave: number, kos: number) => {
-  const auth = await authHeaders();
-  const res = await fetch(DAILY_API, { method: "POST", headers: { "Content-Type": "application/json", ...auth }, body: JSON.stringify({ name, wave, kos }) });
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Could not save daily score.");
-  return res.json() as Promise<DailyBoard>;
-};
-
 // --- Stats ---
 export interface GameStats { totalKos: number; totalDeaths: number; fighterPlays: number[]; highestWave: number[]; gamesPlayed: number }
 const STATS_KEY = "gameStats";
