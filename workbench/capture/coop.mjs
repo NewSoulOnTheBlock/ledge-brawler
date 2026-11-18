@@ -37,7 +37,7 @@ const state = (page) => page.evaluate(() => {
 /** Play together, and a group found by the arena's matchmaking. */
 async function find(page) {
   await page.getByRole("button", { name: "Campaign" }).click();
-  await page.getByRole("button", { name: /Play together/ }).click();
+  await page.getByRole("button", { name: /^Co-op/ }).click();
   await page.getByRole("button", { name: "Find a group" }).click();
   return page.getByLabel("Invite link").inputValue({ timeout: 20000 });
 }

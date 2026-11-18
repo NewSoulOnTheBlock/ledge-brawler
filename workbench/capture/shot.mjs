@@ -13,7 +13,7 @@ if (state === "survival") {
   await page.keyboard.press("Enter"); await page.waitForTimeout(3500);
   for (const key of ["KeyJ", "KeyK", "KeyJ"]) { await page.keyboard.press(key); await page.waitForTimeout(300); }
 } else if (state === "level") {
-  await page.getByRole("button", { name: "Campaign" }).click(); await page.waitForTimeout(500);
+  await page.getByRole("button", { name: "Campaign" }).click(); await page.getByRole("button", { name: /^Solo/ }).click(); await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Play", exact: true }).first().click();
   await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("meter", { name: "HP" }).waitFor({ timeout: 20000 });

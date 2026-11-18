@@ -235,6 +235,29 @@ function TierChoice({ mode, onPick, onBack }: { mode: "Survival" | "Versus"; onP
   );
 }
 
+/** Campaign, as chosen on the title: alone, on the campaign screen, or with others, by way of co-op matchmaking (Coop.tsx). */
+function PartyChoice({ onPick, onBack }: { onPick: (coop: boolean) => void; onBack: () => void }) {
+  const way = "grid cursor-pointer gap-1 border-2 border-foreground bg-background px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:bg-muted";
+  return (
+    <div className="absolute inset-0 z-40 grid [place-items:safe_center] bg-background/80 px-4 py-4">
+      <section aria-labelledby="partyTitle" className="grid w-full max-w-[480px] gap-3 border-2 border-foreground bg-card px-6 py-5 shadow-[6px_6px_0_var(--foreground)]">
+        <h2 id="partyTitle" className="font-sans text-2xl font-bold tracking-[0.1em] uppercase">Campaign</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button type="button" autoFocus className={way} onClick={() => onPick(false)}>
+            <b className="font-sans text-lg tracking-[0.12em] uppercase">Solo</b>
+            <span className="text-[12.5px] text-muted-foreground">Your five campaigns, at your own pace.</span>
+          </button>
+          <button type="button" className={way} onClick={() => onPick(true)}>
+            <b className="font-sans text-lg tracking-[0.12em] uppercase">Co-op</b>
+            <span className="text-[12.5px] text-muted-foreground">Find a group of up to five, or bring friends with a code.</span>
+          </button>
+        </div>
+        <SmallButton className="justify-self-start" onClick={onBack}>Back</SmallButton>
+      </section>
+    </div>
+  );
+}
+
 /** A duel won: who is left standing, how everyone did, and whether to fight again or go. */
 function MatchOver({ standing, onAgain, onLeave, again = "Fight again", note }: { standing: Standing; onAgain: () => void; onLeave: () => void; again?: string; /** What became of a pro match's pot. */ note?: string }) {
   const won = standing.rivals.find((rival) => rival.name === standing.winner);
@@ -513,7 +536,9 @@ export function App({ runtime }: { runtime: Runtime }) {
   const [versus, setVersus] = useState(false);
   // Pro mode (pro.ts): Survival or Versus played for an entry fee. `ready` is an entry paid and not yet used, `paidIn`
   // the run or seat being played with one; `afterPay` is what to start once the fee asked for (`paying`) is paid.
-  const [pro, setPro] = useState(false), [paying, setPaying] = useState(false), [proNote, setProNote] = useState(""), [choosing, setChoosing] = useState<"Survival" | "Versus" | null>(null);
+  const [pro, setPro] = useState(false), [paying, setPaying] = useState(false), [proNote, setProNote] = useState(""), [choosing, setChoosing] = useState<"Survival" | "Versus" | null>(null), [askParty, setPartyChoice] = useState(false);
+  // Whether the campaign was entered for co-op: leaving its matchmaking without a table goes back to the title.
+  const coopWay = useRef(false);
   const proOn = useRef(false), ready = useRef<Entry | null>(null), paidIn = useRef<Entry | null>(null), afterPay = useRef<(() => void) | null>(null);
   useEffect(() => { proOn.current = pro; }, [pro]);
   /** Starts `go` at once, or, in pro mode, with a paid entry: the one ready, or one paid for first. */
@@ -988,7 +1013,8 @@ export function App({ runtime }: { runtime: Runtime }) {
       <Arena game={game} before={tick} />
       <Curtain on={`${match.screen}${campaign ? " campaign" : ""} ${level?.id ?? ""}${awakening ? " within" : ""}`} />
       {match.screen === "Title" && <>
-        <TitleScreen onCampaign={() => { chime(); setCampaign(true); setVersus(false); setPro(false); select("enter"); }} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onDaily={() => { dailyBoard().then((d) => { setDailyFighter(d.fighter); setCampaign(false); setVersus(false); setPro(false); send({ type: "focus", pick: d.fighter }); select("enter"); }).catch(() => {}); }} onProfile={authenticated ? () => setShowProfile(true) : undefined} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing} />
+        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onDaily={() => { dailyBoard().then((d) => { setDailyFighter(d.fighter); setCampaign(false); setVersus(false); setPro(false); send({ type: "focus", pick: d.fighter }); select("enter"); }).catch(() => {}); }} onProfile={authenticated ? () => setShowProfile(true) : undefined} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
+        {askParty && <PartyChoice onBack={() => setPartyChoice(false)} onPick={(coop) => { chime(); setPartyChoice(false); coopWay.current = coop; setCampaign(true); setVersus(false); setPro(false); select("enter"); if (coop) setCoopOpen(true); }} />}
         {choosing && <TierChoice mode={choosing} onBack={() => setChoosing(null)} onPick={(paid) => { chime(); setCampaign(false); setVersus(choosing === "Versus"); setPro(paid); setChoosing(null); select("enter"); }} />}
         {showProfile && saga && <Profile saga={saga} onClose={() => setShowProfile(false)} />}
         {conflict && (
@@ -1013,7 +1039,7 @@ export function App({ runtime }: { runtime: Runtime }) {
         <CoopTable table={table} saga={saga} error={coopError} onJoin={(code) => void sit(code)}
           onSeat={(hero) => { mySeat.current = hero; together.current?.seat(hero); }} onReady={(on) => together.current?.ready(on)}
           onChoose={(id) => together.current?.choose(id)} onStart={() => together.current?.start()}
-          onLeave={() => { if (table) standUp(); else setCoopOpen(false); }} />
+          onLeave={() => { if (table) standUp(); else { setCoopOpen(false); if (coopWay.current) { coopWay.current = false; send({ type: "back" }); } } }} />
       )}
       {match.screen === "Select" && !campaign && <SelectScreen match={match} mine={{ specials: specialsOf(heroOf(match.fighter), match.fighter), learned: granted && !pro ? 5 : Math.min(5, chaptersDone(HEROES.indexOf(heroOf(match.fighter)), saga)), build: buildOf(heroOf(match.fighter)) }} onFocus={(pick) => send({ type: "focus", pick })} onFight={() => start(versus ? brawl : fight)} onBack={() => send({ type: "back" })} go={pro ? "Pay & enter" : versus ? "Enter match" : "Fight"}
         extra={pro ? <p className="border-2 border-destructive bg-card px-4.5 py-3 text-[12.5px]"><b className="font-sans tracking-[0.12em] uppercase">Pro {versus ? "Versus" : "Survival"}</b> · 50,000 $BLADES entry{proNote && <span role="status" className="mt-1 block text-muted-foreground">{proNote}</span>}</p> : versus ? <MatchPicker /> : undefined} />}

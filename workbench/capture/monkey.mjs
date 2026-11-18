@@ -23,7 +23,7 @@ for (const mode of ["survival", "campaign"]) {
   page.on("console", (m) => { if (m.type() === "error" && ours(m.text())) errors.push("console: " + m.text().slice(0, 220)); });
   await page.goto("http://localhost:5199/"); await page.waitForTimeout(1000);
   if (mode === "survival") { await page.getByRole("button", { name: "Survival" }).click(); await page.waitForTimeout(400); await page.keyboard.press("Enter"); }
-  else { await page.getByRole("button", { name: "Campaign" }).click(); await page.waitForTimeout(400); await page.getByRole("button", { name: "Play", exact: true }).first().click(); await page.getByRole("button", { name: "Skip" }).click(); }
+  else { await page.getByRole("button", { name: "Campaign" }).click(); await page.getByRole("button", { name: /^Solo/ }).click(); await page.waitForTimeout(400); await page.getByRole("button", { name: "Play", exact: true }).first().click(); await page.getByRole("button", { name: "Skip" }).click(); }
   await page.waitForTimeout(2500);
   const presses = await mash(page, secs * 1000);
   const body = await page.locator("body").innerText().catch(() => "");

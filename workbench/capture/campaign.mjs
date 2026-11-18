@@ -12,7 +12,7 @@ page.on("pageerror", (e) => errors.push(String(e)));
 await page.goto("http://localhost:5199/");
 await page.evaluate(() => localStorage.clear());
 await page.reload();
-await page.getByRole("button", { name: "Campaign" }).click();
+await page.getByRole("button", { name: "Campaign" }).click(); await page.getByRole("button", { name: /^Solo/ }).click();
 await page.getByRole("tab", { name: who }).click();
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${out}${tag}-10-campaign.png` });

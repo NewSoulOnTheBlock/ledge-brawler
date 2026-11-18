@@ -32,10 +32,11 @@ export function CoopTable({ table, saga, error, onSeat, onReady, onChoose, onSta
   if (!table) return (
     <div className="dark absolute inset-0 z-30 grid [place-items:safe_center] bg-[#0b1114]/85 px-4 py-6 text-foreground">
       <KitPanel aria-label="Play together" className="grid w-full max-w-[460px] gap-3 px-5 py-4">
+        <p className="text-xs tracking-[0.2em] text-[#e0b84a] uppercase">Co-op · matchmaking</p>
         <h2 className={cn(display, "text-2xl tracking-[0.14em]")}>Play together</h2>
         <p className="text-[12.5px] leading-normal text-muted-foreground">Up to five, each one of the five blades. The host chooses a chapter of their own campaign; it counts for everyone who clears it.</p>
         <div className="flex flex-wrap gap-2">
-          <KitButton onClick={() => onJoin()} className="px-4 py-2">Find a group</KitButton>
+          <KitButton autoFocus onClick={() => onJoin()} className="px-4 py-2">Find a group</KitButton>
           <KitButton onClick={() => onJoin(Math.random().toString(36).slice(2, 8))} className="px-4 py-2">Private table</KitButton>
         </div>
         <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (code.trim()) onJoin(code.trim()); }}>
