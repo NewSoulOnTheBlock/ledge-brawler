@@ -29,3 +29,4 @@ contracts/artifacts/
 contracts/cache/
 contracts/ignition/deployments/chain-31337/
 contracts/.testnet.env
+apps/app/arena/.env

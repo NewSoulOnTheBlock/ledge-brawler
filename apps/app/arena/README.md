@@ -11,7 +11,22 @@ VPS (1 vCPU, 1 GB) seats thousands of Versus and co-op players; each paid run in
 sixty times a second, a few percent of a core, so plan a core for every few dozen at once. Pick a region near most
 players.
 
-## Setting it up
+## On Fly.io
+
+`fly.toml` here runs it as one always-on Machine (`shared-cpu-1x`, 1 GB); Fly ends TLS, so there is no Caddy. From
+the repository root:
+
+```sh
+fly apps create five-blades-arena
+fly secrets set --app five-blades-arena ARENA_SECRET=<the secret>
+fly deploy --config apps/app/arena/fly.toml --ha=false
+```
+
+`https://five-blades-arena.fly.dev/health` answers once it is up. On Vercel, set `ARENA_SECRET` to the same secret and
+`VITE_ARENA_URL=wss://five-blades-arena.fly.dev/play`, then rebuild and redeploy the game. Keep it at one Machine
+(`--ha=false`, never `fly scale count 2`): the tables live in its memory.
+
+## On a VPS of your own
 
 1. **A VPS** with Ubuntu 24.04 and a public IP. Install Docker:
    `curl -fsSL https://get.docker.com | sh`.
