@@ -228,7 +228,8 @@ export function TouchPad({ game }: { game: Game; fighter: number }) {
       <Stick game={game} />
       {shift(1, 0, "Aura", "charge")}
       {shift(2, 54, "Arts")}
-      <div className="absolute right-[max(12px,env(safe-area-inset-right))] bottom-[max(10px,env(safe-area-inset-bottom))] h-[194px] w-[156px] !pointer-events-none [&>*]:pointer-events-auto" style={grow("bottom right")}>
+      {/* Half an inch over the bottom edge, where a thumb rests without curling down to the phone's rim. */}
+      <div className="absolute right-[max(12px,env(safe-area-inset-right))] bottom-[calc(max(10px,env(safe-area-inset-bottom))_+_48px)] h-[194px] w-[156px] !pointer-events-none [&>*]:pointer-events-auto" style={grow("bottom right")}>
         <Hold label={name(guard)} className={cn(shoulder, "top-0 left-0")} press={() => hold(game.scene.hero?.grounded === false ? "grab" : "guard")}>{name(guard)}</Hold>
         <Hold label={name(PAGES.shoulder[page])} className={cn(shoulder, "top-0 right-0")} press={() => hold(PAGES.shoulder[pageRef.current])}>{name(PAGES.shoulder[page])}</Hold>
         {FACES.map(([shape, left, top, mark]) => {
