@@ -22,6 +22,8 @@ const GUESS_MOST = 150, MEND = 90;
 const QUIET = 2500, GONE = 8000;
 /** How often each game asks the others how long a word takes there and back. */
 const PING_EVERY = 2000;
+/** How long a fighter out of lives lies down in a duel's practice, before it starts again. */
+const OUT_FOR = 2000;
 /** What a blow told of by a co-op host's game may be at most, whatever it says (a duel's are the server's to judge):
  *  no move in the game does more, throws harder, or stuns longer; how far from the one it lands on its thrower may be
  *  seen; and how many may land in a second. */
@@ -108,7 +110,9 @@ export async function joinVersus(code: string | undefined, name: string, staged:
   /** Whether a player is still to be counted: heard from lately, or this game's own. */
   const here = (id: string, now: number) => id === me || now - (heardAt.get(id) ?? now) < GONE;
   /** The round this game is fighting: a duel's is the server's, a co-op group's its level's. */
-  let round = 0, said = 0, told = 0, online = true, gone = false, spare = 20, spent = performance.now();
+  let round = 0, said = 0, told = 0, online = true, lost = false, gone = false, spare = 20, spent = performance.now();
+  /** When this fighter was last seen out of lives with no round of the server's being fought here, or 0. */
+  let outSince = 0;
   /** How the server last said the bout stands, at a duel's table, and when this game heard it. */
   let bout: BoutWord | null = null, boutAt = 0;
   /** What was last said of this fighter, without its time. */
@@ -190,6 +194,8 @@ export async function joinVersus(code: string | undefined, name: string, staged:
     room.onDisconnect(() => { online = false; });
     // Back at the table, in the same seat or, if it was given up, a new one: say where this fighter is at once.
     room.onReconnect(() => { online = true; me = room.sessionId; said = 0; });
+    // The seat could not be taken back: this game fights the stand-in alone from now on.
+    room.onLost(() => { online = false; lost = true; words = new Map(); track.clear(); });
     link?.attach(room, me);
   }
   attach();
@@ -225,11 +231,19 @@ export async function joinVersus(code: string | undefined, name: string, staged:
     return { x: h(a.x, b.x, a.vx, b.vx), y: h(a.y, b.y, a.vy, b.vy), w: k < 0.5 ? a : b };
   }
 
+  /** The server's round, being fought or just over; 0 before the first. */
+  const serverRound = () => (bout && (bout.fighting || bout.over) ? bout.round : 0);
+  /** Whether this game sat down during the server's round, or was not ready when it began, and waits for the next. */
+  const benched = () => !link && serverRound() > round;
   function others(now: number): Peer[] {
     const list: Peer[] = [];
+    // spec/app/bout.md, "A fighter sits down once, while there is a seat, with its most health"
+    // A round is fought by those in it: a game waiting for the next sees none of them, and fights the stand-in
+    // meanwhile; and none of them sees it, so nobody goes for a fighter no blow can reach.
+    if (lost || benched()) return list;
     for (const [id, w] of words) {
       const t = track.get(id);
-      if (id === me || !t?.words.length || !here(id, now) || (link && w.round !== round)) continue;
+      if (id === me || !t?.words.length || !here(id, now) || w.round !== (link ? round : serverRound())) continue;
       // How far in the past to draw it: enough to cover how unevenly its words come, eased towards that so that time
       // never jumps for it.
       const sorted = [...t.late].sort((p, q) => p - q), spread = sorted[Math.floor(sorted.length * 0.9)] - sorted[0];
@@ -252,10 +266,18 @@ export async function joinVersus(code: string | undefined, name: string, staged:
       // spec/app/bout.md, "A round begins between two or more, when no round is being fought, and gives everyone full health and three lives"
       // A round the server has begun: every game at the table starts it afresh, under the round's sky; one that sat
       // down after it began waits for the next (spec/app/bout.md, "A fighter sits down once, while there is a seat, with its most health").
-      else if (bout && bout.fighting && bout.round > round && (bout.fighters[me]?.lives ?? 0) > 0) {
+      // A game that cannot start it this moment (its pause is open) starts it as soon as it can.
+      else if (bout && bout.fighting && bout.round > round && (bout.fighters[me]?.lives ?? 0) > 0 && (!staged || rules.send({ type: "rematch" }))) {
         round = bout.round; said = 0;
-        if (staged && rules.send({ type: "rematch" })) game.begin(stageFor(room.code, round));
+        if (staged) game.begin(stageFor(room.code, round));
       }
+      // With no round of the server's fought here (alone, before one, or waiting for the next) the duel is practice
+      // against the stand-in: a fighter out of lives lies down a moment, then it starts again, never down for good.
+      const practice = !link && !(round > 0 && serverRound() === round);
+      if (staged && practice && !match.alive && match.lives === 1) {
+        outSince ||= now;
+        if (now - outSince > OUT_FOR && rules.send({ type: "rematch" })) { outSince = 0; game.begin(stageFor(room.code, round)); }
+      } else outSince = 0;
       game.peers(others(now));
       // In co-op a fighter is said only while its level is played.
       if (hero && (!link || (round > 0 && match.screen === "Play")) && now - said >= SAY_EVERY) {
@@ -278,10 +300,10 @@ export async function joinVersus(code: string | undefined, name: string, staged:
             ping: pings.has(id) ? Math.round(pings.get(id)!) : undefined, quiet: id !== me && now - (heardAt.get(id) ?? now) > QUIET };
         });
         const ended = !link && !!bout?.over, startsIn = bout?.next === null || bout?.next === undefined ? undefined : Math.max(0, bout.next - (now - boutAt));
-        const benched = !link && !!bout?.fighting && bout.round > round;
+        // A game waiting for the next round is not told how this one ended: it was not in it.
         onStanding({
           rivals, startsIn,
-          status: !online ? "reconnecting" : ended ? "over" : benched ? "waiting" : rivals.length < 2 ? "alone" : !link && startsIn !== undefined && !bout?.fighting ? "starting" : "fighting",
+          status: lost ? "offline" : !online ? "reconnecting" : benched() ? "waiting" : ended ? "over" : rivals.length < 2 ? "alone" : link || bout?.fighting ? "fighting" : "starting",
           winner: ended && bout?.winner ? words.get(bout.winner)?.name ?? "?" : undefined,
         });
       }

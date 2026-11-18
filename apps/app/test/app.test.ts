@@ -549,11 +549,12 @@ it("Find a match: a dropped connection gets its seat back, and what a game sends
   second.close(); third.close();
 });
 
-// spec/app/index.md, "Story: Fight other players"; spec/app/bout.md, "Story: Fight for the pot"
+// spec/app/index.md, "Story: Fight other players"; spec/app/bout.md, "Story: Fight for the pot"; spec/app/lobby.md, "Story: Find a match"
 // Two players' games, each its own arena of sim.ts stepped a sixtieth of a second at a time, at one table of the
 // arena server through versus.ts: the round the server begins starts in both, a punch thrown in one lands in the other
-// by way of the server, and a fall costs what the server takes.
-it("Fight other players: two games at the arena start the server's round together, a punch lands through the server, and a fall costs what it takes", async () => {
+// by way of the server, and a fall costs what the server takes. A third, looking for a duel during the round, waits
+// at the same table for the next one.
+it("Fight other players: two games at the arena start the server's round together, a punch lands through the server, a fall costs what it takes, and one who comes during a round fights in the next", async () => {
   const { url, later } = await arenaServer();
   vi.stubEnv("VITE_ARENA_URL", url);
   async function duelist(name: string) {
@@ -570,14 +571,15 @@ it("Fight other players: two games at the arena start the server's round togethe
   }
   const ada = await duelist("Ada"), bo = await duelist("Bo");
   expect(bo.net.code).toBe(ada.net.code);
-  /** Both games, frame by frame as the page plays them, until `done` holds. */
+  const games = [ada, bo];
+  /** Every game at the table, frame by frame as the page plays them, until `done` holds. */
   async function play(done: () => boolean, what: string, most = 600) {
     for (let i = 0; i < most; i++) {
-      for (const p of [ada, bo]) { p.net.tick(); p.game.frame(1000 / 60); }
+      for (const p of games) { p.net.tick(); p.game.frame(1000 / 60); }
       if (done()) return;
       await new Promise((resolve) => setTimeout(resolve, 2));
     }
-    throw new Error(`never: ${what} (${JSON.stringify([ada.seen.standing, bo.seen.standing])})`);
+    throw new Error(`never: ${what} (${JSON.stringify(games.map((p) => p.seen.standing))})`);
   }
   // spec/app/bout.md, "A round begins between two or more, when no round is being fought, and gives everyone full health and three lives"
   await play(() => ada.seen.standing.status === "starting" && bo.seen.standing.status === "starting", "the round announced");
@@ -602,6 +604,34 @@ it("Fight other players: two games at the arena start the server's round togethe
   // The server took the same: its word does not lower Bo's health further.
   await play(() => false, "", 30).catch(() => undefined);
   expect(bo.rules.get().hp).toBe(punched - 25);
+
+  // spec/app/lobby.md, "A co-op table stops taking players from matchmaking while its group plays a level, and takes them again once it is done"
+  // spec/app/bout.md, "A fighter sits down once, while there is a seat, with its most health"
+  // Looking for a duel during the round, Cy sits at the same table and waits for the next one, fighting the stand-in
+  // meanwhile: the two fighting never see Cy, nor Cy them.
+  const cy = await duelist("Cy");
+  games.push(cy);
+  expect(cy.net.code).toBe(ada.net.code);
+  const names = (p: typeof ada) => p.game.scene.enemies.map((E) => E.peer?.name ?? E.tag);
+  await play(() => cy.seen.standing.status === "waiting" && names(cy).includes("CPU"), "Cy waiting, with the stand-in");
+  expect([names(cy), names(ada), names(bo)]).toEqual([["CPU"], ["Bo"], ["Ada"]]);
+  // Out of lives with no round of its own, Cy's practice starts again a moment later.
+  for (let i = 0; i < 3; i++) {
+    cy.game.struck("x", { dmg: 500, kx: 0, ky: 0 });
+    await play(() => cy.rules.get().alive || cy.rules.get().lives === 1, "Cy down");
+  }
+  await play(() => cy.rules.get().alive && cy.rules.get().lives === 3, "Cy's practice again", 2000);
+  // The round ends when Bo goes. Ada's pause is open as the next one begins: Ada starts it on closing the pause.
+  games.splice(games.indexOf(bo), 1); bo.net.leave();
+  await play(() => ada.seen.standing.status === "over" && cy.seen.standing.status === "waiting", "the round over, Cy still waiting");
+  ada.rules.send({ type: "openMoves" });
+  later(6_000);
+  await play(() => cy.seen.standing.status === "fighting" && ada.seen.standing.status === "waiting", "the next round, begun without Ada's paused game");
+  // Neither sees the other until Ada's game is in the round; Ada's, paused, steps no stand-in either.
+  expect([names(cy), names(ada)]).toEqual([[], []]);
+  ada.rules.send({ type: "closeMoves" });
+  await play(() => names(ada).join() === "Cy" && names(cy).join() === "Ada" && ada.seen.standing.status === "fighting", "Ada and Cy face to face");
+  expect([ada.rules.get().lives, cy.rules.get().lives]).toEqual([3, 3]);
 });
 
 // spec/app/index.md, "Story: Fight the waves"; spec/app/index.md, "Story: Stay alive"

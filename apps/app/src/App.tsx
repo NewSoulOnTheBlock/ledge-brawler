@@ -644,6 +644,12 @@ export function App({ runtime }: { runtime: Runtime }) {
   // The room is left with the duel: for the select screen, the title, or the page going away.
   const dueling = match?.screen === "Play" && match.duel;
   useEffect(() => { if (!dueling) { net.current?.leave(); net.current = null; } }, [dueling]);
+  // spec/app/bout.md, "A round begins between two or more, when no round is being fought, and gives everyone full health and three lives"
+  // Its last three seconds and its start, across the screen: until it starts no blow counts.
+  const countdown = dueling && standing.status === "starting" && standing.startsIn !== undefined ? Math.ceil(standing.startsIn / 1000) : 0;
+  useEffect(() => { if (countdown >= 1 && countdown <= 3) sayBanner({ text: String(countdown) }); }, [countdown, sayBanner]);
+  const roundOn = dueling && standing.status === "fighting" && standing.rivals.length > 1;
+  useEffect(() => { if (roundOn) sayBanner({ text: "Fight!", tone: "red" }); }, [roundOn, sayBanner]);
   useEffect(() => {
     if (standing.status !== "over") return;
     sound("over");

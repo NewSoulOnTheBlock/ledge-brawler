@@ -123,10 +123,14 @@ pure def leave(l: Lobby, by: int, table: int): Lobby =
   else { ...l, seatsOf: l.seatsOf.put(table, rest), seated: l.seated.exclude(Set(by)) }
 ```
 
-### A table stops taking players from matchmaking while it plays, and takes them again once it is done
+### A co-op table stops taking players from matchmaking while its group plays a level, and takes them again once it is done
+
+A duel's table never stops taking them: whoever sits down during a round waits for the next one (spec/app/bout.md),
+at the same table as everyone else looking for a duel, so that two who look at once are never split between two
+tables.
 
 ```quint
-pure def canClose(l: Lobby, table: int): bool = l.open.contains(table)
+pure def canClose(l: Lobby, table: int): bool = l.open.contains(table) and kindAt(table, l) == Group
 
 pure def close(l: Lobby, table: int): Lobby = { ...l, open: l.open.exclude(Set(table)) }
 

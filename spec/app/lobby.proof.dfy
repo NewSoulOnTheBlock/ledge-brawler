@@ -329,7 +329,7 @@ lemma leave_ensures(l: Lobby, by_: int, table: int)
   }
 }
 
-// spec/app/lobby.md, "A table stops taking players from matchmaking while it plays, and takes them again once it is done"
+// spec/app/lobby.md, "A co-op table stops taking players from matchmaking while its group plays a level, and takes them again once it is done"
 // What is open after a table is closed, with the filter the library reasons about in place of the standard one.
 lemma CloseOpen(l: Lobby, table: int)
   ensures close(l, table).open == ProofLib.Filter((set_x: int) => !((set_x in [table])), l.open)
