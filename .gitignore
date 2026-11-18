@@ -30,3 +30,4 @@ contracts/cache/
 contracts/ignition/deployments/chain-31337/
 contracts/.testnet.env
 apps/app/arena/.env
+apps/app/.env.production.local
