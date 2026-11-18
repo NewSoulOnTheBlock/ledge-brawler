@@ -6,6 +6,7 @@ import { CHARS } from "./game/data.ts";
 import { type Board, type GameStats, loadStats, standingOf, syncSagaToCloud } from "./scores.ts";
 import { SmallButton, BigButton } from "./screens.tsx";
 import { HEROES, PROTAGONISTS } from "./story/canon.ts";
+import { WalletAddress } from "./WalletAddress.tsx";
 import { ACHIEVEMENTS, unlocked as getUnlocked } from "./achievements.ts";
 
 const display = "font-display font-bold uppercase";
@@ -41,7 +42,7 @@ export function Profile({ saga, onClose }: { saga: Saga; onClose: () => void }) 
         <div className="grid gap-1.5 text-[13px]">
           {user?.name && <p><b className="font-medium text-foreground">{user.name}</b></p>}
           {user?.email && <p className="text-muted-foreground">{user.email}</p>}
-          {user?.wallet && <p className="truncate text-muted-foreground" title={user.wallet}>Wallet: {user.wallet.slice(0, 6)}...{user.wallet.slice(-4)}</p>}
+          {user?.wallet && <p className="flex items-center gap-1.5 text-muted-foreground">Wallet <WalletAddress address={user.wallet} /></p>}
         </div>
 
         <div>

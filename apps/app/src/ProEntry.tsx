@@ -5,6 +5,7 @@ import { cn } from "@repo/ui";
 import { useAuth } from "./auth.tsx";
 import { type Entry, type ProInfo, type ProMode, payEntry, proInfo, tokens } from "./pro.ts";
 import { BigButton, SmallButton } from "./screens.tsx";
+import { WalletAddress } from "./WalletAddress.tsx";
 
 const RULES: Record<ProMode, string[]> = {
   survival: [
@@ -68,8 +69,8 @@ function Pay({ mode, info, onPaid }: { mode: ProMode; info: ProInfo; onPaid: (en
   };
   return (
     <div className="grid gap-2 text-[13px]">
-      <p>Paying from <span className="font-mono select-all" title={wallet.address}>{wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}</span>
-        {held !== null && <> · holds <b className="tabular-nums">{tokens(held.toString(), info.decimals)}</b> $BLADES</>}</p>
+      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1">Paying from <WalletAddress address={wallet.address} />
+        {held !== null && <span>· holds <b className="tabular-nums">{tokens(held.toString(), info.decimals)}</b> $BLADES</span>}</p>
       {short && <p className="text-destructive">This wallet needs {amount} $BLADES on Robinhood Chain. Send some to the address above first.</p>}
       <BigButton disabled={busy || short} className={cn(busy && "opacity-60")} onClick={() => void pay()}>{busy ? "Paying…" : `Pay ${amount} $BLADES and enter`}</BigButton>
       <p className="text-[11px] text-muted-foreground">You sign; the game pays the network fee. Entry fees are not refunded once your run or match has started.</p>
