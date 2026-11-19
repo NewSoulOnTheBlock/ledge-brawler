@@ -11,7 +11,7 @@ import { drawEffect, effectArea } from "./effects.ts";
 import { SCALE as FIGURE_SCALE, deathFrame, drawFigure, frameOf, loadFigures, showFrame, turnOf } from "./figure.ts";
 import type { Decor } from "./levels.ts";
 import type { Fx } from "./post/post.ts";
-import { SCENERY, THEMES, drawBackdrop, drawFrame, drawPiece, drawPlant, drawSlab, drawSpikes, drawTop, loadPlaces } from "./places.ts";
+import { SCENERY, THEMES, drawBackdrop, drawFrame, drawPiece, drawPlant, drawSlab, drawSpikes, drawTop, drawTurned, loadPlaces } from "./places.ts";
 import { type View, createScenery } from "./scenery.ts";
 import { drawGuide } from "./guide.ts";
 import { type SkyId, drawSky, loadSky, skyIsDark } from "./sky.ts";
@@ -633,17 +633,17 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
         }
       }
     }
-    // A blade on a chain, a toothed wheel turning as it swings, with a smear where it has just been.
+    // A blade on a chain, with a smear where it has just been: the executioner's pendulum (art/locale/traps.lua), its
+    // crescent square to its chain as it swings.
     for (const b of traps.blades) {
       if (!onScreen({ x: b.x - b.len, y: b.y }, { x: b.x + b.len, y: b.y + b.len + 40 })) continue;
       for (const back of [0.08, 0.04]) { const { tip } = bladeAt(S.time - back, b); ctx.fillStyle = `rgba(233,226,238,${back * 2})`; ctx.beginPath(); ctx.arc(tip.x, tip.y, BLADE_R, 0, Math.PI * 2); ctx.fill(); }
-      const { tip } = bladeAt(S.time, b);
-      ctx.strokeStyle = IRON; ctx.lineWidth = 3; ctx.setLineDash([8, 5]);
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(tip.x, tip.y); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill();
+      const { tip, a } = bladeAt(S.time, b);
       // In the Ember's places a blade is a censer: a bowl of coals on its chain, tilting as it swings and shedding sparks.
       if (L?.theme === "ember" || L?.theme === "shrine") {
-        const { a } = bladeAt(S.time, b);
+        ctx.strokeStyle = IRON; ctx.lineWidth = 3; ctx.setLineDash([8, 5]);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(tip.x, tip.y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill();
         for (let k = 0; k < 4; k++) { const life = (S.time * 2 + k * 0.25) % 1; ctx.fillStyle = `rgba(255,170,70,${1 - life})`; ctx.fillRect(tip.x - Math.sin(a) * 30 * life + (k - 1.5) * 6, tip.y - 10 + life * 34, 3, 3); }
         ctx.save(); ctx.translate(tip.x, tip.y); ctx.rotate(-a);
         ctx.fillStyle = "#a8742e"; ctx.beginPath(); ctx.arc(0, -4, BLADE_R, 0, Math.PI); ctx.fill();
@@ -653,13 +653,10 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
         ctx.restore();
         continue;
       }
-      ctx.save(); ctx.translate(tip.x, tip.y); ctx.rotate(S.time * 9);
-      ctx.fillStyle = IRON; ctx.beginPath();
-      for (let k = 0; k < 20; k++) { const r = k % 2 ? BLADE_R - 6 : BLADE_R + 3, a = (k / 20) * Math.PI * 2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = HOT; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, BLADE_R - 9, 0.3, 1.6); ctx.stroke();
-      ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+      const reach = Math.hypot(tip.x - b.x, tip.y - b.y);
+      for (let d = 12; d < reach - 16; d += 24) drawTurned(ctx, "trap-link", b.x + d * Math.sin(a), b.y + d * Math.cos(a), -a);
+      drawTurned(ctx, "trap-pivot", b.x, b.y);
+      drawTurned(ctx, "trap-blade", tip.x, tip.y, -a);
     }
     // A slot in the rock glows before it looses; its bolt is gone once it has struck.
     traps.bolts.forEach((b, i) => {

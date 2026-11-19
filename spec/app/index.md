@@ -52,13 +52,16 @@ type Match = {
   lives: int,
   learned: int,
   vigor: int,
-  spared: bool
+  spared: bool,
+  world: bool,
+  hasDash: bool
 }
 
 pure val initial: Match = {
   screen: Title, fighter: 0, paused: false, hp: 100, alive: true, aura: 40000, held: 0, overdrive: 0,
   flying: false, wave: 0, waiting: 0, foes: 0, kos: 0, hits: 0, combo: 0, best: 0, found: Set(),
-  stamina: 110000, dashes: 1, owed: false, quest: false, cleared: false, duel: false, lives: 0, learned: 5, vigor: 0, spared: false
+  stamina: 110000, dashes: 1, owed: false, quest: false, cleared: false, duel: false, lives: 0, learned: 5, vigor: 0, spared: false,
+  world: false, hasDash: false
 }
 ```
 
@@ -145,7 +148,8 @@ pure def canFight(m: Match): bool = m.screen == Select
 pure def fight(m: Match): Match = {
   screen: Play, fighter: m.fighter, paused: false, hp: full(m), alive: true, aura: 40000, held: 0,
   overdrive: 0, flying: false, wave: 0, waiting: 0, foes: 0, kos: 0, hits: 0, combo: 0, best: 0, found: Set(),
-  stamina: 110000, dashes: 1, owed: false, quest: false, cleared: false, duel: false, lives: 0, learned: m.learned, vigor: m.vigor, spared: false
+  stamina: 110000, dashes: 1, owed: false, quest: false, cleared: false, duel: false, lives: 0, learned: m.learned, vigor: m.vigor, spared: false,
+  world: false, hasDash: false
 }
 ```
 
@@ -212,10 +216,10 @@ pure def plunge(m: Match): Match =
 
 It comes back rested: full stamina and its dash ready. Coming back costs a life, and a fighter on its last life
 does not come back. Against the waves there is one life and no coming back: only a fighter on a quest or in a
-duel, with a life to spare, revives.
+duel, with a life to spare, revives. In a hero's world lives are not spent: the fighter wakes at a shrine instead.
 
 ```quint
-pure def canRevive(m: Match): bool = playing(m) and not(m.alive) and (m.quest or m.duel) and m.lives > 1
+pure def canRevive(m: Match): bool = playing(m) and not(m.alive) and (m.quest or m.duel) and m.lives > 1 and not(m.world)
 
 pure def revive(m: Match): Match =
   { ...m, alive: true, hp: full(m), aura: if (m.aura < 40000) 40000 else m.aura,
@@ -225,10 +229,11 @@ pure def revive(m: Match): Match =
 ### A fighter out of lives on a quest can be let off once, and goes on with its last life
 
 It comes back as a revived fighter does, rested and at full health, but no life is given back: the next knockout
-is the end of the level. A level lets its fighter off only once.
+is the end of the level. A level lets its fighter off only once. There is no bargain in a hero's world, where no
+life is ever lost.
 
 ```quint
-pure def canBargain(m: Match): bool = playing(m) and not(m.alive) and m.quest and m.lives == 1 and not(m.spared)
+pure def canBargain(m: Match): bool = playing(m) and not(m.alive) and m.quest and m.lives == 1 and not(m.spared) and not(m.world)
 
 pure def bargain(m: Match): Match =
   { ...m, alive: true, hp: full(m), aura: if (m.aura < 40000) 40000 else m.aura,
@@ -491,7 +496,7 @@ pure def alwaysCountsMakeSense(m: Match): bool =
 
 ```quint
 pure def stepScoreNeverDrops(before: Match, via: str, after: Match): bool =
-  (via != "fight" and via != "embark" and via != "duel" and via != "rematch" and via != "retry") implies (
+  (via != "fight" and via != "embark" and via != "wander" and via != "duel" and via != "rematch" and via != "retry") implies (
     after.wave >= before.wave and after.kos >= before.kos and after.hits >= before.hits and after.best >= before.best
   )
 ```
@@ -534,7 +539,7 @@ pure def closeMoves(m: Match): Match = { ...m, paused: false }
 ```quint
 pure def canChange(m: Match): bool = m.paused
 
-pure def change(m: Match): Match = { ...m, screen: Select, paused: false, flying: false, quest: false, cleared: false, duel: false, lives: 0, spared: false }
+pure def change(m: Match): Match = { ...m, screen: Select, paused: false, flying: false, quest: false, cleared: false, duel: false, lives: 0, spared: false, world: false }
 ```
 
 ### The game is paused only on the play screen
@@ -566,7 +571,7 @@ pure def alwaysFoundAreMoves(m: Match): bool = m.found.forall(x => 0 <= x and x 
 
 ```quint
 pure def stepFoundOnlyGrows(before: Match, via: str, after: Match): bool =
-  (via != "fight" and via != "embark" and via != "duel" and via != "rematch" and via != "retry") implies before.found.subseteq(after.found)
+  (via != "fight" and via != "embark" and via != "wander" and via != "duel" and via != "rematch" and via != "retry") implies before.found.subseteq(after.found)
 ```
 
 ## Story: Dash and climb
@@ -577,12 +582,13 @@ pure def stepFoundOnlyGrows(before: Match, via: str, after: Match): bool =
 
 ### A fighter has one dash, and gets it back by touching the ground
 
-Touching the ground also restores stamina and forgets a climb jump.
+Touching the ground also restores stamina and forgets a climb jump. In a hero's world the dash is used only once
+it has been found there.
 
 ```quint
 pure val fullStamina = 110000
 
-pure def canDash(m: Match): bool = fighting(m) and m.dashes > 0
+pure def canDash(m: Match): bool = fighting(m) and m.dashes > 0 and (m.hasDash or not(m.world))
 
 pure def dash(m: Match): Match = { ...m, dashes: 0, held: 0 }
 
@@ -693,8 +699,10 @@ pure def ambush(m: Match, count: int): Match = { ...m, waiting: m.waiting + coun
 
 A cleared level is over: nothing more can happen in it.
 
+A hero's world has no way out to reach: its areas lead into each other.
+
 ```quint
-pure def canClear(m: Match): bool = fighting(m) and m.quest
+pure def canClear(m: Match): bool = fighting(m) and m.quest and not(m.world)
 
 pure def clear(m: Match): Match = { ...m, cleared: true, flying: false, held: 0 }
 ```
@@ -704,7 +712,7 @@ pure def clear(m: Match): Match = { ...m, cleared: true, flying: false, held: 0 
 ```quint
 pure def canLeave(m: Match): bool = m.cleared
 
-pure def leave(m: Match): Match = { ...m, screen: Select, paused: false, cleared: false, quest: false, lives: 0, spared: false }
+pure def leave(m: Match): Match = { ...m, screen: Select, paused: false, cleared: false, quest: false, lives: 0, spared: false, world: false }
 ```
 
 ### A quest is always in its one wave
@@ -726,6 +734,87 @@ pure def alwaysOnlyQuestsAreCleared(m: Match): bool = m.cleared implies (m.quest
 
 ```quint
 pure def sometimesCleared(m: Match): bool = m.cleared
+```
+
+## Story: Explore a hero's world
+
+> As a player, I want a hero's chapters to be one connected world that I cross and come back through, finding what
+> lets me go further, so that the campaign is a place to explore and not a list of levels.
+
+Where the fighter is in the world, which areas and rooms it has seen, and which shrine it last rested at are the
+arena's to keep and the save's to remember. This spec owns what the fighter can do there.
+
+### A hero's world starts from the select screen like a level, with the dash as the save remembers it
+
+A world is a quest: its enemies arrive as its rooms bring them. It counts its three lives but never spends them.
+
+```quint
+pure val ownsValues = Set(false, true)
+
+pure def canWander(m: Match, owns: bool): bool = m.screen == Select
+
+pure def wander(m: Match, owns: bool): Match = { ...embark(m), world: true, hasDash: owns }
+```
+
+### Only a quest is a world
+
+```quint
+pure def alwaysAWorldIsAQuest(m: Match): bool = m.world implies (m.quest and m.screen == Play)
+```
+
+### The dash is found in the world once, and kept
+
+```quint
+pure def canTakeDash(m: Match): bool = fighting(m) and m.world and not(m.hasDash)
+
+pure def takeDash(m: Match): Match = { ...m, hasDash: true }
+```
+
+### The dash is kept until the world is left
+
+```quint
+pure def stepTheDashIsKept(before: Match, via: str, after: Match): bool =
+  (before.world and after.world and before.hasDash) implies after.hasDash
+```
+
+### In the world, a fighter that has not found the dash has never spent it
+
+```quint
+pure def alwaysNoDashBeforeFindingIt(m: Match): bool = (m.world and not(m.hasDash)) implies m.dashes == 1
+```
+
+### Resting at a shrine gives full health, full stamina and the dash back
+
+```quint
+pure def canRest(m: Match): bool = fighting(m) and m.world
+
+pure def rest(m: Match): Match = { ...m, hp: full(m), stamina: fullStamina, dashes: 1, owed: false }
+```
+
+### A fighter knocked out in the world wakes at its last shrine, with full health and at least 40 aura
+
+No life is spent and nothing found is lost: only where it stands changes, and that is the arena's.
+
+```quint
+pure def canWake(m: Match): bool = playing(m) and not(m.alive) and m.world
+
+pure def wake(m: Match): Match =
+  { ...m, alive: true, hp: full(m), aura: if (m.aura < 40000) 40000 else m.aura,
+    stamina: fullStamina, dashes: 1, owed: false, flying: false, held: 0 }
+```
+
+### In the world lives are never spent
+
+```quint
+pure def alwaysTheWorldKeepsItsLives(m: Match): bool = m.world implies m.lives == 3
+```
+
+### A fighter can find the dash, and can wake at a shrine
+
+```quint
+pure def sometimesDashFound(m: Match): bool = m.world and m.hasDash and m.dashes == 0
+
+pure def sometimesDownInTheWorld(m: Match): bool = m.world and not(m.alive)
 ```
 
 ## Story: Fight other players

@@ -24,11 +24,15 @@ lemma discover_ensures(m: Match, move: int)
   ensures (inv(m) ==> canDiscover(m, move) ==> alwaysLearnedIsCounted(discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> alwaysAQuestIsAWave(discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> alwaysOnlyQuestsAreCleared(discover(m, move)))
+  ensures (inv(m) ==> canDiscover(m, move) ==> alwaysAWorldIsAQuest(discover(m, move)))
+  ensures (inv(m) ==> canDiscover(m, move) ==> alwaysNoDashBeforeFindingIt(discover(m, move)))
+  ensures (inv(m) ==> canDiscover(m, move) ==> alwaysTheWorldKeepsItsLives(discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> alwaysLivesAreADuels(discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> alwaysADuelHasNoWaves(discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> stepFighterIsChosenOnTheSelectScreen(m, "discover", discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> stepScoreNeverDrops(m, "discover", discover(m, move)))
   ensures (inv(m) ==> canDiscover(m, move) ==> stepFoundOnlyGrows(m, "discover", discover(m, move)))
+  ensures (inv(m) ==> canDiscover(m, move) ==> stepTheDashIsKept(m, "discover", discover(m, move)))
 {
   if inv(m) && canDiscover(m, move) {
     DiscoverFound(m, move);

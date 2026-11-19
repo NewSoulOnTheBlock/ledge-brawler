@@ -2214,9 +2214,17 @@
 "h": 16,
 "k": 3.4
 },
-"x2-cornice": {
+"trap-blade": {
 "file": "locale/atlas.png",
 "x": 778,
+"y": 177,
+"w": 21,
+"h": 16,
+"k": 3.2
+},
+"x2-cornice": {
+"file": "locale/atlas.png",
+"x": 800,
 "y": 177,
 "w": 14,
 "h": 16,
@@ -2225,7 +2233,7 @@
 },
 "x3-frost": {
 "file": "locale/atlas.png",
-"x": 793,
+"x": 815,
 "y": 177,
 "w": 20,
 "h": 16,
@@ -2234,7 +2242,7 @@
 },
 "x5-masonry": {
 "file": "locale/atlas.png",
-"x": 814,
+"x": 836,
 "y": 177,
 "w": 28,
 "h": 16,
@@ -2243,7 +2251,7 @@
 },
 "x5-message": {
 "file": "locale/atlas.png",
-"x": 843,
+"x": 865,
 "y": 177,
 "w": 34,
 "h": 16,
@@ -2252,7 +2260,7 @@
 },
 "f2-wanted": {
 "file": "locale/atlas.png",
-"x": 878,
+"x": 900,
 "y": 177,
 "w": 12,
 "h": 15,
@@ -2261,7 +2269,7 @@
 },
 "a1-jars": {
 "file": "locale/atlas.png",
-"x": 891,
+"x": 913,
 "y": 177,
 "w": 24,
 "h": 14,
@@ -2270,7 +2278,7 @@
 },
 "a2-sextant": {
 "file": "locale/atlas.png",
-"x": 916,
+"x": 938,
 "y": 177,
 "w": 18,
 "h": 14,
@@ -2279,7 +2287,7 @@
 },
 "a5-picks": {
 "file": "locale/atlas.png",
-"x": 935,
+"x": 957,
 "y": 177,
 "w": 22,
 "h": 14,
@@ -2288,7 +2296,7 @@
 },
 "e5-barrels": {
 "file": "locale/atlas.png",
-"x": 958,
+"x": 980,
 "y": 177,
 "w": 22,
 "h": 14,
@@ -2296,7 +2304,7 @@
 },
 "e5-camp": {
 "file": "locale/atlas.png",
-"x": 981,
+"x": 1003,
 "y": 177,
 "w": 18,
 "h": 14,
@@ -2312,7 +2320,7 @@
 },
 "e5-drum": {
 "file": "locale/atlas.png",
-"x": 1000,
+"x": 1022,
 "y": 177,
 "w": 16,
 "h": 14,
@@ -2320,7 +2328,7 @@
 },
 "f3-sarcophagus": {
 "file": "locale/atlas.png",
-"x": 1017,
+"x": 1039,
 "y": 177,
 "w": 30,
 "h": 14,
@@ -2328,7 +2336,7 @@
 },
 "f3-web": {
 "file": "locale/atlas.png",
-"x": 1048,
+"x": 1070,
 "y": 177,
 "w": 14,
 "h": 14,
@@ -2337,7 +2345,7 @@
 },
 "f4-wallBooks": {
 "file": "locale/atlas.png",
-"x": 1063,
+"x": 1085,
 "y": 177,
 "w": 26,
 "h": 14,
@@ -2346,7 +2354,7 @@
 },
 "f5-milestone": {
 "file": "locale/atlas.png",
-"x": 1090,
+"x": 1112,
 "y": 177,
 "w": 12,
 "h": 14,
@@ -2354,7 +2362,7 @@
 },
 "h2-skullCandle": {
 "file": "locale/atlas.png",
-"x": 1103,
+"x": 1125,
 "y": 177,
 "w": 12,
 "h": 14,
@@ -2369,7 +2377,7 @@
 },
 "h5-fence": {
 "file": "locale/atlas.png",
-"x": 1116,
+"x": 1138,
 "y": 177,
 "w": 30,
 "h": 14,
@@ -2377,7 +2385,7 @@
 },
 "x2-boulder": {
 "file": "locale/atlas.png",
-"x": 1147,
+"x": 1169,
 "y": 177,
 "w": 22,
 "h": 14,
@@ -2385,7 +2393,7 @@
 },
 "x2-strata": {
 "file": "locale/atlas.png",
-"x": 1170,
+"x": 1192,
 "y": 177,
 "w": 40,
 "h": 14,
@@ -2394,7 +2402,7 @@
 },
 "x5-web": {
 "file": "locale/atlas.png",
-"x": 1211,
+"x": 1233,
 "y": 177,
 "w": 16,
 "h": 14,
@@ -2403,7 +2411,7 @@
 },
 "f1-skullFossil": {
 "file": "locale/atlas.png",
-"x": 1228,
+"x": 1250,
 "y": 177,
 "w": 14,
 "h": 13,
@@ -2412,7 +2420,7 @@
 },
 "a3-spoils": {
 "file": "locale/atlas.png",
-"x": 1243,
+"x": 1265,
 "y": 177,
 "w": 26,
 "h": 12,
@@ -2420,7 +2428,7 @@
 },
 "e4-incense": {
 "file": "locale/atlas.png",
-"x": 1270,
+"x": 1292,
 "y": 177,
 "w": 12,
 "h": 12,
@@ -2435,7 +2443,7 @@
 },
 "f1-candles": {
 "file": "locale/atlas.png",
-"x": 1283,
+"x": 1305,
 "y": 177,
 "w": 14,
 "h": 12,
@@ -2450,7 +2458,7 @@
 },
 "f1-skulls": {
 "file": "locale/atlas.png",
-"x": 1298,
+"x": 1320,
 "y": 177,
 "w": 22,
 "h": 12,
@@ -2458,7 +2466,7 @@
 },
 "f2-bolts": {
 "file": "locale/atlas.png",
-"x": 1321,
+"x": 1343,
 "y": 177,
 "w": 14,
 "h": 12,
@@ -2467,7 +2475,7 @@
 },
 "f4-ledgers": {
 "file": "locale/atlas.png",
-"x": 1336,
+"x": 1358,
 "y": 177,
 "w": 18,
 "h": 12,
@@ -2475,7 +2483,7 @@
 },
 "f5-grassTall": {
 "file": "locale/atlas.png",
-"x": 1355,
+"x": 1377,
 "y": 177,
 "w": 16,
 "h": 12,
@@ -2485,7 +2493,7 @@
 },
 "h1-satchel": {
 "file": "locale/atlas.png",
-"x": 1372,
+"x": 1394,
 "y": 177,
 "w": 16,
 "h": 12,
@@ -2493,7 +2501,7 @@
 },
 "h1-shelf": {
 "file": "locale/atlas.png",
-"x": 1389,
+"x": 1411,
 "y": 177,
 "w": 16,
 "h": 12,
@@ -2508,7 +2516,7 @@
 },
 "h2-eyes": {
 "file": "locale/atlas.png",
-"x": 1406,
+"x": 1428,
 "y": 177,
 "w": 20,
 "h": 12,
@@ -2523,7 +2531,7 @@
 },
 "h2-sigil": {
 "file": "locale/atlas.png",
-"x": 1427,
+"x": 1449,
 "y": 177,
 "w": 16,
 "h": 12,
@@ -2532,7 +2540,7 @@
 },
 "h3-mound": {
 "file": "locale/atlas.png",
-"x": 1444,
+"x": 1466,
 "y": 177,
 "w": 30,
 "h": 12,
@@ -2547,7 +2555,7 @@
 },
 "h3-wreath": {
 "file": "locale/atlas.png",
-"x": 1475,
+"x": 1497,
 "y": 177,
 "w": 12,
 "h": 12,
@@ -2556,7 +2564,7 @@
 },
 "h4-barnacles": {
 "file": "locale/atlas.png",
-"x": 1488,
+"x": 1510,
 "y": 177,
 "w": 18,
 "h": 12,
@@ -2565,7 +2573,7 @@
 },
 "h4-fishBones": {
 "file": "locale/atlas.png",
-"x": 1507,
+"x": 1529,
 "y": 177,
 "w": 26,
 "h": 12,
@@ -2574,7 +2582,7 @@
 },
 "h5-doll": {
 "file": "locale/atlas.png",
-"x": 1534,
+"x": 1556,
 "y": 177,
 "w": 10,
 "h": 12,
@@ -2583,7 +2591,7 @@
 },
 "x1-cairn": {
 "file": "locale/atlas.png",
-"x": 1545,
+"x": 1567,
 "y": 177,
 "w": 10,
 "h": 12,
@@ -2592,7 +2600,7 @@
 },
 "x3-wall": {
 "file": "locale/atlas.png",
-"x": 1556,
+"x": 1578,
 "y": 177,
 "w": 30,
 "h": 12,
@@ -2600,7 +2608,7 @@
 },
 "x5-bench": {
 "file": "locale/atlas.png",
-"x": 1587,
+"x": 1609,
 "y": 177,
 "w": 28,
 "h": 12,
@@ -2608,7 +2616,7 @@
 },
 "h1-sedge": {
 "file": "locale/atlas.png",
-"x": 1616,
+"x": 1638,
 "y": 177,
 "w": 16,
 "h": 11,
@@ -2618,7 +2626,7 @@
 },
 "e3-arrows": {
 "file": "locale/atlas.png",
-"x": 1633,
+"x": 1655,
 "y": 177,
 "w": 16,
 "h": 10,
@@ -2627,7 +2635,7 @@
 },
 "f1-rubble": {
 "file": "locale/atlas.png",
-"x": 1650,
+"x": 1672,
 "y": 177,
 "w": 30,
 "h": 10,
@@ -2636,7 +2644,7 @@
 },
 "f1-straw": {
 "file": "locale/atlas.png",
-"x": 1681,
+"x": 1703,
 "y": 177,
 "w": 24,
 "h": 10,
@@ -2644,7 +2652,7 @@
 },
 "f1-tallies": {
 "file": "locale/atlas.png",
-"x": 1706,
+"x": 1728,
 "y": 177,
 "w": 18,
 "h": 10,
@@ -2653,7 +2661,7 @@
 },
 "f2-eaves": {
 "file": "locale/atlas.png",
-"x": 1725,
+"x": 1747,
 "y": 177,
 "w": 14,
 "h": 10,
@@ -2662,7 +2670,7 @@
 },
 "f3-vigil": {
 "file": "locale/atlas.png",
-"x": 1740,
+"x": 1762,
 "y": 177,
 "w": 24,
 "h": 10,
@@ -2677,7 +2685,7 @@
 },
 "h1-log": {
 "file": "locale/atlas.png",
-"x": 1765,
+"x": 1787,
 "y": 177,
 "w": 34,
 "h": 10,
@@ -2685,7 +2693,7 @@
 },
 "h1-wisp": {
 "file": "locale/atlas.png",
-"x": 1800,
+"x": 1822,
 "y": 177,
 "w": 10,
 "h": 10,
@@ -2700,7 +2708,7 @@
 },
 "h5-flowers": {
 "file": "locale/atlas.png",
-"x": 1811,
+"x": 1833,
 "y": 177,
 "w": 20,
 "h": 10,
@@ -2710,7 +2718,7 @@
 },
 "x2-ore": {
 "file": "locale/atlas.png",
-"x": 1832,
+"x": 1854,
 "y": 177,
 "w": 12,
 "h": 10,
@@ -2719,7 +2727,7 @@
 },
 "e1-bucket": {
 "file": "locale/atlas.png",
-"x": 1845,
+"x": 1867,
 "y": 177,
 "w": 10,
 "h": 9,
@@ -2728,7 +2736,7 @@
 },
 "e3-shot": {
 "file": "locale/atlas.png",
-"x": 1856,
+"x": 1878,
 "y": 177,
 "w": 16,
 "h": 9,
@@ -2737,7 +2745,7 @@
 },
 "f2-ridge": {
 "file": "locale/atlas.png",
-"x": 1873,
+"x": 1895,
 "y": 177,
 "w": 24,
 "h": 9,
@@ -2746,15 +2754,23 @@
 },
 "f3-scrolls": {
 "file": "locale/atlas.png",
-"x": 1898,
+"x": 1920,
 "y": 177,
 "w": 18,
 "h": 9,
 "k": 3.2
 },
+"trap-spikes": {
+"file": "locale/atlas.png",
+"x": 1939,
+"y": 177,
+"w": 12,
+"h": 9,
+"k": 4
+},
 "x2-frostGrass": {
 "file": "locale/atlas.png",
-"x": 1917,
+"x": 1952,
 "y": 177,
 "w": 16,
 "h": 9,
@@ -2764,7 +2780,7 @@
 },
 "a1-steam": {
 "file": "locale/atlas.png",
-"x": 1934,
+"x": 1969,
 "y": 177,
 "w": 12,
 "h": 8,
@@ -2774,7 +2790,7 @@
 },
 "e2-vent": {
 "file": "locale/atlas.png",
-"x": 1947,
+"x": 1982,
 "y": 177,
 "w": 14,
 "h": 8,
@@ -2784,7 +2800,7 @@
 },
 "e3-merlons": {
 "file": "locale/atlas.png",
-"x": 1962,
+"x": 1997,
 "y": 177,
 "w": 24,
 "h": 8,
@@ -2793,7 +2809,7 @@
 },
 "f2-crows": {
 "file": "locale/atlas.png",
-"x": 1987,
+"x": 2022,
 "y": 177,
 "w": 18,
 "h": 8,
@@ -2801,18 +2817,34 @@
 },
 "f5-grass": {
 "file": "locale/atlas.png",
-"x": 2006,
-"y": 177,
+"x": 0,
+"y": 196,
 "w": 16,
 "h": 8,
 "k": 3,
 "sway": true,
 "wall": true
 },
+"trap-link": {
+"file": "locale/atlas.png",
+"x": 17,
+"y": 196,
+"w": 3,
+"h": 8,
+"k": 3
+},
+"trap-pivot": {
+"file": "locale/atlas.png",
+"x": 21,
+"y": 196,
+"w": 11,
+"h": 8,
+"k": 3
+},
 "x3-coldfire": {
 "file": "locale/atlas.png",
-"x": 2023,
-"y": 177,
+"x": 33,
+"y": 196,
 "w": 24,
 "h": 8,
 "k": 3.2,
@@ -2820,7 +2852,7 @@
 },
 "x5-deadCandles": {
 "file": "locale/atlas.png",
-"x": 0,
+"x": 58,
 "y": 196,
 "w": 16,
 "h": 8,
@@ -2829,7 +2861,7 @@
 },
 "e1-ash": {
 "file": "locale/atlas.png",
-"x": 17,
+"x": 75,
 "y": 196,
 "w": 22,
 "h": 7,
@@ -2838,7 +2870,7 @@
 },
 "e1-scorched": {
 "file": "locale/atlas.png",
-"x": 40,
+"x": 98,
 "y": 196,
 "w": 16,
 "h": 7,
@@ -2848,7 +2880,7 @@
 },
 "e4-votives": {
 "file": "locale/atlas.png",
-"x": 57,
+"x": 115,
 "y": 196,
 "w": 20,
 "h": 7,
@@ -2864,7 +2896,7 @@
 },
 "x1-drift": {
 "file": "locale/atlas.png",
-"x": 78,
+"x": 136,
 "y": 196,
 "w": 26,
 "h": 7,
@@ -2873,7 +2905,7 @@
 },
 "a1-tools": {
 "file": "locale/atlas.png",
-"x": 105,
+"x": 163,
 "y": 196,
 "w": 22,
 "h": 6,
@@ -2882,7 +2914,7 @@
 },
 "a5-pit": {
 "file": "locale/atlas.png",
-"x": 128,
+"x": 186,
 "y": 196,
 "w": 26,
 "h": 6,
@@ -2891,7 +2923,7 @@
 },
 "e2-lava": {
 "file": "locale/atlas.png",
-"x": 155,
+"x": 213,
 "y": 196,
 "w": 26,
 "h": 6,
@@ -2906,7 +2938,7 @@
 },
 "e3-helms": {
 "file": "locale/atlas.png",
-"x": 182,
+"x": 240,
 "y": 196,
 "w": 16,
 "h": 6,
@@ -2915,7 +2947,7 @@
 },
 "e5-pennant": {
 "file": "locale/atlas.png",
-"x": 199,
+"x": 257,
 "y": 196,
 "w": 14,
 "h": 6,
@@ -2924,7 +2956,7 @@
 },
 "e5-trampled": {
 "file": "locale/atlas.png",
-"x": 214,
+"x": 272,
 "y": 196,
 "w": 16,
 "h": 6,
@@ -2934,7 +2966,7 @@
 },
 "h1-mud": {
 "file": "locale/atlas.png",
-"x": 231,
+"x": 289,
 "y": 196,
 "w": 20,
 "h": 6,
@@ -2943,7 +2975,7 @@
 },
 "h1-pool": {
 "file": "locale/atlas.png",
-"x": 252,
+"x": 310,
 "y": 196,
 "w": 30,
 "h": 6,
@@ -2958,7 +2990,7 @@
 },
 "x3-snowline": {
 "file": "locale/atlas.png",
-"x": 283,
+"x": 341,
 "y": 196,
 "w": 24,
 "h": 6,
@@ -2967,7 +2999,7 @@
 },
 "x4-litter": {
 "file": "locale/atlas.png",
-"x": 308,
+"x": 366,
 "y": 196,
 "w": 22,
 "h": 6,
@@ -2976,7 +3008,7 @@
 },
 "a4-vials": {
 "file": "locale/atlas.png",
-"x": 331,
+"x": 389,
 "y": 196,
 "w": 18,
 "h": 5,
@@ -2985,7 +3017,7 @@
 },
 "e1-debris": {
 "file": "locale/atlas.png",
-"x": 350,
+"x": 408,
 "y": 196,
 "w": 18,
 "h": 5,
@@ -2994,7 +3026,7 @@
 },
 "f5-manacles": {
 "file": "locale/atlas.png",
-"x": 369,
+"x": 427,
 "y": 196,
 "w": 14,
 "h": 5,
@@ -3003,7 +3035,7 @@
 },
 "f5-roadStones": {
 "file": "locale/atlas.png",
-"x": 384,
+"x": 442,
 "y": 196,
 "w": 24,
 "h": 5,
@@ -3012,7 +3044,7 @@
 },
 "h5-moss": {
 "file": "locale/atlas.png",
-"x": 409,
+"x": 467,
 "y": 196,
 "w": 26,
 "h": 5,
@@ -3021,7 +3053,7 @@
 },
 "a3-dirt": {
 "file": "locale/atlas.png",
-"x": 436,
+"x": 494,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3030,7 +3062,7 @@
 },
 "e2-grit": {
 "file": "locale/atlas.png",
-"x": 451,
+"x": 509,
 "y": 196,
 "w": 16,
 "h": 4,
@@ -3039,7 +3071,7 @@
 },
 "e4-petals": {
 "file": "locale/atlas.png",
-"x": 468,
+"x": 526,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3048,7 +3080,7 @@
 },
 "f1-pebbles": {
 "file": "locale/atlas.png",
-"x": 483,
+"x": 541,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3057,7 +3089,7 @@
 },
 "f1-shards": {
 "file": "locale/atlas.png",
-"x": 498,
+"x": 556,
 "y": 196,
 "w": 12,
 "h": 4,
@@ -3066,7 +3098,7 @@
 },
 "f2-slates": {
 "file": "locale/atlas.png",
-"x": 511,
+"x": 569,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3075,7 +3107,7 @@
 },
 "f3-rubble": {
 "file": "locale/atlas.png",
-"x": 526,
+"x": 584,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3084,7 +3116,7 @@
 },
 "f4-ink": {
 "file": "locale/atlas.png",
-"x": 541,
+"x": 599,
 "y": 196,
 "w": 18,
 "h": 4,
@@ -3093,7 +3125,7 @@
 },
 "f4-pages": {
 "file": "locale/atlas.png",
-"x": 560,
+"x": 618,
 "y": 196,
 "w": 16,
 "h": 4,
@@ -3102,7 +3134,7 @@
 },
 "f5-gravel": {
 "file": "locale/atlas.png",
-"x": 577,
+"x": 635,
 "y": 196,
 "w": 14,
 "h": 4,
@@ -3111,7 +3143,7 @@
 },
 "x4-crackedIce": {
 "file": "locale/atlas.png",
-"x": 592,
+"x": 650,
 "y": 196,
 "w": 26,
 "h": 4,
@@ -3120,7 +3152,7 @@
 },
 "x5-beads": {
 "file": "locale/atlas.png",
-"x": 619,
+"x": 677,
 "y": 196,
 "w": 16,
 "h": 4,
@@ -3129,7 +3161,7 @@
 },
 "a2-meridian": {
 "file": "locale/atlas.png",
-"x": 636,
+"x": 694,
 "y": 196,
 "w": 26,
 "h": 3,

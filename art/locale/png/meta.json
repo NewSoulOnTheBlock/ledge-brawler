@@ -302,4 +302,8 @@
 "h5-fireflies":{"flicker":true,"k":3,"light":[0,-40,70,"220,255,140"]},
 "h5-fronds":{"k":3,"sway":true,"under":true},
 "h5-farWillows":{"alpha":0.9,"far":0.3,"k":5},
-"h5-moss":{"k":3.4,"wall":true}}
+"h5-moss":{"k":3.4,"wall":true},
+"trap-spikes":{"k":4},
+"trap-blade":{"k":3.2},
+"trap-link":{"k":3},
+"trap-pivot":{"k":3}}

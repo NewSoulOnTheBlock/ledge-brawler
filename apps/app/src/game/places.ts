@@ -150,11 +150,22 @@ export function drawTop(ctx: Ctx, theme: Theme, x: number, y: number, w: number)
 
 /** A row of the village's spikes along the floor from `x` for `w`, standing on `y`. */
 export function drawSpikes(ctx: Ctx, x: number, y: number, w: number) {
-  const p = pieceOf("village", "spikes"), img = p && image(p.file);
+  // The traps' own strip (art/locale/traps.lua), repeated along the row and cut where it ends.
+  const p = SCENERY["trap-spikes"], img = p && image(p.file);
   if (!p || !img) return;
-  const k = 4;
+  const k = p.k;
   ctx.save(); ctx.imageSmoothingEnabled = false;
-  for (let at = x; at < x + w - 1; at += p.w * k) { const part = Math.min(p.w, (x + w - at) / k); ctx.drawImage(img, 0, 0, part, p.h, at, y - p.h * k, part * k, p.h * k); }
+  for (let at = x; at < x + w - 1; at += p.w * k) { const part = Math.min(p.w, (x + w - at) / k); ctx.drawImage(img, p.x ?? 0, p.y ?? 0, part, p.h, at, y - p.h * k, part * k, p.h * k); }
+  ctx.restore();
+}
+
+/** Draws a scenery piece at its own scale with its middle at (x, y), turned `rot` radians: a trap's parts as they swing. */
+export function drawTurned(ctx: Ctx, name: string, x: number, y: number, rot = 0) {
+  const p = SCENERY[name], img = p && image(p.file);
+  if (!p || !img) return;
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  ctx.translate(x, y); ctx.rotate(rot); ctx.scale(p.k, p.k);
+  ctx.drawImage(img, p.x ?? 0, p.y ?? 0, p.w, p.h, -p.w / 2, -p.h / 2, p.w, p.h);
   ctx.restore();
 }
 
