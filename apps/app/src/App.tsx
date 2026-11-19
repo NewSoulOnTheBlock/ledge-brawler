@@ -66,7 +66,7 @@ const CONFIRM = ["Enter", "Space", "KeyJ", "NumpadEnter"];
 const IN_HAND: Record<string, [pad: string, touch: string]> = {
   "Hold U to charge": ["Hold LT to charge", "Hold Aura to charge"],
   "W up · S down · F to land": ["Stick up and down · D-pad down to land", "Stick up and down · Aura and Fly to land"],
-  "T to use, R to choose": ["R3 to use, L3 to choose", "Arts and Item to use, Arts and Next to choose"],
+  "T to use, R to choose": ["R3 to use, L3 to choose", "Aura and Item to use, Aura and Next to choose"],
 };
 function inHand(sub: string) {
   const pad = [...(navigator.getGamepads?.() ?? [])].some((each) => each?.connected), touch = matchMedia("(pointer: coarse)").matches;
