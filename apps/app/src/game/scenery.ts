@@ -4,6 +4,7 @@
 // small creatures under one wind, light and dark, and a grade over the whole view. Only looked at: nothing here
 // changes the match. The urns break and the icicles fall for the eye alone.
 import type { Decor, Level } from "./levels.ts";
+import { LOCALE } from "./locale.ts";
 import { SCENERY, type SceneryMeta, type Theme, type ThemeId, drawPiece, image } from "./places.ts";
 
 type Ctx = CanvasRenderingContext2D;
@@ -78,7 +79,8 @@ export function createScenery() {
   /** Takes up a level (or none): its weather, creatures and what has broken are its own. */
   function enter(L: Level | null) {
     if (L === level) return;
-    level = L; themeId = L?.theme; mood = moodOf(themeId); bits = []; drips = []; shards = []; breath = []; hidden.clear(); falls.clear(); pattern = null;
+    // A level of its own may have its own weather over its theme's (locale.ts): snow on a winter road built of ruins.
+    level = L; themeId = L?.theme; mood = moodOf(themeId); const own = L && LOCALE[L.id]?.weather; if (mood && own) mood = { ...mood, weather: own }; bits = []; drips = []; shards = []; breath = []; hidden.clear(); falls.clear(); pattern = null;
     critters = []; lamps = []; shafts = []; smokers = []; drippers = []; urns = []; moths = [];
     (L?.decor ?? []).forEach((d, i) => { const m = meta(d), lantern = "piece" in d && d.piece.startsWith("lantern");
       const l = m?.light ?? (lantern ? [0, -50, 150, "255,190,110"] as const : undefined), k = m?.k ?? 4, top = m?.under ? m.h * m.k : 0;
@@ -105,7 +107,7 @@ export function createScenery() {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, bw, bh); ctx.setTransform(0.5, 0, 0, 0.5, 0, 0);
     ctx.save();
     ctx.globalAlpha = 0.2; ctx.fillStyle = `rgb(${mood.tint})`; ctx.fillRect(0, 0, v.w, v.h); ctx.globalAlpha = 1;
-    const far = [...(mood.far ?? []), ...(FAR[level.id]?.far ?? [])];
+    const far = [...(mood.far ?? []), ...(FAR[level.id]?.far ?? []), ...(LOCALE[level.id]?.far ?? [])];
     for (const name of far) {
       const p = SCENERY[name], img = p && image(p.file); if (!p || !img) continue;
       const par = p.far ?? 0.25, k = p.k * v.scale * 0.8, pw = p.w * k, gap = pw * (name === "frozenHost" || name === "cart" ? 1.6 : 1.15);

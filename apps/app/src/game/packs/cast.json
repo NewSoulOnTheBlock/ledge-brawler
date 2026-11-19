@@ -326,5 +326,592 @@
     "fps": 14
    }
   }
+ },
+ "nightborne": {
+  "file": "nightborne.png",
+  "w": 80,
+  "h": 80,
+  "cols": 25,
+  "feet": [
+   33,
+   64
+  ],
+  "scale": 3.59,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 9,
+    "fps": 10
+   },
+   "run": {
+    "start": 9,
+    "frames": 6,
+    "fps": 12
+   },
+   "attack": {
+    "start": 15,
+    "frames": 12,
+    "fps": 16
+   },
+   "special": {
+    "start": 27,
+    "frames": 12,
+    "fps": 22
+   },
+   "hit": {
+    "start": 39,
+    "frames": 5,
+    "fps": 10
+   },
+   "death": {
+    "start": 44,
+    "frames": 23,
+    "fps": 14
+   }
+  }
+ },
+ "fireworm": {
+  "file": "fireworm.png",
+  "w": 90,
+  "h": 90,
+  "cols": 22,
+  "feet": [
+   44,
+   58
+  ],
+  "scale": 2.0,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 9,
+    "fps": 10
+   },
+   "run": {
+    "start": 9,
+    "frames": 9,
+    "fps": 10
+   },
+   "attack": {
+    "start": 18,
+    "frames": 16,
+    "fps": 18
+   },
+   "special": {
+    "start": 34,
+    "frames": 16,
+    "fps": 14
+   },
+   "hit": {
+    "start": 50,
+    "frames": 3,
+    "fps": 10
+   },
+   "death": {
+    "start": 53,
+    "frames": 8,
+    "fps": 12
+   }
+  }
+ },
+ "stormhead": {
+  "file": "stormhead.png",
+  "w": 119,
+  "h": 124,
+  "cols": 17,
+  "feet": [
+   52,
+   124
+  ],
+  "scale": 3.03,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 9,
+    "fps": 10
+   },
+   "run": {
+    "start": 9,
+    "frames": 10,
+    "fps": 12
+   },
+   "attack": {
+    "start": 19,
+    "frames": 21,
+    "fps": 20
+   },
+   "special": {
+    "start": 40,
+    "frames": 21,
+    "fps": 14
+   },
+   "hit": {
+    "start": 61,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 63,
+    "frames": 8,
+    "fps": 10
+   }
+  }
+ },
+ "mudguard": {
+  "file": "mudguard.png",
+  "w": 82,
+  "h": 23,
+  "cols": 24,
+  "feet": [
+   20,
+   23
+  ],
+  "scale": 2.84,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 5,
+    "fps": 10
+   },
+   "run": {
+    "start": 5,
+    "frames": 6,
+    "fps": 12
+   },
+   "attack": {
+    "start": 11,
+    "frames": 7,
+    "fps": 14
+   },
+   "attack2": {
+    "start": 18,
+    "frames": 7,
+    "fps": 14
+   },
+   "special": {
+    "start": 25,
+    "frames": 7,
+    "fps": 10
+   },
+   "hit": {
+    "start": 32,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 34,
+    "frames": 6,
+    "fps": 10
+   }
+  }
+ },
+ "sprout": {
+  "file": "sprout.png",
+  "w": 82,
+  "h": 39,
+  "cols": 24,
+  "feet": [
+   13,
+   38
+  ],
+  "scale": 2.14,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 6,
+    "fps": 10
+   },
+   "run": {
+    "start": 6,
+    "frames": 6,
+    "fps": 12
+   },
+   "attack": {
+    "start": 12,
+    "frames": 13,
+    "fps": 18
+   },
+   "special": {
+    "start": 25,
+    "frames": 13,
+    "fps": 12
+   },
+   "hit": {
+    "start": 38,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 40,
+    "frames": 6,
+    "fps": 10
+   }
+  }
+ },
+ "toaster": {
+  "file": "toaster.png",
+  "w": 106,
+  "h": 22,
+  "cols": 19,
+  "feet": [
+   17,
+   19
+  ],
+  "scale": 3.07,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 5,
+    "fps": 10
+   },
+   "run": {
+    "start": 5,
+    "frames": 8,
+    "fps": 14
+   },
+   "attack": {
+    "start": 13,
+    "frames": 11,
+    "fps": 16
+   },
+   "special": {
+    "start": 24,
+    "frames": 11,
+    "fps": 8
+   },
+   "hit": {
+    "start": 35,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 37,
+    "frames": 5,
+    "fps": 10
+   }
+  }
+ },
+ "droid": {
+  "file": "droid.png",
+  "w": 58,
+  "h": 41,
+  "cols": 35,
+  "feet": [
+   15,
+   41
+  ],
+  "scale": 1.76,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 1,
+    "fps": 10
+   },
+   "wake": {
+    "start": 1,
+    "frames": 6,
+    "fps": 10
+   },
+   "run": {
+    "start": 7,
+    "frames": 6,
+    "fps": 12
+   },
+   "attack": {
+    "start": 13,
+    "frames": 10,
+    "fps": 16
+   },
+   "special": {
+    "start": 23,
+    "frames": 10,
+    "fps": 14
+   },
+   "hit": {
+    "start": 33,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 35,
+    "frames": 6,
+    "fps": 10
+   }
+  }
+ },
+ "botwheel": {
+  "file": "botwheel.png",
+  "w": 117,
+  "h": 26,
+  "cols": 17,
+  "feet": [
+   22,
+   25
+  ],
+  "scale": 3.65,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 1,
+    "fps": 10
+   },
+   "run": {
+    "start": 1,
+    "frames": 8,
+    "fps": 14
+   },
+   "attack": {
+    "start": 9,
+    "frames": 4,
+    "fps": 12
+   },
+   "attack2": {
+    "start": 13,
+    "frames": 4,
+    "fps": 10
+   },
+   "special": {
+    "start": 17,
+    "frames": 7,
+    "fps": 14
+   },
+   "hit": {
+    "start": 24,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 26,
+    "frames": 6,
+    "fps": 10
+   }
+  }
+ },
+ "golem": {
+  "file": "golem.png",
+  "w": 100,
+  "h": 100,
+  "cols": 20,
+  "feet": [
+   47,
+   70
+  ],
+  "scale": 2.87,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 4,
+    "fps": 10
+   },
+   "run": {
+    "start": 4,
+    "frames": 8,
+    "fps": 8
+   },
+   "attack": {
+    "start": 12,
+    "frames": 7,
+    "fps": 12
+   },
+   "attack2": {
+    "start": 19,
+    "frames": 9,
+    "fps": 12
+   },
+   "special": {
+    "start": 28,
+    "frames": 7,
+    "fps": 8
+   },
+   "hit": {
+    "start": 35,
+    "frames": 2,
+    "fps": 10
+   },
+   "death": {
+    "start": 37,
+    "frames": 14,
+    "fps": 10
+   }
+  }
+ },
+ "executioner": {
+  "file": "executioner.png",
+  "w": 100,
+  "h": 100,
+  "cols": 20,
+  "feet": [
+   40,
+   83
+  ],
+  "scale": 1.94,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 4,
+    "fps": 10
+   },
+   "run": {
+    "start": 4,
+    "frames": 8,
+    "fps": 10
+   },
+   "attack": {
+    "start": 12,
+    "frames": 13,
+    "fps": 16
+   },
+   "attack2": {
+    "start": 25,
+    "frames": 12,
+    "fps": 14
+   },
+   "special": {
+    "start": 37,
+    "frames": 5,
+    "fps": 8
+   },
+   "death": {
+    "start": 42,
+    "frames": 18,
+    "fps": 14
+   }
+  }
+ },
+ "spirit": {
+  "file": "spirit.png",
+  "w": 50,
+  "h": 50,
+  "cols": 19,
+  "feet": [
+   24,
+   38
+  ],
+  "scale": 2.0,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 4,
+    "fps": 10
+   },
+   "run": {
+    "start": 4,
+    "frames": 4,
+    "fps": 12
+   },
+   "wake": {
+    "start": 8,
+    "frames": 6,
+    "fps": 10
+   },
+   "death": {
+    "start": 14,
+    "frames": 5,
+    "fps": 10
+   }
+  }
+ },
+ "wizard": {
+  "file": "wizard.png",
+  "w": 250,
+  "h": 250,
+  "cols": 8,
+  "feet": [
+   123,
+   167
+  ],
+  "scale": 1.16,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 8,
+    "fps": 10
+   },
+   "run": {
+    "start": 8,
+    "frames": 8,
+    "fps": 12
+   },
+   "attack": {
+    "start": 16,
+    "frames": 8,
+    "fps": 14
+   },
+   "special": {
+    "start": 24,
+    "frames": 8,
+    "fps": 10
+   },
+   "jump": {
+    "start": 32,
+    "frames": 2,
+    "fps": 10
+   },
+   "fall": {
+    "start": 34,
+    "frames": 2,
+    "fps": 10
+   },
+   "hit": {
+    "start": 36,
+    "frames": 3,
+    "fps": 10
+   },
+   "death": {
+    "start": 39,
+    "frames": 7,
+    "fps": 10
+   }
+  }
+ },
+ "ronin": {
+  "file": "ronin.png",
+  "w": 96,
+  "h": 96,
+  "cols": 21,
+  "feet": [
+   47,
+   81
+  ],
+  "scale": 2.65,
+  "faces": 1,
+  "anims": {
+   "idle": {
+    "start": 0,
+    "frames": 10,
+    "fps": 10
+   },
+   "run": {
+    "start": 10,
+    "frames": 16,
+    "fps": 16
+   },
+   "attack": {
+    "start": 26,
+    "frames": 7,
+    "fps": 16
+   },
+   "special": {
+    "start": 33,
+    "frames": 7,
+    "fps": 10
+   },
+   "hit": {
+    "start": 40,
+    "frames": 4,
+    "fps": 10
+   }
+  }
  }
 }

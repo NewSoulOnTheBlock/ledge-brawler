@@ -1,15 +1,39 @@
 // spec/app/index.md, "Story: Fight the waves"
 // The arena's sounds and its music, synthesised: nothing plays before the first key or touch, or while muted.
+import type { RegionId } from "../story/canon.ts";
+import type { Level } from "./levels.ts";
+import { type Sample, sampleUrls, soundingOf } from "./samples.ts";
 import type { Sfx } from "./sim.ts";
 import type { SkyId } from "./sky.ts";
 
-/** The music some places have of their own: a recording (art/packs/README.md), looped in place of the synthesised music wherever that place is the one in play. */
-export type Track = "moonlight" | "rocky";
-/** The places that have their own music: the moonlit forest, and the canyon. */
+/** The recorded music (art/packs/README.md), looped in place of the synthesised music: the soundtrack, and the two loops of the places that have their own. */
+export type Track = "moonlight" | "rocky" | "throne" | "credits" | "crown" | "crownB" | "ash" | "drowned" | "north" | "fungal" | "shrine" | "blackspire"
+  | "boss" | "firstborn" | "final" | "duelA" | "duelB" | "duelC" | "waves" | "wavesLate";
+/** The places that have their own music in a campaign: the moonlit forest, and the canyon. */
 export const TRACKS: Partial<Record<SkyId, Track>> = { nightforest: "moonlight", wastelands: "rocky" };
-const TRACK_URLS = import.meta.glob<string>("./packs/sfx/{moonlight,rocky}.mp3", { eager: true, query: "?url", import: "default" });
-/** How loud each is at full music volume: about as loud as the other, and under the fight. */
-const TRACK_LOUD: Record<Track, number> = { moonlight: 0.5, rocky: 0.42 };
+const TRACK_URLS = import.meta.glob<string>("./packs/sfx/{moonlight,rocky,throne,credits,crown,crownB,ash,drowned,north,fungal,shrine,blackspire,boss,firstborn,final,duelA,duelB,duelC,waves,wavesLate}.mp3", { eager: true, query: "?url", import: "default" });
+/** How loud each is at full music volume: the soundtrack is levelled by the build to play as loud as the moonlit
+ *  forest's, and all of it about 6 dB under the fight's sounds (samples.ts, LOUD), so a swing is never lost in a song. */
+const trackLoud = (name: Track) => (name === "rocky" ? 0.3 : 0.35);
+const REGION_TRACK: Record<RegionId, Track> = { crownlands: "crown", ashenReach: "ash", drownedWilds: "drowned", paleNorth: "north", hollowBelow: "blackspire" };
+const DUELS: Track[] = ["duelA", "duelB", "duelC"];
+/** The Survival wave from which the later, more urgent music plays. */
+const LATE_WAVE = 10;
+
+/** What plays in a fight: a boss's own music while one is fought, then Versus's or Survival's, then in a campaign a
+ *  place's own (TRACKS), the Black Archive's, a fungal or shrine place's, or its region's. `pick` chooses among the
+ *  Versus songs and stays the same for a match; the Crownlands, with most of the levels, alternate two by chapter. */
+export function musicFor(at: { sky: SkyId | null; level: Pick<Level, "id" | "region" | "theme" | "chapter"> | null; versus: boolean; wave: number; boss: boolean; pick: number }): Track {
+  const { level } = at;
+  if (at.boss) return !level ? "boss" : level.chapter >= 4 ? "final" : level.chapter === 3 ? "firstborn" : "boss";
+  if (at.versus) return DUELS[at.pick % DUELS.length];
+  if (!level) return at.wave >= LATE_WAVE ? "wavesLate" : "waves";
+  const own = at.sky ? TRACKS[at.sky] : undefined;
+  if (own) return own;
+  if (level.id === "forbidden-4") return "blackspire";
+  if (level.theme === "fungal" || level.theme === "shrine") return level.theme;
+  return level.region === "crownlands" && level.chapter % 2 ? "crownB" : REGION_TRACK[level.region];
+}
 
 export function createAudio() {
   let actx: AudioContext | null = null;
@@ -30,11 +54,10 @@ export function createAudio() {
   const LOUD = 0.05, BEAT = 60 / 112 / 2;
   const BASS = [110, 110, 87.31, 98], ARP = [[220, 261.63, 329.63], [220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66]];
   let nextNote = 0, beat = 0;
-  // A place's own music: what is playing, what was last asked for (kept for when sound is first allowed), each
-  // recording once it has been read, and whether the fighter is down.
+  // A place's own music: what is playing, what was last asked for (kept for when sound is first allowed), and whether
+  // the fighter is down.
   // `waiting`: the main menu's own song (App.tsx) is playing, and the music comes in only once it has finished.
   let playing: { name: Track; gain: GainNode; source: AudioBufferSourceNode | null } | null = null, wanted: Track | null = null, ducked = false, waiting = false;
-  const recordings = new Map<Track, Promise<AudioBuffer>>();
   const ramp = (param: AudioParam, to: number, over: number) => {
     if (!actx) return;
     const t = actx.currentTime;
@@ -45,7 +68,7 @@ export function createAudio() {
     if (!music) return;
     const k = waiting ? 0 : musicVol * (ducked ? 0.35 : 1);
     ramp(music.gain.gain, playing ? 0 : LOUD * k, over);
-    if (playing) ramp(playing.gain.gain, TRACK_LOUD[playing.name] * k, over);
+    if (playing) ramp(playing.gain.gain, trackLoud(playing.name) * k, over);
   }
   /** Plays the music of a place that has its own, looped, in place of the synthesised music; or, given none, goes back to that. */
   function track(name: Track | null) {
@@ -56,9 +79,7 @@ export function createAudio() {
       const ctx = actx, gain = ctx.createGain();
       gain.gain.value = 0; gain.connect(bus!);
       const mine = (playing = { name, gain, source: null as AudioBufferSourceNode | null });
-      const read = recordings.get(name) ?? fetch(TRACK_URLS[`./packs/sfx/${name}.mp3`]).then((got) => got.arrayBuffer()).then((data) => ctx.decodeAudioData(data));
-      recordings.set(name, read);
-      read.then((recording) => {
+      read(TRACK_URLS[`./packs/sfx/${name}.mp3`]).then((recording) => {
         // Another place may have been come to while this one's music was being read.
         if (playing !== mine) return;
         const source = ctx.createBufferSource();
@@ -103,6 +124,31 @@ export function createAudio() {
     nextNote = actx.currentTime + 0.1;
     setInterval(schedule, 100);
     track(wanted);
+    // The short recorded sounds are read now, so the first sword swing is not late. They play here, beside the music,
+    // and not as media of the page: a phone (Safari above all) hands its sound to a page's media as it starts, and the
+    // music here then stops. Should a phone stop it anyway, the next key or touch brings it back.
+    for (const url of sampleUrls) read(url);
+    const wake = () => { if (actx && actx.state !== "running" && actx.state !== "closed" && !document.hidden) void actx.resume().catch(() => undefined); };
+    window.addEventListener("pointerdown", wake); window.addEventListener("keydown", wake);
+  }
+
+  /** Each recording once it has been read. */
+  const decoded = new Map<string, Promise<AudioBuffer>>();
+  function read(url: string) {
+    const ctx = actx!;
+    const got = decoded.get(url) ?? fetch(url).then((r) => r.arrayBuffer()).then((data) => ctx.decodeAudioData(data));
+    decoded.set(url, got);
+    return got;
+  }
+  /** Plays a short recorded sound (samples.ts) once, at `scale` of its own loudness. */
+  function sample(name: Sample, scale: number) {
+    if (!actx || !bus || scale === 0) return;
+    const { url, loud, rate } = soundingOf(name), ctx = actx, out = bus;
+    read(url).then((recording) => {
+      const source = ctx.createBufferSource(), g = ctx.createGain();
+      source.buffer = recording; source.playbackRate.value = rate; g.gain.value = Math.min(1, loud * scale);
+      source.connect(g); g.connect(out); source.start();
+    }, () => undefined);
   }
 
   /** Down: the music drops and dulls over a quarter of a second. Up: it swells back over 1.2 seconds. */
@@ -165,7 +211,7 @@ export function createAudio() {
   function sleep(away: boolean) { if (actx) void (away ? actx.suspend() : actx.resume()).catch(() => undefined); }
 
   return {
-    sfx, unlock, duck, track, sleep,
+    sfx, unlock, duck, track, sleep, sample,
     /** Holds the music silent while another song plays (`true`), then brings it in over a second and a half (`false`). */
     wait(on: boolean) { if (waiting === on) return; waiting = on; levels(on ? 0 : 1.5); },
     sfxVol: () => sfxVol,

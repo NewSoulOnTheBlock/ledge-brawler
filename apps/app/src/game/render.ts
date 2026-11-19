@@ -6,8 +6,9 @@ import { CHARS, ITEMS, type ItemId, type Skin, type Vec } from "./data.ts";
 import { RELICS, RELIC_ICONS } from "./relics.ts";
 import { SPRITES, type Sprite } from "./sprites.ts";
 import { FX_FRAMES } from "./fxsprites.ts";
+import { drawFoeShot, loadFoeFx } from "./foefx.ts";
 import { drawEffect, effectArea } from "./effects.ts";
-import { deathFrame, drawFigure, frameOf, loadFigures, showFrame, turnOf } from "./figure.ts";
+import { SCALE as FIGURE_SCALE, deathFrame, drawFigure, frameOf, loadFigures, showFrame, turnOf } from "./figure.ts";
 import type { Decor } from "./levels.ts";
 import type { Fx } from "./post/post.ts";
 import { SCENERY, THEMES, drawBackdrop, drawFrame, drawPiece, drawPlant, drawSlab, drawSpikes, drawTop, loadPlaces } from "./places.ts";
@@ -96,7 +97,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
   const ctx = canvas.getContext("2d")!;
   // Only the arena's own art at the start; a campaign level asks for its theme's when it begins (draw), and the
   // campaign's screen fetches the rest while the player reads it (kit.tsx, ArtLoading).
-  void loadFigures(); void loadCast(); void loadPlaces(["cove"]);
+  void loadFigures(); void loadCast(); void loadFoeFx(); void loadPlaces(["cove"]);
   const S = game.scene;
   const system = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarse = matchMedia("(pointer: coarse)").matches;
@@ -854,7 +855,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       drawCast(ctx, F.cast, castFrame(F, F.cast, time), F.body.position.x, F.body.bounds.max.y, F.facing, F.flash > 0 && F.flash % 4 < 2 ? 0.45 : 1, F.squash * 0.5, F.big);
       // A boss's health is across the foot of the screen (drawScreen), not over its head.
       if (F.hp < F.maxHp && !F.boss) {
-        const w = big ? 120 : 36, x = F.body.position.x - w / 2, y = F.skel.head.y - (big ? 110 : 26);
+        const w = big ? 120 : 36, x = F.body.position.x - w / 2, y = F.body.bounds.min.y - (big ? 24 : 12);
         ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(x - 1, y - 1, w + 2, big ? 8 : 6);
         ctx.fillStyle = RED; ctx.fillRect(x, y, w * Math.max(0, F.hp / F.maxHp), big ? 6 : 4);
       }
@@ -867,7 +868,8 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
     // Afterimages, from where the hips were: the body is 84 tall and the hips sit at its middle.
     F.trail.forEach((sk, i) => drawFigure(ctx, look, at, sk.hip.x, sk.hip.y + 40, turn, 0.1 + 0.07 * i));
     if (sp) drawSpecial(F, sp);
-    drawFigure(ctx, look, at, x, feet, turn, F.flash > 0 && F.flash % 4 < 2 ? 0.45 : 1, undefined, F.squash);
+    // An enemy drawn as a Seeker stands as big as its body (sim.ts, `enemyAt`).
+    drawFigure(ctx, look, at, x, feet, turn, F.flash > 0 && F.flash % 4 < 2 ? 0.45 : 1, F.isPlayer ? undefined : FIGURE_SCALE * F.big, F.squash);
     if (F.burn > 0) { ctx.fillStyle = "rgba(255,122,26,0.5)"; ctx.beginPath(); ctx.arc(F.skel.head.x, F.skel.head.y - 4, 13 + Math.sin(time * 30) * 2, Math.PI, 0); ctx.fill(); }
     // A guard: the bubble a blow breaks on.
     if (F.isPlayer ? S.guard > 0 : F.peer?.guard) {
@@ -914,7 +916,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
     for (const r of S.ragdolls) {
       const torso = r.parts[0];
       // A character of the cast falls where it stood: its own death, not the ragdoll's tumble.
-      if (r.cast) { drawCast(ctx, r.cast, castDeath(r.cast, (540 - r.life) * (1000 / 60)), torso.position.x, torso.position.y + 34, torso.velocity.x < 0 ? 1 : -1, Math.min(1, r.life / 60)); continue; }
+      if (r.cast) { drawCast(ctx, r.cast, castDeath(r.cast, (540 - r.life) * (1000 / 60)), torso.position.x, torso.position.y + 34 * (r.big ?? 1), torso.velocity.x < 0 ? 1 : -1, Math.min(1, r.life / 60), 0, r.big ?? 1); continue; }
       drawFigure(ctx, { skin: r.skin }, deathFrame((540 - r.life) * (1000 / 60)), torso.position.x, torso.position.y + 34, torso.velocity.x < 0 ? 1 : -1, Math.min(1, r.life / 60));
     }
   }
@@ -926,6 +928,8 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
         ctx.fillStyle = o.color; ctx.beginPath(); ctx.arc(p.x, p.y, o.r * (0.5 + i / 12), 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
+      // An enemy's shot is its own drawn strip (foefx.ts), pointing the way it flies.
+      if (o.look) { drawFoeShot(ctx, o.look, o.x, o.y, o.vx, o.vy, S.time); continue; }
       if (o.disc) {
         ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.spin);
         ctx.beginPath(); ctx.ellipse(0, 0, o.r * 1.5, o.r * 0.6, 0, 0, Math.PI * 2);
@@ -1218,8 +1222,9 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
     return {
       glitch: (system || calm) || !on ? 0 : Math.min(1, S.deathMs / 500), split: (system || calm) ? 0 : Math.min(1.4, low * (0.75 + 0.25 * Math.sin(S.time * 7)) + S.punch * 5),
       grey: on ? Math.min(0.85, Math.max(S.slowMs, S.deathMs) / 300) : 0, blur: m.screen === "Play" && m.paused ? 1 : 0, ripples, time: S.time,
-      // The lit circle round the fighter and the guide while he talks.
-      spot: on && S.guide && guideShown > 0.02 ? [((H!.body.position.x + S.guide.x) / 2 - camX) * scale / cssW, (S.guide.y - 60 - camY) * scale / cssH, 250 * scale / cssH, guideShown] : null,
+      // The lit circle round the fighter as a greater art lands (sim.ts, `finisher`), or round it and the guide while he talks.
+      spot: on && S.finisher > 0 ? [(H!.body.position.x - camX) * scale / cssW, (H!.body.position.y - 30 - camY) * scale / cssH, 190 * scale / cssH, Math.min(1, S.finisher / 15)]
+        : on && S.guide && guideShown > 0.02 ?[((H!.body.position.x + S.guide.x) / 2 - camX) * scale / cssW, (S.guide.y - 60 - camY) * scale / cssH, 250 * scale / cssH, guideShown] : null,
     };
   }
 
@@ -1230,7 +1235,7 @@ export function createView(canvas: HTMLCanvasElement, game: Game) {
       updateCamera(realDt);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawBackground();
-      if (S.level !== levelLoaded) { levelLoaded = S.level; const T = theme(); if (T) void loadPlaces([T.set, "scenery", "gate", "plants", "fields"]); }
+      if (S.level !== levelLoaded) { levelLoaded = S.level; const T = theme(); if (T) void loadPlaces([T.set, "scenery", "locale", "gate", "plants", "fields"]); }
       sceneDt = realDt / 1000; sv = sceneView(); scenery.enter(S.level); scenery.backdrop(ctx, sv);
       worldTransform();
       drawRooms(true); drawDecor(false); drawStatics(); drawDecor(false, true); drawRooms(false);

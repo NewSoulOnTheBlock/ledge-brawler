@@ -284,7 +284,9 @@ it("Play a level of a campaign: its rooms can be crossed, ambushes spring as the
   // the power never runs out, and using it is told.
   rules.send({ type: "openMoves" }); rules.send({ type: "change" }); rules.send({ type: "train", vigor: 0, learned: 1 }); rules.send({ type: "embark" });
   game.begin(within(wild.hero)); game.trial(0); steps(30);
-  game.press("s1"); steps(2); game.release("s1"); steps(300);
+  // Called as every special is, by its motion and the blast (data.ts, SPECIAL_MOTIONS): down, forward, blast.
+  for (const k of ["down", "right", "blast"] as const) { game.press(k); steps(2); game.release(k); steps(2); }
+  steps(300);
   expect([game.scene.dark, game.scene.enemies.length, game.scene.enemies.every((E) => E.alive && E.hp >= 1), rules.get().aura >= 100000, rules.get().hp === game.scene.hero!.maxHp, said.includes("used")]).toEqual([true, 3, true, true, true, true]);
 });
 

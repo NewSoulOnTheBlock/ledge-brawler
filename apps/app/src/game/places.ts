@@ -11,9 +11,10 @@ const PLACES = Object.values(import.meta.glob<Record<string, Record<string, Piec
 const PLANTS = Object.values(import.meta.glob<Record<string, Plant>>("./packs/plants.json", { eager: true, import: "default" }))[0];
 /** The scenery of the campaign themes, drawn in code for this game (art/scenery/make.cjs): each piece with how it is drawn and lit. */
 export interface SceneryMeta extends Piece { k: number; light?: [dx: number, dy: number, r: number, rgb: string]; flicker?: boolean; sway?: boolean; under?: boolean; wall?: boolean; fg?: boolean; far?: number; alpha?: number; frames?: number; tile?: boolean; shaft?: string; smoke?: boolean; drip?: boolean }
-export const SCENERY = Object.values(import.meta.glob<Record<string, SceneryMeta>>("./packs/scenery/scenery.json", { eager: true, import: "default" }))[0];
+// With them, each level's own props, drawn in Aseprite (art/locale, packs/locale; placed by locale.ts).
+export const SCENERY: Record<string, SceneryMeta> = Object.assign({}, ...Object.values(import.meta.glob<Record<string, SceneryMeta>>(["./packs/scenery/scenery.json", "./packs/locale/locale.json"], { eager: true, import: "default" })));
 PLACES.scenery = SCENERY;
-const urls = import.meta.glob<string>("./packs/{mossy,shadow,fields,gate,plants,cove,village,cavern,frost,shrine,ruin,fungal,ember,scenery}/*.{png,webp}", { eager: true, query: "?url", import: "default" });
+const urls = import.meta.glob<string>("./packs/{mossy,shadow,fields,gate,plants,cove,village,cavern,frost,shrine,ruin,fungal,ember,scenery,locale}/*.{png,webp}", { eager: true, query: "?url", import: "default" });
 const images = new Map<string, HTMLImageElement>();
 
 export function image(path: string) {

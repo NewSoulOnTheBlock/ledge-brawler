@@ -9,10 +9,8 @@ import { type RefObject, useEffect } from "react";
 export type PadMode = "fight" | "select" | "menu";
 
 // The standard layout: 0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 8 Back, 9 Start, 10 and 11 the sticks pressed, 12-15 the D-pad up, down, left, right.
-/** In a fight: jump, blast, punch, kick; guard and dash on the bumpers; charge and hold a wall on the triggers; the move list on Start; the bag's next item and using it on the left and right sticks pressed; the three specials on the D-pad's left, up and right, and flight on its down. With Back held, the D-pad's left, up and right are the three greater arts instead. */
-const FIGHT: Record<number, string> = { 0: "Space", 1: "KeyL", 2: "KeyJ", 3: "KeyK", 4: "KeyG", 5: "KeyI", 6: "KeyU", 7: "KeyO", 9: "KeyH", 10: "KeyR", 11: "KeyT", 14: "Digit1", 12: "Digit2", 15: "Digit3", 13: "KeyF" };
-/** The greater arts, with Back held: the D-pad's left, up and right. */
-const ARTS: Record<number, string> = { 14: "Digit4", 12: "Digit5", 15: "Digit6" };
+/** In a fight: jump, blast, punch, kick; guard and dash on the bumpers; charge and hold a wall on the triggers; the move list on Start; the bag's next item and using it on the left and right sticks pressed; the D-pad moves as the stick does, for the motions that call the specials and finishers (data.ts, SPECIAL_MOTIONS); flight on Back. */
+const FIGHT: Record<number, string> = { 0: "Space", 1: "KeyL", 2: "KeyJ", 3: "KeyK", 4: "KeyG", 5: "KeyI", 6: "KeyU", 7: "KeyO", 9: "KeyH", 10: "KeyR", 11: "KeyT", 8: "KeyF", 12: "ArrowUp", 13: "ArrowDown", 14: "ArrowLeft", 15: "ArrowRight" };
 /** How far the stick is pushed before it counts, and how far before the fighter runs. */
 const PUSHED = 0.4, HARD = 0.9;
 
@@ -43,7 +41,7 @@ export function useGamepad(mode: RefObject<PadMode>) {
       const pressed = (n: number) => down[n] && !was[n];
       if (mode.current === "fight") {
         const want = new Set<string>();
-        for (const [n, code] of Object.entries(FIGHT)) if (down[Number(n)]) want.add(down[8] ? ARTS[Number(n)] ?? code : code);
+        for (const [n, code] of Object.entries(FIGHT)) if (down[Number(n)]) want.add(code);
         if (x < -PUSHED) want.add("ArrowLeft"); else if (x > PUSHED) want.add("ArrowRight");
         if (y < -PUSHED) want.add("ArrowUp"); else if (y > PUSHED) want.add("ArrowDown");
         if (Math.abs(x) > HARD) want.add("ShiftLeft");

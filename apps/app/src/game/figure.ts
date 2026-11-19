@@ -46,7 +46,7 @@ export type Frame = { anim: AnimName; frame: number } | { move: string; frame: n
 export interface Look { skin: Skin; spent?: boolean }
 
 /** World pixels to a sprite pixel: the Seeker stands 24 tall, a fighter's body 84. */
-const SCALE = 3.5;
+export const SCALE = 3.5;
 const DEATH_MS = [100, 80, 80, 80, 100, 80, 70, 70, 70, 70, 70, 80, 80, 80, 80, 80, 80, 80, 80, 900];
 
 const urls = import.meta.glob<string>("./seeker/**/*.png", { eager: true, query: "?url", import: "default" });

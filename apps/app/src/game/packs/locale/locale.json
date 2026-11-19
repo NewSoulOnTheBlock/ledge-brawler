@@ -1,0 +1,3139 @@
+{
+"f5-fgTrunk": {
+"file": "locale/atlas.png",
+"x": 0,
+"y": 0,
+"w": 26,
+"h": 90,
+"fg": true,
+"k": 4
+},
+"h4-fgKelp": {
+"file": "locale/atlas.png",
+"x": 27,
+"y": 0,
+"w": 34,
+"h": 90,
+"fg": true,
+"k": 4
+},
+"x3-fgBirches": {
+"file": "locale/atlas.png",
+"x": 62,
+"y": 0,
+"w": 30,
+"h": 90,
+"fg": true,
+"k": 4
+},
+"e5-fgSpears": {
+"file": "locale/atlas.png",
+"x": 93,
+"y": 0,
+"w": 40,
+"h": 80,
+"fg": true,
+"k": 4
+},
+"h2-farWitness": {
+"file": "locale/atlas.png",
+"x": 134,
+"y": 0,
+"w": 100,
+"h": 80,
+"alpha": 0.8,
+"far": 0.18,
+"k": 5
+},
+"x2-fgPine": {
+"file": "locale/atlas.png",
+"x": 235,
+"y": 0,
+"w": 30,
+"h": 80,
+"fg": true,
+"k": 4
+},
+"a4-fgRuin": {
+"file": "locale/atlas.png",
+"x": 266,
+"y": 0,
+"w": 44,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"e1-fgPosts": {
+"file": "locale/atlas.png",
+"x": 311,
+"y": 0,
+"w": 30,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"e4-fgStatue": {
+"file": "locale/atlas.png",
+"x": 342,
+"y": 0,
+"w": 26,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"f1-fgPillar": {
+"file": "locale/atlas.png",
+"x": 369,
+"y": 0,
+"w": 22,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"f4-farStacks": {
+"file": "locale/atlas.png",
+"x": 392,
+"y": 0,
+"w": 100,
+"h": 70,
+"alpha": 0.9,
+"far": 0.28,
+"k": 5
+},
+"h1-farDrowned": {
+"file": "locale/atlas.png",
+"x": 493,
+"y": 0,
+"w": 120,
+"h": 70,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"h3-fgSteles": {
+"file": "locale/atlas.png",
+"x": 614,
+"y": 0,
+"w": 36,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"x1-fgPagoda": {
+"file": "locale/atlas.png",
+"x": 651,
+"y": 0,
+"w": 40,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"x5-fgPillars": {
+"file": "locale/atlas.png",
+"x": 692,
+"y": 0,
+"w": 40,
+"h": 70,
+"fg": true,
+"k": 4
+},
+"a1-farPalace": {
+"file": "locale/atlas.png",
+"x": 733,
+"y": 0,
+"w": 120,
+"h": 64,
+"alpha": 0.9,
+"far": 0.25,
+"k": 5
+},
+"a2-farDome": {
+"file": "locale/atlas.png",
+"x": 854,
+"y": 0,
+"w": 120,
+"h": 64,
+"alpha": 0.9,
+"far": 0.25,
+"k": 5
+},
+"e4-farDomes": {
+"file": "locale/atlas.png",
+"x": 975,
+"y": 0,
+"w": 120,
+"h": 64,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"f2-fgSpire": {
+"file": "locale/atlas.png",
+"x": 1096,
+"y": 0,
+"w": 18,
+"h": 64,
+"fg": true,
+"k": 4
+},
+"e1-farTown": {
+"file": "locale/atlas.png",
+"x": 1115,
+"y": 0,
+"w": 110,
+"h": 60,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"e3-farFort": {
+"file": "locale/atlas.png",
+"x": 1226,
+"y": 0,
+"w": 120,
+"h": 60,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"e3-fgPalisade": {
+"file": "locale/atlas.png",
+"x": 1347,
+"y": 0,
+"w": 36,
+"h": 60,
+"fg": true,
+"k": 4
+},
+"f3-farCrypt": {
+"file": "locale/atlas.png",
+"x": 1384,
+"y": 0,
+"w": 120,
+"h": 60,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"f3-fgArch": {
+"file": "locale/atlas.png",
+"x": 1505,
+"y": 0,
+"w": 44,
+"h": 60,
+"fg": true,
+"k": 4
+},
+"h1-fgReeds": {
+"file": "locale/atlas.png",
+"x": 1550,
+"y": 0,
+"w": 36,
+"h": 60,
+"fg": true,
+"k": 4
+},
+"h5-willow": {
+"file": "locale/atlas.png",
+"x": 1587,
+"y": 0,
+"w": 40,
+"h": 60,
+"k": 3.4,
+"sway": true
+},
+"x2-farRidge": {
+"file": "locale/atlas.png",
+"x": 1628,
+"y": 0,
+"w": 120,
+"h": 60,
+"alpha": 0.9,
+"far": 0.25,
+"k": 5
+},
+"h3-farHill": {
+"file": "locale/atlas.png",
+"x": 1749,
+"y": 0,
+"w": 120,
+"h": 56,
+"alpha": 0.9,
+"far": 0.28,
+"k": 5
+},
+"x1-farRoofs": {
+"file": "locale/atlas.png",
+"x": 1870,
+"y": 0,
+"w": 120,
+"h": 56,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"x4-fgShards": {
+"file": "locale/atlas.png",
+"x": 1991,
+"y": 0,
+"w": 44,
+"h": 56,
+"fg": true,
+"k": 4
+},
+"x3-birch": {
+"file": "locale/atlas.png",
+"x": 0,
+"y": 91,
+"w": 22,
+"h": 54,
+"k": 3.4
+},
+"f1-chain": {
+"file": "locale/atlas.png",
+"x": 23,
+"y": 91,
+"w": 7,
+"h": 52,
+"k": 3,
+"sway": true,
+"under": true
+},
+"a3-farStockade": {
+"file": "locale/atlas.png",
+"x": 31,
+"y": 91,
+"w": 120,
+"h": 50,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"a5-farRim": {
+"file": "locale/atlas.png",
+"x": 152,
+"y": 91,
+"w": 120,
+"h": 50,
+"alpha": 0.9,
+"far": 0.25,
+"k": 5
+},
+"e5-farVillages": {
+"file": "locale/atlas.png",
+"x": 273,
+"y": 91,
+"w": 120,
+"h": 50,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"e5-standard": {
+"file": "locale/atlas.png",
+"x": 394,
+"y": 91,
+"w": 16,
+"h": 50,
+"k": 3.4,
+"sway": true
+},
+"f5-deadTree": {
+"file": "locale/atlas.png",
+"x": 411,
+"y": 91,
+"w": 30,
+"h": 50,
+"k": 3.4
+},
+"h2-eyeTree": {
+"file": "locale/atlas.png",
+"x": 442,
+"y": 91,
+"w": 30,
+"h": 50,
+"k": 3.4
+},
+"h2-fgRoots": {
+"file": "locale/atlas.png",
+"x": 473,
+"y": 91,
+"w": 50,
+"h": 50,
+"fg": true,
+"k": 4
+},
+"h4-bubbles": {
+"file": "locale/atlas.png",
+"x": 524,
+"y": 91,
+"w": 10,
+"h": 50,
+"k": 3,
+"sway": true
+},
+"h5-farWillows": {
+"file": "locale/atlas.png",
+"x": 535,
+"y": 91,
+"w": 120,
+"h": 50,
+"alpha": 0.9,
+"far": 0.3,
+"k": 5
+},
+"f4-case": {
+"file": "locale/atlas.png",
+"x": 656,
+"y": 91,
+"w": 30,
+"h": 48,
+"k": 3.6
+},
+"a4-house": {
+"file": "locale/atlas.png",
+"x": 687,
+"y": 91,
+"w": 36,
+"h": 46,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-70,
+160,
+"100,240,140"
+],
+"smoke": true
+},
+"e1-house": {
+"file": "locale/atlas.png",
+"x": 724,
+"y": 91,
+"w": 36,
+"h": 46,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-70,
+150,
+"255,130,50"
+],
+"smoke": true
+},
+"e2-fgSpikes": {
+"file": "locale/atlas.png",
+"x": 761,
+"y": 91,
+"w": 40,
+"h": 46,
+"fg": true,
+"k": 4
+},
+"e3-ladder": {
+"file": "locale/atlas.png",
+"x": 802,
+"y": 91,
+"w": 12,
+"h": 46,
+"k": 3.2
+},
+"e4-saint": {
+"file": "locale/atlas.png",
+"x": 815,
+"y": 91,
+"w": 20,
+"h": 46,
+"k": 3.4,
+"light": [
+0,
+-130,
+110,
+"255,220,140"
+]
+},
+"x3-farVillage": {
+"file": "locale/atlas.png",
+"x": 836,
+"y": 91,
+"w": 120,
+"h": 46,
+"alpha": 0.9,
+"far": 0.32,
+"k": 5
+},
+"f1-gibbet": {
+"file": "locale/atlas.png",
+"x": 957,
+"y": 91,
+"w": 26,
+"h": 44,
+"k": 3.2
+},
+"f2-fgChimneys": {
+"file": "locale/atlas.png",
+"x": 984,
+"y": 91,
+"w": 40,
+"h": 44,
+"fg": true,
+"k": 4
+},
+"h4-anchor": {
+"file": "locale/atlas.png",
+"x": 1025,
+"y": 91,
+"w": 18,
+"h": 44,
+"k": 3,
+"sway": true,
+"under": true
+},
+"x4-banner": {
+"file": "locale/atlas.png",
+"x": 1044,
+"y": 91,
+"w": 16,
+"h": 44,
+"k": 3.4
+},
+"a3-flags": {
+"file": "locale/atlas.png",
+"x": 1061,
+"y": 91,
+"w": 30,
+"h": 40,
+"k": 3.4,
+"sway": true
+},
+"a4-scaffold": {
+"file": "locale/atlas.png",
+"x": 1092,
+"y": 91,
+"w": 40,
+"h": 40,
+"k": 3.4
+},
+"a5-floating": {
+"file": "locale/atlas.png",
+"x": 1133,
+"y": 91,
+"w": 30,
+"h": 40,
+"k": 3.4,
+"light": [
+0,
+-60,
+50,
+"150,240,255"
+]
+},
+"a5-motes": {
+"file": "locale/atlas.png",
+"x": 1164,
+"y": 91,
+"w": 34,
+"h": 40,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+-60,
+90,
+"150,240,255"
+]
+},
+"e3-gate": {
+"file": "locale/atlas.png",
+"x": 1199,
+"y": 91,
+"w": 30,
+"h": 40,
+"k": 3.4
+},
+"e4-arch": {
+"file": "locale/atlas.png",
+"x": 1230,
+"y": 91,
+"w": 30,
+"h": 40,
+"k": 3.4
+},
+"f2-grapnel": {
+"file": "locale/atlas.png",
+"x": 1261,
+"y": 91,
+"w": 9,
+"h": 40,
+"k": 3,
+"sway": true,
+"under": true
+},
+"f4-fgStacks": {
+"file": "locale/atlas.png",
+"x": 1271,
+"y": 91,
+"w": 40,
+"h": 40,
+"fg": true,
+"k": 4
+},
+"f4-ladder": {
+"file": "locale/atlas.png",
+"x": 1312,
+"y": 91,
+"w": 10,
+"h": 40,
+"k": 3.2,
+"wall": true
+},
+"f5-farProcession": {
+"file": "locale/atlas.png",
+"x": 1323,
+"y": 91,
+"w": 120,
+"h": 40,
+"alpha": 0.9,
+"far": 0.35,
+"k": 5
+},
+"f5-post": {
+"file": "locale/atlas.png",
+"x": 1444,
+"y": 91,
+"w": 14,
+"h": 40,
+"flicker": true,
+"k": 3.2,
+"light": [
+4,
+-100,
+120,
+"255,180,90"
+]
+},
+"h1-lantern": {
+"file": "locale/atlas.png",
+"x": 1459,
+"y": 91,
+"w": 10,
+"h": 40,
+"flicker": true,
+"k": 3.2,
+"light": [
+2,
+-110,
+110,
+"255,190,110"
+]
+},
+"h4-kelp": {
+"file": "locale/atlas.png",
+"x": 1470,
+"y": 91,
+"w": 14,
+"h": 40,
+"k": 3.4,
+"sway": true
+},
+"x2-gate": {
+"file": "locale/atlas.png",
+"x": 1485,
+"y": 91,
+"w": 34,
+"h": 40,
+"k": 3.4
+},
+"x3-post": {
+"file": "locale/atlas.png",
+"x": 1520,
+"y": 91,
+"w": 12,
+"h": 40,
+"flicker": true,
+"k": 3.2,
+"light": [
+2,
+-110,
+100,
+"255,200,120"
+]
+},
+"h3-lantern": {
+"file": "locale/atlas.png",
+"x": 1533,
+"y": 91,
+"w": 12,
+"h": 38,
+"flicker": true,
+"k": 3.2,
+"light": [
+2,
+-110,
+110,
+"255,210,140"
+]
+},
+"h5-fronds": {
+"file": "locale/atlas.png",
+"x": 1546,
+"y": 91,
+"w": 12,
+"h": 37,
+"k": 3,
+"sway": true,
+"under": true
+},
+"f4-chained": {
+"file": "locale/atlas.png",
+"x": 1559,
+"y": 91,
+"w": 12,
+"h": 36,
+"k": 3,
+"sway": true,
+"under": true
+},
+"h4-weeping": {
+"file": "locale/atlas.png",
+"x": 1572,
+"y": 91,
+"w": 18,
+"h": 36,
+"k": 3.4
+},
+"a1-orrery": {
+"file": "locale/atlas.png",
+"x": 1591,
+"y": 91,
+"w": 30,
+"h": 34,
+"k": 3.4,
+"light": [
+0,
+-60,
+80,
+"255,220,150"
+]
+},
+"a2-mobile": {
+"file": "locale/atlas.png",
+"x": 1622,
+"y": 91,
+"w": 30,
+"h": 34,
+"k": 3,
+"sway": true,
+"under": true
+},
+"e5-spears": {
+"file": "locale/atlas.png",
+"x": 1653,
+"y": 91,
+"w": 20,
+"h": 34,
+"k": 3.4
+},
+"f1-cage": {
+"file": "locale/atlas.png",
+"x": 1674,
+"y": 91,
+"w": 16,
+"h": 34,
+"k": 3,
+"sway": true,
+"under": true
+},
+"f2-vane": {
+"file": "locale/atlas.png",
+"x": 1691,
+"y": 91,
+"w": 16,
+"h": 34,
+"k": 3
+},
+"f3-shelf": {
+"file": "locale/atlas.png",
+"x": 1708,
+"y": 91,
+"w": 22,
+"h": 34,
+"k": 3.2
+},
+"h2-effigy": {
+"file": "locale/atlas.png",
+"x": 1731,
+"y": 91,
+"w": 18,
+"h": 34,
+"k": 3.4
+},
+"x3-signpost": {
+"file": "locale/atlas.png",
+"x": 1750,
+"y": 91,
+"w": 22,
+"h": 34,
+"k": 3.4
+},
+"h4-kelpHang": {
+"file": "locale/atlas.png",
+"x": 1773,
+"y": 91,
+"w": 12,
+"h": 33,
+"k": 3,
+"sway": true,
+"under": true
+},
+"x5-ropes": {
+"file": "locale/atlas.png",
+"x": 1786,
+"y": 91,
+"w": 12,
+"h": 33,
+"k": 3,
+"sway": true,
+"under": true
+},
+"a1-tapestry": {
+"file": "locale/atlas.png",
+"x": 1799,
+"y": 91,
+"w": 20,
+"h": 32,
+"k": 3.2,
+"sway": true,
+"wall": true
+},
+"a2-armillary": {
+"file": "locale/atlas.png",
+"x": 1820,
+"y": 91,
+"w": 24,
+"h": 32,
+"k": 3.4,
+"light": [
+0,
+-60,
+60,
+"255,220,150"
+]
+},
+"x2-crossed": {
+"file": "locale/atlas.png",
+"x": 1845,
+"y": 91,
+"w": 24,
+"h": 32,
+"k": 3.4
+},
+"x2-graveSwords": {
+"file": "locale/atlas.png",
+"x": 1870,
+"y": 91,
+"w": 24,
+"h": 32,
+"k": 3.4
+},
+"x4-spearman": {
+"file": "locale/atlas.png",
+"x": 1895,
+"y": 91,
+"w": 26,
+"h": 32,
+"k": 3.4,
+"light": [
+0,
+-50,
+60,
+"120,200,255"
+],
+"wall": true
+},
+"a1-clock": {
+"file": "locale/atlas.png",
+"x": 1922,
+"y": 91,
+"w": 30,
+"h": 30,
+"k": 3.6,
+"light": [
+0,
+-54,
+70,
+"255,230,170"
+],
+"wall": true
+},
+"a1-telescope": {
+"file": "locale/atlas.png",
+"x": 1953,
+"y": 91,
+"w": 28,
+"h": 30,
+"k": 3.4
+},
+"e2-skull": {
+"file": "locale/atlas.png",
+"x": 1982,
+"y": 91,
+"w": 40,
+"h": 30,
+"k": 4.2,
+"light": [
+4,
+-60,
+60,
+"255,120,40"
+],
+"wall": true
+},
+"e3-rack": {
+"file": "locale/atlas.png",
+"x": 2023,
+"y": 91,
+"w": 24,
+"h": 30,
+"k": 3.4
+},
+"e5-catapult": {
+"file": "locale/atlas.png",
+"x": 0,
+"y": 146,
+"w": 40,
+"h": 30,
+"k": 3.4
+},
+"f1-banner": {
+"file": "locale/atlas.png",
+"x": 41,
+"y": 146,
+"w": 14,
+"h": 30,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"f3-censer": {
+"file": "locale/atlas.png",
+"x": 56,
+"y": 146,
+"w": 10,
+"h": 30,
+"k": 3,
+"smoke": true,
+"sway": true,
+"under": true
+},
+"f4-lamp": {
+"file": "locale/atlas.png",
+"x": 67,
+"y": 146,
+"w": 12,
+"h": 30,
+"k": 3,
+"light": [
+0,
+70,
+140,
+"190,140,255"
+],
+"sway": true,
+"under": true
+},
+"h1-hut": {
+"file": "locale/atlas.png",
+"x": 80,
+"y": 146,
+"w": 36,
+"h": 30,
+"flicker": true,
+"k": 3.4,
+"light": [
+-10,
+-40,
+110,
+"255,190,110"
+]
+},
+"h3-chimes": {
+"file": "locale/atlas.png",
+"x": 117,
+"y": 146,
+"w": 14,
+"h": 30,
+"k": 3,
+"sway": true,
+"under": true
+},
+"h3-coffin": {
+"file": "locale/atlas.png",
+"x": 132,
+"y": 146,
+"w": 14,
+"h": 30,
+"k": 3.4
+},
+"h4-lamp": {
+"file": "locale/atlas.png",
+"x": 147,
+"y": 146,
+"w": 12,
+"h": 30,
+"k": 3.2,
+"light": [
+0,
+-80,
+120,
+"140,230,255"
+]
+},
+"x1-banner": {
+"file": "locale/atlas.png",
+"x": 160,
+"y": 146,
+"w": 10,
+"h": 30,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"x1-bell": {
+"file": "locale/atlas.png",
+"x": 171,
+"y": 146,
+"w": 16,
+"h": 30,
+"k": 3,
+"sway": true,
+"under": true
+},
+"x1-monk": {
+"file": "locale/atlas.png",
+"x": 188,
+"y": 146,
+"w": 14,
+"h": 30,
+"k": 3.4
+},
+"x4-entombed": {
+"file": "locale/atlas.png",
+"x": 203,
+"y": 146,
+"w": 22,
+"h": 30,
+"k": 3.4,
+"light": [
+0,
+-50,
+60,
+"120,200,255"
+],
+"wall": true
+},
+"x5-sheeted": {
+"file": "locale/atlas.png",
+"x": 226,
+"y": 146,
+"w": 22,
+"h": 30,
+"k": 3.4
+},
+"f3-roots": {
+"file": "locale/atlas.png",
+"x": 249,
+"y": 146,
+"w": 12,
+"h": 29,
+"k": 3,
+"sway": true,
+"under": true
+},
+"f5-shrine": {
+"file": "locale/atlas.png",
+"x": 262,
+"y": 146,
+"w": 16,
+"h": 28,
+"k": 3.2,
+"light": [
+0,
+-40,
+80,
+"255,190,110"
+]
+},
+"h2-charms": {
+"file": "locale/atlas.png",
+"x": 279,
+"y": 146,
+"w": 18,
+"h": 28,
+"k": 3,
+"sway": true,
+"under": true
+},
+"h5-well": {
+"file": "locale/atlas.png",
+"x": 298,
+"y": 146,
+"w": 22,
+"h": 28,
+"k": 3.4
+},
+"h1-roots": {
+"file": "locale/atlas.png",
+"x": 321,
+"y": 146,
+"w": 12,
+"h": 27,
+"k": 3,
+"sway": true,
+"under": true
+},
+"a1-chandelier": {
+"file": "locale/atlas.png",
+"x": 334,
+"y": 146,
+"w": 24,
+"h": 26,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+50,
+140,
+"255,200,120"
+],
+"sway": true,
+"under": true
+},
+"a3-lootWagon": {
+"file": "locale/atlas.png",
+"x": 359,
+"y": 146,
+"w": 40,
+"h": 26,
+"k": 3.4
+},
+"e4-window": {
+"file": "locale/atlas.png",
+"x": 400,
+"y": 146,
+"w": 16,
+"h": 26,
+"k": 3.2,
+"light": [
+0,
+-40,
+110,
+"240,180,120"
+],
+"wall": true
+},
+"e5-tent": {
+"file": "locale/atlas.png",
+"x": 417,
+"y": 146,
+"w": 34,
+"h": 26,
+"k": 3.4
+},
+"f2-chimney": {
+"file": "locale/atlas.png",
+"x": 452,
+"y": 146,
+"w": 14,
+"h": 26,
+"k": 3.2,
+"smoke": true
+},
+"f4-lectern": {
+"file": "locale/atlas.png",
+"x": 467,
+"y": 146,
+"w": 16,
+"h": 26,
+"flicker": true,
+"k": 3.2,
+"light": [
+2,
+-40,
+110,
+"255,180,90"
+]
+},
+"h4-jelly": {
+"file": "locale/atlas.png",
+"x": 484,
+"y": 146,
+"w": 14,
+"h": 26,
+"k": 3,
+"light": [
+0,
+30,
+80,
+"220,140,255"
+],
+"sway": true,
+"under": true
+},
+"x5-robe": {
+"file": "locale/atlas.png",
+"x": 499,
+"y": 146,
+"w": 14,
+"h": 26,
+"k": 3.2,
+"wall": true
+},
+"f5-ivy": {
+"file": "locale/atlas.png",
+"x": 514,
+"y": 146,
+"w": 12,
+"h": 25,
+"k": 3,
+"sway": true,
+"under": true
+},
+"a3-cage": {
+"file": "locale/atlas.png",
+"x": 527,
+"y": 146,
+"w": 22,
+"h": 24,
+"k": 3.4
+},
+"a3-tent": {
+"file": "locale/atlas.png",
+"x": 550,
+"y": 146,
+"w": 34,
+"h": 24,
+"k": 3.4
+},
+"e2-altar": {
+"file": "locale/atlas.png",
+"x": 585,
+"y": 146,
+"w": 30,
+"h": 24,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-40,
+130,
+"255,120,40"
+]
+},
+"f2-timber": {
+"file": "locale/atlas.png",
+"x": 616,
+"y": 146,
+"w": 30,
+"h": 24,
+"k": 3.2,
+"wall": true
+},
+"h5-fireflies": {
+"file": "locale/atlas.png",
+"x": 647,
+"y": 146,
+"w": 30,
+"h": 24,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+-40,
+70,
+"220,255,140"
+]
+},
+"x1-lantern": {
+"file": "locale/atlas.png",
+"x": 678,
+"y": 146,
+"w": 14,
+"h": 24,
+"flicker": true,
+"k": 3.2,
+"light": [
+0,
+-40,
+90,
+"255,200,120"
+]
+},
+"x4-jutting": {
+"file": "locale/atlas.png",
+"x": 693,
+"y": 146,
+"w": 26,
+"h": 24,
+"k": 3.4
+},
+"x4-spikes": {
+"file": "locale/atlas.png",
+"x": 720,
+"y": 146,
+"w": 12,
+"h": 23,
+"k": 3,
+"sway": false,
+"under": true
+},
+"a1-gears": {
+"file": "locale/atlas.png",
+"x": 733,
+"y": 146,
+"w": 30,
+"h": 22,
+"k": 3.4,
+"wall": true
+},
+"a2-constellation": {
+"file": "locale/atlas.png",
+"x": 764,
+"y": 146,
+"w": 30,
+"h": 22,
+"k": 3.4,
+"light": [
+0,
+-36,
+70,
+"160,200,255"
+],
+"wall": true
+},
+"a3-board": {
+"file": "locale/atlas.png",
+"x": 795,
+"y": 146,
+"w": 24,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"a3-stew": {
+"file": "locale/atlas.png",
+"x": 820,
+"y": 146,
+"w": 18,
+"h": 22,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-20,
+120,
+"255,140,50"
+],
+"smoke": true
+},
+"a4-crack": {
+"file": "locale/atlas.png",
+"x": 839,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"a5-crack": {
+"file": "locale/atlas.png",
+"x": 860,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"a5-shard": {
+"file": "locale/atlas.png",
+"x": 881,
+"y": 146,
+"w": 16,
+"h": 22,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-35,
+130,
+"150,240,255"
+]
+},
+"e1-crack": {
+"file": "locale/atlas.png",
+"x": 898,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"e1-sign": {
+"file": "locale/atlas.png",
+"x": 919,
+"y": 146,
+"w": 18,
+"h": 22,
+"k": 3,
+"sway": true,
+"under": true
+},
+"e2-crack": {
+"file": "locale/atlas.png",
+"x": 938,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"e2-horn": {
+"file": "locale/atlas.png",
+"x": 959,
+"y": 146,
+"w": 22,
+"h": 22,
+"k": 3.4,
+"wall": true
+},
+"e2-spine": {
+"file": "locale/atlas.png",
+"x": 982,
+"y": 146,
+"w": 48,
+"h": 22,
+"k": 3.4,
+"wall": true
+},
+"e3-brazier": {
+"file": "locale/atlas.png",
+"x": 1031,
+"y": 146,
+"w": 14,
+"h": 22,
+"flicker": true,
+"k": 3.2,
+"light": [
+0,
+-30,
+130,
+"255,150,60"
+],
+"smoke": true
+},
+"f1-crack": {
+"file": "locale/atlas.png",
+"x": 1046,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"f1-shackles": {
+"file": "locale/atlas.png",
+"x": 1067,
+"y": 146,
+"w": 14,
+"h": 22,
+"k": 3,
+"wall": true
+},
+"f2-crack": {
+"file": "locale/atlas.png",
+"x": 1082,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"f2-dormer": {
+"file": "locale/atlas.png",
+"x": 1103,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"light": [
+0,
+-25,
+80,
+"255,180,90"
+]
+},
+"f2-lantern": {
+"file": "locale/atlas.png",
+"x": 1124,
+"y": 146,
+"w": 16,
+"h": 22,
+"flicker": true,
+"k": 3,
+"light": [
+4,
+50,
+120,
+"255,190,100"
+],
+"sway": true,
+"under": true
+},
+"f3-brazier": {
+"file": "locale/atlas.png",
+"x": 1141,
+"y": 146,
+"w": 14,
+"h": 22,
+"flicker": true,
+"k": 3.2,
+"light": [
+0,
+-30,
+130,
+"255,150,60"
+]
+},
+"f3-crack": {
+"file": "locale/atlas.png",
+"x": 1156,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"f3-names": {
+"file": "locale/atlas.png",
+"x": 1177,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3,
+"wall": true
+},
+"f4-crack": {
+"file": "locale/atlas.png",
+"x": 1198,
+"y": 146,
+"w": 20,
+"h": 22,
+"k": 3.2,
+"wall": true
+},
+"h1-herbs": {
+"file": "locale/atlas.png",
+"x": 1219,
+"y": 146,
+"w": 18,
+"h": 22,
+"k": 3,
+"sway": true,
+"under": true
+},
+"h2-greatEye": {
+"file": "locale/atlas.png",
+"x": 1238,
+"y": 146,
+"w": 36,
+"h": 22,
+"k": 3.6,
+"light": [
+0,
+-40,
+110,
+"230,60,90"
+],
+"wall": true
+},
+"h3-plot": {
+"file": "locale/atlas.png",
+"x": 1275,
+"y": 146,
+"w": 36,
+"h": 22,
+"k": 3.4
+},
+"h5-camp": {
+"file": "locale/atlas.png",
+"x": 1312,
+"y": 146,
+"w": 34,
+"h": 22,
+"flicker": true,
+"k": 3.4,
+"light": [
+10,
+-20,
+120,
+"255,150,60"
+],
+"smoke": true
+},
+"x1-panel": {
+"file": "locale/atlas.png",
+"x": 1347,
+"y": 146,
+"w": 30,
+"h": 22,
+"k": 3.4,
+"wall": true
+},
+"x1-paper": {
+"file": "locale/atlas.png",
+"x": 1378,
+"y": 146,
+"w": 10,
+"h": 22,
+"k": 3,
+"light": [
+0,
+50,
+100,
+"255,120,80"
+],
+"sway": true,
+"under": true
+},
+"x5-fallenBell": {
+"file": "locale/atlas.png",
+"x": 1389,
+"y": 146,
+"w": 30,
+"h": 22,
+"k": 3.4
+},
+"f5-roots": {
+"file": "locale/atlas.png",
+"x": 1420,
+"y": 146,
+"w": 12,
+"h": 21,
+"k": 3,
+"sway": false,
+"under": true
+},
+"a1-portrait": {
+"file": "locale/atlas.png",
+"x": 1433,
+"y": 146,
+"w": 16,
+"h": 20,
+"k": 3.2,
+"wall": true
+},
+"a2-chart": {
+"file": "locale/atlas.png",
+"x": 1450,
+"y": 146,
+"w": 24,
+"h": 20,
+"k": 3.2,
+"wall": true
+},
+"a3-grindstone": {
+"file": "locale/atlas.png",
+"x": 1475,
+"y": 146,
+"w": 22,
+"h": 20,
+"k": 3.4
+},
+"a4-seam": {
+"file": "locale/atlas.png",
+"x": 1498,
+"y": 146,
+"w": 24,
+"h": 20,
+"k": 3.2,
+"light": [
+0,
+-32,
+70,
+"90,240,130"
+],
+"wall": true
+},
+"e1-seam": {
+"file": "locale/atlas.png",
+"x": 1523,
+"y": 146,
+"w": 24,
+"h": 20,
+"k": 3.2,
+"light": [
+0,
+-32,
+70,
+"255,110,40"
+],
+"wall": true
+},
+"e2-seam": {
+"file": "locale/atlas.png",
+"x": 1548,
+"y": 146,
+"w": 24,
+"h": 20,
+"k": 3.2,
+"light": [
+0,
+-32,
+70,
+"255,110,40"
+],
+"wall": true
+},
+"e3-slit": {
+"file": "locale/atlas.png",
+"x": 1573,
+"y": 146,
+"w": 8,
+"h": 20,
+"k": 3.2,
+"light": [
+0,
+-30,
+70,
+"255,170,80"
+],
+"wall": true
+},
+"f1-grate": {
+"file": "locale/atlas.png",
+"x": 1582,
+"y": 146,
+"w": 16,
+"h": 20,
+"k": 3,
+"light": [
+0,
+-30,
+120,
+"150,170,255"
+],
+"wall": true
+},
+"f1-moss": {
+"file": "locale/atlas.png",
+"x": 1599,
+"y": 146,
+"w": 12,
+"h": 20,
+"k": 3,
+"sway": true,
+"under": true
+},
+"h3-stones": {
+"file": "locale/atlas.png",
+"x": 1612,
+"y": 146,
+"w": 32,
+"h": 20,
+"k": 3.4
+},
+"x3-wagon": {
+"file": "locale/atlas.png",
+"x": 1645,
+"y": 146,
+"w": 40,
+"h": 20,
+"k": 3.4
+},
+"a1-notes": {
+"file": "locale/atlas.png",
+"x": 1686,
+"y": 146,
+"w": 26,
+"h": 18,
+"k": 3.2,
+"wall": true
+},
+"a1-pipes": {
+"file": "locale/atlas.png",
+"x": 1713,
+"y": 146,
+"w": 34,
+"h": 18,
+"k": 3.4,
+"wall": true
+},
+"a3-lanterns": {
+"file": "locale/atlas.png",
+"x": 1748,
+"y": 146,
+"w": 48,
+"h": 18,
+"k": 3,
+"light": [
+0,
+30,
+110,
+"255,190,110"
+],
+"sway": true,
+"under": true
+},
+"a3-mark": {
+"file": "locale/atlas.png",
+"x": 1797,
+"y": 146,
+"w": 20,
+"h": 18,
+"k": 3.4,
+"wall": true
+},
+"a4-bombs": {
+"file": "locale/atlas.png",
+"x": 1818,
+"y": 146,
+"w": 24,
+"h": 18,
+"k": 3.4,
+"light": [
+0,
+-20,
+60,
+"100,240,140"
+]
+},
+"a4-greenFire": {
+"file": "locale/atlas.png",
+"x": 1843,
+"y": 146,
+"w": 18,
+"h": 18,
+"flicker": true,
+"k": 4,
+"light": [
+0,
+-25,
+150,
+"100,240,140"
+],
+"smoke": true
+},
+"a4-window": {
+"file": "locale/atlas.png",
+"x": 1862,
+"y": 146,
+"w": 16,
+"h": 18,
+"k": 3.2,
+"light": [
+0,
+-28,
+90,
+"100,240,140"
+],
+"wall": true
+},
+"a5-cart": {
+"file": "locale/atlas.png",
+"x": 1879,
+"y": 146,
+"w": 26,
+"h": 18,
+"k": 3.4
+},
+"a5-stakes": {
+"file": "locale/atlas.png",
+"x": 1906,
+"y": 146,
+"w": 40,
+"h": 18,
+"k": 3.4
+},
+"e3-barricade": {
+"file": "locale/atlas.png",
+"x": 1947,
+"y": 146,
+"w": 30,
+"h": 18,
+"k": 3.4
+},
+"e4-flags": {
+"file": "locale/atlas.png",
+"x": 1978,
+"y": 146,
+"w": 44,
+"h": 18,
+"k": 3,
+"sway": true,
+"under": true
+},
+"e4-icon": {
+"file": "locale/atlas.png",
+"x": 2023,
+"y": 146,
+"w": 14,
+"h": 18,
+"k": 3.2,
+"wall": true
+},
+"f1-ribs": {
+"file": "locale/atlas.png",
+"x": 0,
+"y": 177,
+"w": 26,
+"h": 18,
+"alpha": 0.8,
+"k": 3.2,
+"wall": true
+},
+"f2-shutter": {
+"file": "locale/atlas.png",
+"x": 27,
+"y": 177,
+"w": 16,
+"h": 18,
+"k": 3,
+"light": [
+0,
+-20,
+90,
+"255,180,90"
+],
+"wall": true
+},
+"f4-sigil": {
+"file": "locale/atlas.png",
+"x": 44,
+"y": 177,
+"w": 18,
+"h": 18,
+"k": 3,
+"light": [
+0,
+-27,
+90,
+"170,110,255"
+],
+"wall": true
+},
+"f5-wheel": {
+"file": "locale/atlas.png",
+"x": 63,
+"y": 177,
+"w": 18,
+"h": 18,
+"k": 3.2
+},
+"h4-mosaic": {
+"file": "locale/atlas.png",
+"x": 82,
+"y": 177,
+"w": 24,
+"h": 18,
+"k": 3.2,
+"wall": true
+},
+"x1-glyph": {
+"file": "locale/atlas.png",
+"x": 107,
+"y": 177,
+"w": 18,
+"h": 18,
+"k": 3,
+"wall": true
+},
+"x1-wheel": {
+"file": "locale/atlas.png",
+"x": 126,
+"y": 177,
+"w": 12,
+"h": 18,
+"k": 3.2,
+"wall": true
+},
+"x4-crystals": {
+"file": "locale/atlas.png",
+"x": 139,
+"y": 177,
+"w": 18,
+"h": 18,
+"k": 3.4,
+"light": [
+0,
+-25,
+90,
+"120,210,255"
+]
+},
+"x3-icicles": {
+"file": "locale/atlas.png",
+"x": 158,
+"y": 177,
+"w": 12,
+"h": 17,
+"k": 3,
+"sway": false,
+"under": true
+},
+"a2-blocks": {
+"file": "locale/atlas.png",
+"x": 171,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"a3-dice": {
+"file": "locale/atlas.png",
+"x": 200,
+"y": 177,
+"w": 26,
+"h": 16,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-30,
+70,
+"255,200,120"
+]
+},
+"a5-vein": {
+"file": "locale/atlas.png",
+"x": 227,
+"y": 177,
+"w": 34,
+"h": 16,
+"k": 3.4,
+"light": [
+0,
+-27,
+80,
+"255,220,120"
+],
+"wall": true
+},
+"e1-beam": {
+"file": "locale/atlas.png",
+"x": 262,
+"y": 177,
+"w": 30,
+"h": 16,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-20,
+120,
+"255,140,50"
+],
+"smoke": true
+},
+"e1-cart": {
+"file": "locale/atlas.png",
+"x": 293,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2
+},
+"e1-fire": {
+"file": "locale/atlas.png",
+"x": 322,
+"y": 177,
+"w": 16,
+"h": 16,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-25,
+150,
+"255,140,50"
+],
+"smoke": true
+},
+"e2-obsidian": {
+"file": "locale/atlas.png",
+"x": 339,
+"y": 177,
+"w": 18,
+"h": 16,
+"k": 3.4
+},
+"e3-blocks": {
+"file": "locale/atlas.png",
+"x": 358,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"e3-shield": {
+"file": "locale/atlas.png",
+"x": 387,
+"y": 177,
+"w": 14,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"e5-blocks": {
+"file": "locale/atlas.png",
+"x": 402,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f1-block": {
+"file": "locale/atlas.png",
+"x": 431,
+"y": 177,
+"w": 22,
+"h": 16,
+"k": 3.2
+},
+"f1-bricks": {
+"file": "locale/atlas.png",
+"x": 454,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f2-bricks": {
+"file": "locale/atlas.png",
+"x": 483,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f2-gargoyle": {
+"file": "locale/atlas.png",
+"x": 512,
+"y": 177,
+"w": 18,
+"h": 16,
+"k": 3.2
+},
+"f2-washing": {
+"file": "locale/atlas.png",
+"x": 531,
+"y": 177,
+"w": 40,
+"h": 16,
+"k": 3,
+"sway": true,
+"under": true
+},
+"f3-jars": {
+"file": "locale/atlas.png",
+"x": 572,
+"y": 177,
+"w": 22,
+"h": 16,
+"k": 3,
+"wall": true
+},
+"f3-masonry": {
+"file": "locale/atlas.png",
+"x": 595,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f3-niche": {
+"file": "locale/atlas.png",
+"x": 624,
+"y": 177,
+"w": 20,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f3-reliquary": {
+"file": "locale/atlas.png",
+"x": 645,
+"y": 177,
+"w": 16,
+"h": 16,
+"k": 3.2,
+"light": [
+0,
+-20,
+90,
+"200,220,255"
+]
+},
+"f5-cobble": {
+"file": "locale/atlas.png",
+"x": 662,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"h3-bier": {
+"file": "locale/atlas.png",
+"x": 691,
+"y": 177,
+"w": 34,
+"h": 16,
+"k": 3.4
+},
+"h3-tablets": {
+"file": "locale/atlas.png",
+"x": 726,
+"y": 177,
+"w": 30,
+"h": 16,
+"k": 3.4,
+"wall": true
+},
+"h4-coral": {
+"file": "locale/atlas.png",
+"x": 757,
+"y": 177,
+"w": 20,
+"h": 16,
+"k": 3.4
+},
+"x2-cornice": {
+"file": "locale/atlas.png",
+"x": 778,
+"y": 177,
+"w": 14,
+"h": 16,
+"k": 3.2,
+"under": true
+},
+"x3-frost": {
+"file": "locale/atlas.png",
+"x": 793,
+"y": 177,
+"w": 20,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"x5-masonry": {
+"file": "locale/atlas.png",
+"x": 814,
+"y": 177,
+"w": 28,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"x5-message": {
+"file": "locale/atlas.png",
+"x": 843,
+"y": 177,
+"w": 34,
+"h": 16,
+"k": 3.2,
+"wall": true
+},
+"f2-wanted": {
+"file": "locale/atlas.png",
+"x": 878,
+"y": 177,
+"w": 12,
+"h": 15,
+"k": 3,
+"wall": true
+},
+"a1-jars": {
+"file": "locale/atlas.png",
+"x": 891,
+"y": 177,
+"w": 24,
+"h": 14,
+"k": 3.2,
+"wall": true
+},
+"a2-sextant": {
+"file": "locale/atlas.png",
+"x": 916,
+"y": 177,
+"w": 18,
+"h": 14,
+"k": 3.2,
+"wall": true
+},
+"a5-picks": {
+"file": "locale/atlas.png",
+"x": 935,
+"y": 177,
+"w": 22,
+"h": 14,
+"k": 3.2,
+"wall": true
+},
+"e5-barrels": {
+"file": "locale/atlas.png",
+"x": 958,
+"y": 177,
+"w": 22,
+"h": 14,
+"k": 3.2
+},
+"e5-camp": {
+"file": "locale/atlas.png",
+"x": 981,
+"y": 177,
+"w": 18,
+"h": 14,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-20,
+150,
+"255,140,50"
+],
+"smoke": true
+},
+"e5-drum": {
+"file": "locale/atlas.png",
+"x": 1000,
+"y": 177,
+"w": 16,
+"h": 14,
+"k": 3.2
+},
+"f3-sarcophagus": {
+"file": "locale/atlas.png",
+"x": 1017,
+"y": 177,
+"w": 30,
+"h": 14,
+"k": 3.4
+},
+"f3-web": {
+"file": "locale/atlas.png",
+"x": 1048,
+"y": 177,
+"w": 14,
+"h": 14,
+"k": 3,
+"under": true
+},
+"f4-wallBooks": {
+"file": "locale/atlas.png",
+"x": 1063,
+"y": 177,
+"w": 26,
+"h": 14,
+"k": 4,
+"wall": true
+},
+"f5-milestone": {
+"file": "locale/atlas.png",
+"x": 1090,
+"y": 177,
+"w": 12,
+"h": 14,
+"k": 3.2
+},
+"h2-skullCandle": {
+"file": "locale/atlas.png",
+"x": 1103,
+"y": 177,
+"w": 12,
+"h": 14,
+"flicker": true,
+"k": 3.2,
+"light": [
+0,
+-22,
+80,
+"255,170,90"
+]
+},
+"h5-fence": {
+"file": "locale/atlas.png",
+"x": 1116,
+"y": 177,
+"w": 30,
+"h": 14,
+"k": 3.4
+},
+"x2-boulder": {
+"file": "locale/atlas.png",
+"x": 1147,
+"y": 177,
+"w": 22,
+"h": 14,
+"k": 3.4
+},
+"x2-strata": {
+"file": "locale/atlas.png",
+"x": 1170,
+"y": 177,
+"w": 40,
+"h": 14,
+"k": 3.4,
+"wall": true
+},
+"x5-web": {
+"file": "locale/atlas.png",
+"x": 1211,
+"y": 177,
+"w": 16,
+"h": 14,
+"k": 3,
+"under": true
+},
+"f1-skullFossil": {
+"file": "locale/atlas.png",
+"x": 1228,
+"y": 177,
+"w": 14,
+"h": 13,
+"k": 3.2,
+"wall": true
+},
+"a3-spoils": {
+"file": "locale/atlas.png",
+"x": 1243,
+"y": 177,
+"w": 26,
+"h": 12,
+"k": 3.4
+},
+"e4-incense": {
+"file": "locale/atlas.png",
+"x": 1270,
+"y": 177,
+"w": 12,
+"h": 12,
+"k": 3.2,
+"light": [
+0,
+-16,
+60,
+"255,170,90"
+],
+"smoke": true
+},
+"f1-candles": {
+"file": "locale/atlas.png",
+"x": 1283,
+"y": 177,
+"w": 14,
+"h": 12,
+"flicker": true,
+"k": 3.2,
+"light": [
+0,
+-22,
+110,
+"255,170,80"
+]
+},
+"f1-skulls": {
+"file": "locale/atlas.png",
+"x": 1298,
+"y": 177,
+"w": 22,
+"h": 12,
+"k": 3.5
+},
+"f2-bolts": {
+"file": "locale/atlas.png",
+"x": 1321,
+"y": 177,
+"w": 14,
+"h": 12,
+"k": 3,
+"wall": true
+},
+"f4-ledgers": {
+"file": "locale/atlas.png",
+"x": 1336,
+"y": 177,
+"w": 18,
+"h": 12,
+"k": 3.2
+},
+"f5-grassTall": {
+"file": "locale/atlas.png",
+"x": 1355,
+"y": 177,
+"w": 16,
+"h": 12,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"h1-satchel": {
+"file": "locale/atlas.png",
+"x": 1372,
+"y": 177,
+"w": 16,
+"h": 12,
+"k": 3.2
+},
+"h1-shelf": {
+"file": "locale/atlas.png",
+"x": 1389,
+"y": 177,
+"w": 16,
+"h": 12,
+"k": 3.2,
+"light": [
+0,
+-18,
+70,
+"90,230,220"
+],
+"wall": true
+},
+"h2-eyes": {
+"file": "locale/atlas.png",
+"x": 1406,
+"y": 177,
+"w": 20,
+"h": 12,
+"k": 3.2,
+"light": [
+0,
+-18,
+60,
+"230,60,90"
+],
+"wall": true
+},
+"h2-sigil": {
+"file": "locale/atlas.png",
+"x": 1427,
+"y": 177,
+"w": 16,
+"h": 12,
+"k": 3.2,
+"wall": true
+},
+"h3-mound": {
+"file": "locale/atlas.png",
+"x": 1444,
+"y": 177,
+"w": 30,
+"h": 12,
+"flicker": true,
+"k": 3.4,
+"light": [
+0,
+-20,
+90,
+"255,190,110"
+]
+},
+"h3-wreath": {
+"file": "locale/atlas.png",
+"x": 1475,
+"y": 177,
+"w": 12,
+"h": 12,
+"k": 3,
+"wall": true
+},
+"h4-barnacles": {
+"file": "locale/atlas.png",
+"x": 1488,
+"y": 177,
+"w": 18,
+"h": 12,
+"k": 3.2,
+"wall": true
+},
+"h4-fishBones": {
+"file": "locale/atlas.png",
+"x": 1507,
+"y": 177,
+"w": 26,
+"h": 12,
+"k": 3.2,
+"wall": true
+},
+"h5-doll": {
+"file": "locale/atlas.png",
+"x": 1534,
+"y": 177,
+"w": 10,
+"h": 12,
+"k": 3,
+"wall": true
+},
+"x1-cairn": {
+"file": "locale/atlas.png",
+"x": 1545,
+"y": 177,
+"w": 10,
+"h": 12,
+"k": 3.2,
+"wall": true
+},
+"x3-wall": {
+"file": "locale/atlas.png",
+"x": 1556,
+"y": 177,
+"w": 30,
+"h": 12,
+"k": 3.4
+},
+"x5-bench": {
+"file": "locale/atlas.png",
+"x": 1587,
+"y": 177,
+"w": 28,
+"h": 12,
+"k": 3.2
+},
+"h1-sedge": {
+"file": "locale/atlas.png",
+"x": 1616,
+"y": 177,
+"w": 16,
+"h": 11,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"e3-arrows": {
+"file": "locale/atlas.png",
+"x": 1633,
+"y": 177,
+"w": 16,
+"h": 10,
+"k": 3.2,
+"wall": true
+},
+"f1-rubble": {
+"file": "locale/atlas.png",
+"x": 1650,
+"y": 177,
+"w": 30,
+"h": 10,
+"fg": true,
+"k": 4
+},
+"f1-straw": {
+"file": "locale/atlas.png",
+"x": 1681,
+"y": 177,
+"w": 24,
+"h": 10,
+"k": 3.2
+},
+"f1-tallies": {
+"file": "locale/atlas.png",
+"x": 1706,
+"y": 177,
+"w": 18,
+"h": 10,
+"k": 3,
+"wall": true
+},
+"f2-eaves": {
+"file": "locale/atlas.png",
+"x": 1725,
+"y": 177,
+"w": 14,
+"h": 10,
+"k": 3.2,
+"under": true
+},
+"f3-vigil": {
+"file": "locale/atlas.png",
+"x": 1740,
+"y": 177,
+"w": 24,
+"h": 10,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+-18,
+110,
+"255,180,90"
+]
+},
+"h1-log": {
+"file": "locale/atlas.png",
+"x": 1765,
+"y": 177,
+"w": 34,
+"h": 10,
+"k": 3.4
+},
+"h1-wisp": {
+"file": "locale/atlas.png",
+"x": 1800,
+"y": 177,
+"w": 10,
+"h": 10,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+-40,
+90,
+"140,255,210"
+]
+},
+"h5-flowers": {
+"file": "locale/atlas.png",
+"x": 1811,
+"y": 177,
+"w": 20,
+"h": 10,
+"k": 4,
+"sway": true,
+"wall": true
+},
+"x2-ore": {
+"file": "locale/atlas.png",
+"x": 1832,
+"y": 177,
+"w": 12,
+"h": 10,
+"k": 3,
+"wall": true
+},
+"e1-bucket": {
+"file": "locale/atlas.png",
+"x": 1845,
+"y": 177,
+"w": 10,
+"h": 9,
+"k": 3.2,
+"wall": true
+},
+"e3-shot": {
+"file": "locale/atlas.png",
+"x": 1856,
+"y": 177,
+"w": 16,
+"h": 9,
+"k": 3.2,
+"wall": true
+},
+"f2-ridge": {
+"file": "locale/atlas.png",
+"x": 1873,
+"y": 177,
+"w": 24,
+"h": 9,
+"k": 4,
+"wall": true
+},
+"f3-scrolls": {
+"file": "locale/atlas.png",
+"x": 1898,
+"y": 177,
+"w": 18,
+"h": 9,
+"k": 3.2
+},
+"x2-frostGrass": {
+"file": "locale/atlas.png",
+"x": 1917,
+"y": 177,
+"w": 16,
+"h": 9,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"a1-steam": {
+"file": "locale/atlas.png",
+"x": 1934,
+"y": 177,
+"w": 12,
+"h": 8,
+"k": 3.2,
+"smoke": true,
+"wall": true
+},
+"e2-vent": {
+"file": "locale/atlas.png",
+"x": 1947,
+"y": 177,
+"w": 14,
+"h": 8,
+"k": 3.4,
+"smoke": true,
+"wall": true
+},
+"e3-merlons": {
+"file": "locale/atlas.png",
+"x": 1962,
+"y": 177,
+"w": 24,
+"h": 8,
+"k": 3.4,
+"wall": true
+},
+"f2-crows": {
+"file": "locale/atlas.png",
+"x": 1987,
+"y": 177,
+"w": 18,
+"h": 8,
+"k": 3
+},
+"f5-grass": {
+"file": "locale/atlas.png",
+"x": 2006,
+"y": 177,
+"w": 16,
+"h": 8,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"x3-coldfire": {
+"file": "locale/atlas.png",
+"x": 2023,
+"y": 177,
+"w": 24,
+"h": 8,
+"k": 3.2,
+"wall": true
+},
+"x5-deadCandles": {
+"file": "locale/atlas.png",
+"x": 0,
+"y": 196,
+"w": 16,
+"h": 8,
+"k": 3,
+"wall": true
+},
+"e1-ash": {
+"file": "locale/atlas.png",
+"x": 17,
+"y": 196,
+"w": 22,
+"h": 7,
+"k": 3.2,
+"wall": true
+},
+"e1-scorched": {
+"file": "locale/atlas.png",
+"x": 40,
+"y": 196,
+"w": 16,
+"h": 7,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"e4-votives": {
+"file": "locale/atlas.png",
+"x": 57,
+"y": 196,
+"w": 20,
+"h": 7,
+"flicker": true,
+"k": 3,
+"light": [
+0,
+-12,
+70,
+"255,190,110"
+],
+"wall": true
+},
+"x1-drift": {
+"file": "locale/atlas.png",
+"x": 78,
+"y": 196,
+"w": 26,
+"h": 7,
+"k": 3.4,
+"wall": true
+},
+"a1-tools": {
+"file": "locale/atlas.png",
+"x": 105,
+"y": 196,
+"w": 22,
+"h": 6,
+"k": 3.2,
+"wall": true
+},
+"a5-pit": {
+"file": "locale/atlas.png",
+"x": 128,
+"y": 196,
+"w": 26,
+"h": 6,
+"k": 3.4,
+"wall": true
+},
+"e2-lava": {
+"file": "locale/atlas.png",
+"x": 155,
+"y": 196,
+"w": 26,
+"h": 6,
+"k": 3.4,
+"light": [
+0,
+-10,
+110,
+"255,110,30"
+],
+"wall": true
+},
+"e3-helms": {
+"file": "locale/atlas.png",
+"x": 182,
+"y": 196,
+"w": 16,
+"h": 6,
+"k": 3.2,
+"wall": true
+},
+"e5-pennant": {
+"file": "locale/atlas.png",
+"x": 199,
+"y": 196,
+"w": 14,
+"h": 6,
+"k": 3.2,
+"wall": true
+},
+"e5-trampled": {
+"file": "locale/atlas.png",
+"x": 214,
+"y": 196,
+"w": 16,
+"h": 6,
+"k": 3,
+"sway": true,
+"wall": true
+},
+"h1-mud": {
+"file": "locale/atlas.png",
+"x": 231,
+"y": 196,
+"w": 20,
+"h": 6,
+"k": 3.4,
+"wall": true
+},
+"h1-pool": {
+"file": "locale/atlas.png",
+"x": 252,
+"y": 196,
+"w": 30,
+"h": 6,
+"k": 3.4,
+"light": [
+0,
+-10,
+80,
+"100,220,190"
+],
+"wall": true
+},
+"x3-snowline": {
+"file": "locale/atlas.png",
+"x": 283,
+"y": 196,
+"w": 24,
+"h": 6,
+"k": 3.4,
+"wall": true
+},
+"x4-litter": {
+"file": "locale/atlas.png",
+"x": 308,
+"y": 196,
+"w": 22,
+"h": 6,
+"k": 3.2,
+"wall": true
+},
+"a4-vials": {
+"file": "locale/atlas.png",
+"x": 331,
+"y": 196,
+"w": 18,
+"h": 5,
+"k": 3.2,
+"wall": true
+},
+"e1-debris": {
+"file": "locale/atlas.png",
+"x": 350,
+"y": 196,
+"w": 18,
+"h": 5,
+"k": 3.2,
+"wall": true
+},
+"f5-manacles": {
+"file": "locale/atlas.png",
+"x": 369,
+"y": 196,
+"w": 14,
+"h": 5,
+"k": 3,
+"wall": true
+},
+"f5-roadStones": {
+"file": "locale/atlas.png",
+"x": 384,
+"y": 196,
+"w": 24,
+"h": 5,
+"k": 3.4,
+"wall": true
+},
+"h5-moss": {
+"file": "locale/atlas.png",
+"x": 409,
+"y": 196,
+"w": 26,
+"h": 5,
+"k": 3.4,
+"wall": true
+},
+"a3-dirt": {
+"file": "locale/atlas.png",
+"x": 436,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"e2-grit": {
+"file": "locale/atlas.png",
+"x": 451,
+"y": 196,
+"w": 16,
+"h": 4,
+"k": 3.2,
+"wall": true
+},
+"e4-petals": {
+"file": "locale/atlas.png",
+"x": 468,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"f1-pebbles": {
+"file": "locale/atlas.png",
+"x": 483,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"f1-shards": {
+"file": "locale/atlas.png",
+"x": 498,
+"y": 196,
+"w": 12,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"f2-slates": {
+"file": "locale/atlas.png",
+"x": 511,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"f3-rubble": {
+"file": "locale/atlas.png",
+"x": 526,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"f4-ink": {
+"file": "locale/atlas.png",
+"x": 541,
+"y": 196,
+"w": 18,
+"h": 4,
+"k": 3.2,
+"wall": true
+},
+"f4-pages": {
+"file": "locale/atlas.png",
+"x": 560,
+"y": 196,
+"w": 16,
+"h": 4,
+"k": 3.2,
+"wall": true
+},
+"f5-gravel": {
+"file": "locale/atlas.png",
+"x": 577,
+"y": 196,
+"w": 14,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"x4-crackedIce": {
+"file": "locale/atlas.png",
+"x": 592,
+"y": 196,
+"w": 26,
+"h": 4,
+"k": 3.4,
+"wall": true
+},
+"x5-beads": {
+"file": "locale/atlas.png",
+"x": 619,
+"y": 196,
+"w": 16,
+"h": 4,
+"k": 3,
+"wall": true
+},
+"a2-meridian": {
+"file": "locale/atlas.png",
+"x": 636,
+"y": 196,
+"w": 26,
+"h": 3,
+"k": 3.4,
+"wall": true
+}
+}

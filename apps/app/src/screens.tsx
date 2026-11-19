@@ -1,5 +1,6 @@
 // spec/app/index.md, "Story: Choose a fighter"; spec/app/index.md, "Story: Learn the moves"
 import { cn } from "@repo/ui";
+import { WalletAddress } from "./WalletAddress.tsx";
 import { type ComponentProps, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { type Board, deleteAccount, reportStanding, standingOf } from "./scores.ts";
 import { useAuth } from "./auth.tsx";
@@ -81,6 +82,7 @@ const CREDITS: [string, string][] = [
   ["Places", "Stringstar Fields, Mossy Assets, Plant Animations and the Lore tiles"],
   ["The guide", "Reaper (Animated Pixel Art)"],
   ["Versus stage and sounds", "Platform Fighter Template"],
+  ["Music", "Alex Morgan, Mondamusic, Kiravale, Sub_Clair, Rovador, Moodmode, Apalonbeats, Solarflex, Dimmysad, Jonas Blakewood, Alexzavesa, Vaitsez, Kulakovka and Redoctopus (Pixabay)"],
   ["Pixel effects", "pixelfx by Patch and Hugo Duprez (MIT)"],
   ["Typefaces", "Seven Swordsmen BB by Nate Piekos, Blambot (blambot.com), used under license; Lexend by The Lexend Project, lexend.com (SIL Open Font License)"],
   ["Screen effects", "after Celeste's effects, Maddy Makes Games (MIT)"],
@@ -115,11 +117,13 @@ function DeleteAccount({ onDone }: { onDone: () => void }) {
 function UserBadge({ onProfile }: { onProfile?: () => void }) {
   const { ready, authenticated, user, login, logout } = useAuth();
   if (!ready) return null;
+  const corner = "cursor-pointer border border-[#e0b84a]/35 bg-black/70 px-3 py-1 font-sans text-[11px] font-bold tracking-[0.14em] uppercase text-[#f6dfa6] hover:text-white";
   if (!authenticated)
     return (
-      <button type="button" onClick={login} className="absolute top-3 right-[120px] z-10 cursor-pointer border border-[#e0b84a]/35 bg-black/70 px-3 py-1 font-sans text-[11px] font-bold tracking-[0.14em] uppercase text-[#f6dfa6] hover:text-white">
-        Sign In
-      </button>
+      <div className="absolute top-3 right-[120px] z-10 flex gap-2">
+        {onProfile && <button type="button" onClick={onProfile} className={corner}>Profile</button>}
+        <button type="button" onClick={login} className={corner}>Sign In</button>
+      </div>
     );
   return (
     <details className="absolute top-3 right-[120px] z-10 border border-[#e0b84a]/35 bg-black/70 text-[11px] leading-relaxed text-white/85 open:bg-black/90 open:p-3">
@@ -128,7 +132,7 @@ function UserBadge({ onProfile }: { onProfile?: () => void }) {
       </summary>
       <div className="mt-2 grid gap-2">
         {user?.email && <p className="text-white/60">{user.email}</p>}
-        {user?.wallet && <p className="truncate text-white/60" title={user.wallet}>{user.wallet.slice(0, 6)}...{user.wallet.slice(-4)}</p>}
+        {user?.wallet && <WalletAddress address={user.wallet} className="justify-self-start text-white/80" />}
         {onProfile && <button type="button" onClick={onProfile} className="cursor-pointer text-left font-bold uppercase tracking-[0.14em] text-[#f6dfa6] hover:text-white">Profile</button>}
         <button type="button" onClick={() => void logout()} className="cursor-pointer text-left font-bold uppercase tracking-[0.14em] text-red-400 hover:text-red-300">
           Sign Out
@@ -209,7 +213,7 @@ export function TitleBackdrop({ alive, children }: { alive?: boolean; children?:
   );
 }
 
-/** The prices of $BLADES and $GME (prices.ts), under the ways in, read again each minute while the home screen is up.
+/** The price of $BLADES (prices.ts), under the ways in, read again each minute while the home screen is up.
  *  A token not launched shows a dash; one that cannot be read keeps its last price. */
 function Prices() {
   const [quotes, setQuotes] = useState<(Quote | null | undefined)[]>(TICKERS.map(() => undefined));
@@ -239,17 +243,18 @@ function Prices() {
 const CUT = "[clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)]";
 /** One of the ways in, on the home screen: a dark plate edged in gold. One of them is always the one chosen, by the
  *  mouse coming over it, the keys or a controller, and that one is lit and lifted. */
+const WAY = cn(display, CUT, "group cursor-pointer bg-[#e0b84a]/55 p-px outline-none transition-[translate,background-color] duration-fast focus:-translate-y-1 focus:bg-[#fff3cf] active:translate-y-0");
+const WAY_PLATE = cn(CUT, "block min-w-[clamp(112px,15vw,190px)] bg-black/70 px-5 py-3.5 text-center text-[clamp(13px,1.5vw,17px)] tracking-[0.22em] text-[#f6dfa6] transition-colors duration-fast group-focus:bg-[#f6dfa6] group-focus:text-[#2a0d0c]");
 function Way({ className, children, ...props }: ComponentProps<"button">) {
   return (
-    <button type="button" onPointerEnter={(event) => event.currentTarget.focus()} className={cn(display, CUT, "group cursor-pointer bg-[#e0b84a]/55 p-px outline-none transition-[translate,background-color] duration-fast focus:-translate-y-1 focus:bg-[#fff3cf] active:translate-y-0", className)} {...props}>
-      <span className={cn(CUT, "block min-w-[clamp(112px,15vw,190px)] bg-black/70 px-5 py-3.5 text-[clamp(13px,1.5vw,17px)] tracking-[0.22em] text-[#f6dfa6] transition-colors duration-fast group-focus:bg-[#f6dfa6] group-focus:text-[#2a0d0c]")}>{children}</span>
+    <button type="button" data-way onPointerEnter={(event) => event.currentTarget.focus()} className={cn(WAY, className)} {...props}>
+      <span className={WAY_PLATE}>{children}</span>
     </button>
   );
 }
-
 /** The home screen: the five before the throne, filling the page, the game's name over them, and the ways in. While
  *  something is open over it (`busy`) its keys are that thing's. */
-export function TitleScreen({ onCampaign, onArena, onVersus, onDaily, onProfile, onMove, busy, settings }: { onCampaign: () => void; onArena: () => void; onVersus: () => void; onDaily?: () => void; onProfile?: () => void; onMove?: () => void; busy?: boolean; /** The player's preferences (App.tsx, Preferences), opened from the corner. */ settings?: ReactNode }) {
+export function TitleScreen({ onCampaign, onArena, onVersus, onProfile, onMove, onCredits, busy, settings }: { onCampaign: () => void; onArena: () => void; onVersus: () => void; onProfile?: () => void; onMove?: () => void; /** Told when the credits are opened or closed: they have their own music (App.tsx). */ onCredits?: (open: boolean) => void; busy?: boolean; /** The player's preferences (App.tsx, Preferences), opened from the corner. */ settings?: ReactNode }) {
   // Which way in is lit: told (`onMove`) each time it becomes another, and not as the first is lit on arriving.
   const lit = useRef<EventTarget | null>(null);
   const corners = useRef<HTMLDivElement>(null), ways = useRef<HTMLElement>(null);
@@ -259,7 +264,7 @@ export function TitleScreen({ onCampaign, onArena, onVersus, onDaily, onProfile,
   useEffect(() => {
     if (busy) return;
     const down = (event: KeyboardEvent) => {
-      const all = [...(ways.current?.querySelectorAll("button") ?? [])], at = all.indexOf(document.activeElement as HTMLButtonElement);
+      const all = [...(ways.current?.querySelectorAll<HTMLElement>("[data-way]") ?? [])], at = all.indexOf(document.activeElement as HTMLElement);
       if (!all.length || (at < 0 && document.activeElement !== document.body)) return;
       const by = ["ArrowLeft", "KeyA", "ArrowUp", "KeyW"].includes(event.code) ? -1 : ["ArrowRight", "KeyD", "ArrowDown", "KeyS"].includes(event.code) ? 1 : 0;
       if (by) { event.preventDefault(); all[at < 0 ? 0 : (at + by + all.length) % all.length].focus(); }
@@ -286,7 +291,7 @@ export function TitleScreen({ onCampaign, onArena, onVersus, onDaily, onProfile,
           </details>
         )}
         <UserBadge onProfile={onProfile} />
-        <details className="absolute top-3 right-3 z-10 max-w-[min(92vw,420px)] border border-[#e0b84a]/35 bg-black/70 text-[11px] leading-relaxed text-white/85 open:bg-black/90 open:p-3">
+        <details onToggle={(event) => onCredits?.(event.currentTarget.open)} className="absolute top-3 right-3 z-10 max-w-[min(92vw,420px)] border border-[#e0b84a]/35 bg-black/70 text-[11px] leading-relaxed text-white/85 open:bg-black/90 open:p-3">
           <summary className="cursor-pointer list-none px-2 py-1 text-right font-sans font-bold tracking-[0.14em] text-[#f6dfa6] uppercase hover:text-white">Credits</summary>
           <ul className="mt-2 grid gap-1">
             {CREDITS.map(([what, who]) => <li key={what}><b className="font-medium text-white">{what}</b>: {who}</li>)}
@@ -298,7 +303,6 @@ export function TitleScreen({ onCampaign, onArena, onVersus, onDaily, onProfile,
         <Way autoFocus onClick={onCampaign}>Campaign</Way>
         <Way onClick={onArena}>Survival</Way>
         <Way onClick={onVersus}>Versus</Way>
-        {onDaily && <Way onClick={onDaily}>Daily</Way>}
         <Prices />
       </nav>
     </TitleBackdrop>

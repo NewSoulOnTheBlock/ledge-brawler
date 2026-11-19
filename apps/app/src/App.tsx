@@ -13,13 +13,13 @@ import { WATCHED, through } from "./story/prelude.ts";
 import { WHY, within } from "./story/within.ts";
 import { REAPER_UNHEEDED, VOICES, heed } from "./story/voices.ts";
 import { shaped, turnsOf } from "./story/world.ts";
-import { TRACKS, createAudio } from "./game/audio.ts";
-import { CHARS, MOVES_TO_FIND } from "./game/data.ts";
+import { createAudio, musicFor } from "./game/audio.ts";
+import { CHARS, MOVES_TO_FIND, SPECIAL_INPUTS } from "./game/data.ts";
 import { createPost } from "./game/post/post.ts";
 import { createView, isCalm, setCalm } from "./game/render.ts";
 import { skyIsDark } from "./game/sky.ts";
-import { type Level, hasLevel, levelById, levelOf, survivalStage, today } from "./game/levels.ts";
-import { type Sample, playSample } from "./game/samples.ts";
+import { type Level, area, hasLevel, inWorld, levelById, levelOf, survivalStage, today } from "./game/levels.ts";
+import { type Sample, type Song, playSong } from "./game/samples.ts";
 import { type Button, type Game, type Ui, createGame } from "./game/sim.ts";
 import { Combo, Hud, TouchPad, TOUCH_SEEN, TOUCH_SIZES, setTouchFit, touchFit } from "./Hud.tsx";
 import { BigButton, MoveList, SelectScreen, SmallButton, TitleBackdrop, TitleScreen, VolumeSliders } from "./screens.tsx";
@@ -56,8 +56,7 @@ const KEYMAP: Record<string, Button> = {
   ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowDown: "down", KeyS: "down",
   ArrowUp: "up", KeyW: "up", Space: "jump", KeyI: "dash", KeyE: "dash", KeyO: "grab", KeyQ: "grab", ShiftLeft: "run", ShiftRight: "run",
   KeyJ: "punch", KeyZ: "punch", KeyK: "kick", KeyX: "kick", KeyL: "blast", KeyC: "blast", KeyU: "charge", KeyF: "fly", KeyG: "guard", KeyV: "guard",
-  Digit1: "s1", Digit2: "s2", Digit3: "s3", Numpad1: "s1", Numpad2: "s2", Numpad3: "s3",
-  Digit4: "s4", Digit5: "s5", Digit6: "s6", Numpad4: "s4", Numpad5: "s5", Numpad6: "s6",
+  // No key of its own for a special: each is called by its motion and the blast (data.ts, SPECIAL_MOTIONS).
   KeyT: "item", KeyR: "next",
 };
 const CONFIRM = ["Enter", "Space", "KeyJ", "NumpadEnter"];
@@ -118,10 +117,10 @@ interface Said { text: string; sub?: string; tone?: "red" | "gold" }
 /** A recorded song (samples.ts) while `on`, the game's own music (audio.ts) held back under it: played once and the
  *  game's music let in when it ends, or `loop`ed until `on` is over. A browser will not play a sound before the page has
  *  been touched, so a song asked for before then waits for a touch; out of sight it stops, and takes up where it was. */
-function useSong(on: boolean, name: Sample, audio: ReturnType<typeof createAudio>, muted: boolean, loop = false) {
+function useSong(on: boolean, name: Song, audio: ReturnType<typeof createAudio>, muted: boolean, loop = false) {
   useEffect(() => {
     if (!on || muted || audio.musicVol() === 0) return;
-    const music = playSample(name, audio.musicVol());
+    const music = playSong(name, audio.musicVol());
     music.loop = loop;
     audio.wait(true);
     const done = () => audio.wait(false);
@@ -582,7 +581,7 @@ export function App({ runtime }: { runtime: Runtime }) {
   /** The boss speaks before it fights, and the level waits while it does. */
   const bossSpeaks = useRef(() => undefined as void);
   /** Plays a recorded sound at the player's volume for sounds, unless that is off. */
-  const sound = useCallback((name: Sample) => { if (audio.sfxVol() > 0) playSample(name, audio.sfxVol()); }, [audio]);
+  const sound = useCallback((name: Sample) => audio.sample(name, audio.sfxVol()), [audio]);
   const game = useMemo(() => {
     // spec/app/saga.md, "There are forty things to learn, and a protagonist learns each of them once"
     const clue = (fact: string, text: string) => {
@@ -596,8 +595,8 @@ export function App({ runtime }: { runtime: Runtime }) {
       fell: () => (net.current ?? paidRun.current)?.fell(),
       fx: (sprite) => (net.current ?? together.current?.versus)?.fx(sprite),
       foeHit: (uid, blow) => (paidRun.current ?? together.current)?.foeHit(uid, blow), share: (event) => together.current?.share(event),
-      wiped: () => setWiped(true), teamClear: () => setTeamCleared(true),
-      sample: (name) => { if (audio.sfxVol() > 0) playSample(name, audio.sfxVol()); },
+      wiped: () => setWiped(true), teamClear: () => setTeamCleared(true), pass: (way) => passNow.current(way),
+      sample: (name) => audio.sample(name, audio.sfxVol()),
       lost: (here, there) => {
         // A paid run's end and its score are the arena server's, which has put it in the day's pot (run.ts).
         const kept = paidRun.current ? runSaid.current : null, { wave, kos } = kept ?? { wave: here, kos: there };
@@ -705,9 +704,8 @@ export function App({ runtime }: { runtime: Runtime }) {
   useEffect(() => { if (spent) { sound("lost"); track("game_over", { level: playing.current?.id }); } }, [spent, sound]);
   // A kind of game chosen from the main menu.
   const chime = useCallback(() => sound("start"), [sound]);
-  // The main menu's music, once each time the menu is come to, and stopped on leaving it.
+  // The main menu: its music is the soundtrack's (audio.ts, `throne`), from the moment it is come to.
   const onMenu = match?.screen === "Title";
-  useSong(onMenu, "menu", audio, muted);
   // A choice made in any menu but the main one, which has its own sound: every button but those of the touch controls.
   useEffect(() => {
     if (onMenu) return;
@@ -716,24 +714,37 @@ export function App({ runtime }: { runtime: Runtime }) {
     return () => window.removeEventListener("click", chosen, true);
   }, [onMenu, sound]);
   // spec/app/index.md, "Story: Fight the waves"
-  // A place with its own music has it while it is the place in play (audio.ts, TRACKS). It is looked at a few times a
-  // second, since the sky of a fight changes from wave to wave without the page being told.
+  // The soundtrack (audio.ts, musicFor): the main menu's, the credits' while they are open, and in a
+  // fight the music of its mode, boss, place or region. It is looked at a few times a second, since the sky, the wave and
+  // whether a boss is being fought change without the page being told. A dark place keeps the synthesised music. A
+  // fight against the waves has a level of its own too: only a quest or a hero's world is the campaign.
   const inPlay = match?.screen === "Play";
+  const [creditsOpen, setCreditsOpen] = useState(false);
   useEffect(() => {
-    const tune = () => { const sky = inPlay && !game.scene.dark ? game.scene.level?.sky ?? game.scene.sky : null; audio.track((sky && TRACKS[sky]) || null); };
+    const pick = Math.floor(Math.random() * 1e6);
+    const tune = () => {
+      const S = game.scene, sky = S.level?.sky ?? S.sky;
+      const boss = S.locked && S.enemies.some((E) => E.boss && E.alive);
+      audio.track(onMenu ? (creditsOpen ? "credits" : "throne") : inPlay && !S.dark ? musicFor({ sky, level: S.match.quest || S.match.world ? S.level : null, versus, wave: S.match.wave, boss, pick }) : null);
+    };
     tune();
     const timer = window.setInterval(tune, 400);
     return () => window.clearInterval(timer);
-  }, [inPlay, game, audio]);
+  }, [inPlay, onMenu, creditsOpen, versus, game, audio]);
   // spec/app/index.md, "A level starts from the select screen like a fight, but as a quest with three lives"
-  const embark = useCallback((made: Level, together?: { fighter: number; host: boolean }) => {
+  // spec/app/index.md, "A hero's world starts from the select screen like a level, with the dash as the save remembers it"
+  // An area of a world (levels.ts) is set out on as one, alone: its boss gone once beaten, its dash there once the
+  // first area's boss has fallen, and the Reaper's talk only on first coming to an area not yet beaten.
+  const embark = useCallback((made: Level, together?: { fighter: number; host: boolean }, fromEnd = false) => {
+    const wandering = !together && inWorld(made.hero, made.chapter);
+    const done = saga ? chaptersDone(HEROES.indexOf(made.hero), saga) : 0, beaten = wandering && done > made.chapter;
     // The level as the world now has it (story/world.ts). With a co-op group it is played as it was made: the world one
     // player's campaign has shaped is theirs alone, and every game of the group must lay out the same level.
     const turns = saga && !together ? turnsOf(saga) : [], next = saga && !together ? shaped(made, saga) : made;
     // In co-op each plays the protagonist they took at the table.
     send({ type: "focus", pick: together ? together.fighter : PROTAGONISTS.find((p) => p.id === next.hero)!.fighter });
     const mine = built();
-    if (!send({ type: "embark" })) return;
+    if (!send(wandering ? { type: "wander", owns: done >= 1 } : { type: "embark" })) return;
     paid.current = null; setRefused(false);
     // Kept as it was made, so that setting out on it again shapes it afresh and not twice.
     setLevel(made); playing.current = made;
@@ -741,7 +752,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     // leads the group's talk.
     const part = together ? { host: together.host } : null;
     game.coop(together ? { host: false } : null); setGroup(part); setWiped(false); setTeamCleared(false); setHeardTalk(null);
-    game.begin(next, ...mine); sideways();
+    game.begin(wandering ? area(next, beaten, fromEnd) : next, ...mine); sideways();
     game.title(PARLEY[made.id]?.who ?? null);
     began.current = performance.now(); setWent(null);
     track("chapter_start", { level: made.id, hero: made.hero, chapter: made.chapter + 1 });
@@ -757,7 +768,7 @@ export function App({ runtime }: { runtime: Runtime }) {
     // Its other voice has the last word, and does not agree with him (story/voices.ts).
     const voice = VOICES[next.hero], answer = voice.says[next.chapter];
     // A co-op guest hears the host's guide instead (`heardTalk`).
-    if (lines.length && (!together || together.host)) { setTalk({ lines: answer ? [...lines, answer] : lines, at: 0, voice: answer ? voice.name : undefined }); game.talk(true); talking.current = true; }
+    if (lines.length && (!together || together.host) && !beaten && !fromEnd) { setTalk({ lines: answer ? [...lines, answer] : lines, at: 0, voice: answer ? voice.name : undefined }); game.talk(true); talking.current = true; }
   }, [send, game, built, saga]);
   // Co-op: the host's guide is told to the group as he talks, and a guest's level waits while he does, as the host's does.
   useEffect(() => { if (group?.host) together.current?.say(talk ? { lines: talk.lines, at: talk.at, who: talk.who, end: talk.end, voice: talk.voice, choices: talk.at + 1 === talk.lines.length && (talk.voice || talk.boss) ? ["choosing"] : undefined } : null); }, [talk, group]);
@@ -847,7 +858,12 @@ export function App({ runtime }: { runtime: Runtime }) {
   useEffect(() => { if (!questing && talking.current) hush(); }, [questing, hush]);
   // How a level went, taken as it is cleared: for the page that says so, and its best rank kept.
   const began = useRef(0), [went, setWent] = useState<{ seconds: number; lost: number; found: number; of: number } | null>(null);
-  const cleared = match?.screen === "Play" && match.cleared;
+  // spec/app/index.md, "Story: Explore a hero's world"
+  // An area of a world is never cleared: the first time its way out is reached, its page (how it went, its question)
+  // is shown over it, held, and from there the fighter goes on into the next area.
+  const [passing, setPassing] = useState(false);
+  useEffect(() => { if (match?.screen !== "Play") setPassing(false); }, [match?.screen]);
+  const cleared = match?.screen === "Play" && (match.cleared || passing);
   useEffect(() => {
     const at = playing.current;
     if (!cleared || !at) return;
@@ -885,16 +901,38 @@ export function App({ runtime }: { runtime: Runtime }) {
     game.begin(within(hero), specialsOf(hero, fighter), build);
     game.trial(slot);
     setAwakening({ name: power.name, slot, used: false });
-    setTalk({ who: "Within", lines: [`You chose: ${said}`, WHY[school][slot], `It is in you now. ${power.name}. Use it: press ${slot + 1}.`], at: 0, end: "Use it" });
+    setTalk({ who: "Within", lines: [`You chose: ${said}`, WHY[school][slot], `It is in you now. ${power.name}. Use it: ${SPECIAL_INPUTS[slot].slice(0, -1).join(" ")}, then blast.`], at: 0, end: "Use it" });
     game.talk(true); talking.current = true;
   }, [send, game]);
+  /** From the play screen into another area of the hero's world, by its start or back in by its way out. Past the
+   *  world's last area its campaign goes on in levels: the fighter is back on the campaign's page. */
+  const enterArea = useCallback((hero: Hero, chapter: number, fromEnd: boolean) => {
+    send({ type: "openMoves" }); send({ type: "change" });
+    if (!inWorld(hero, chapter)) return;
+    try { embark(levelOf(hero, chapter)!, undefined, fromEnd); } catch (error) { console.error(error); setShut(true); }
+  }, [send, embark]);
+  // What the fighter does after the black room, when it went in between two areas of a world: on into the next.
+  const afterRoom = useRef<(() => void) | null>(null);
+  const passNow = useRef<(way: 1 | -1) => boolean>(() => false);
+  useEffect(() => {
+    passNow.current = (way) => {
+      const at = playing.current;
+      if (!at || group || !inWorld(at.hero, at.chapter) || at.chapter + way < 0) return false;
+      if (way === 1 && counts) { setPassing(true); game.talk(true); return true; }
+      enterArea(at.hero, at.chapter + way, way === -1);
+      return true;
+    };
+  }, [counts, group, game, enterArea]);
   const carryOn = useCallback(async (from?: number) => {
+    const wandering = level !== null && !group && inWorld(level.hero, level.chapter);
     // How it went, for the Reaper to speak of where the next chapter starts: each life lost was one of three.
     if (level) remember(level.hero, { id: level.id, name: level.name, chapter: level.chapter, deaths: 3 - rules.get().lives, paid: paid.current ?? undefined, found: game.scene.cluesFound.length, of: level.clues.length });
     if (level && counts && from !== undefined && level.chapter < 3) choose(level.hero, PROTAGONISTS.find((p) => p.id === level.hero)!.fighter, level.chapter, from);
     if (level && counts && await tell({ type: "finish", who: HEROES.indexOf(level.hero) })) for (const effect of level.effects) await tell({ type: "shift", ...effect });
-    // A co-op fighter out of revives was not there to clear it itself: it leaves as from a lost level.
-    if (!send({ type: "leave" })) { send({ type: "openMoves" }); select("change"); }
+    // A co-op fighter out of revives was not there to clear it itself: it leaves as from a lost level. An area of a
+    // world was never cleared: it is left the same way, for the next area.
+    if (wandering) { setPassing(false); game.talk(false); }
+    if (wandering || !send({ type: "leave" })) { send({ type: "openMoves" }); select("change"); }
     if (group) backToTable();
     if (counts) syncSagaToCloud();
     if (counts && level) {
@@ -905,8 +943,10 @@ export function App({ runtime }: { runtime: Runtime }) {
     if (level && counts && !hasLevel(level.hero, level.chapter + 1)) setEnding(level.hero);
     // Having answered, it stands in the black room.
     const said = from !== undefined && counts && level ? DILEMMAS[level.id]?.answers.find((answer) => answer.school === from)?.say : undefined;
-    if (level && from !== undefined && said) awaken(level.hero, level.chapter, from, said);
-  }, [level, counts, tell, send, rules, game, awaken, group, backToTable, select]);
+    const onward = wandering && level ? () => enterArea(level.hero, level.chapter + 1, false) : null;
+    if (level && from !== undefined && said) { awaken(level.hero, level.chapter, from, said); afterRoom.current = onward; }
+    else onward?.();
+  }, [level, counts, tell, send, rules, game, awaken, group, backToTable, select, enterArea]);
   useEffect(() => { if (match?.screen !== "Play") setAwakening(null); }, [match?.screen]);
   const toggleMoves = useCallback(() => { if (send({ type: "openMoves" }) || send({ type: "closeMoves" })) game.clearInput(); }, [send, game]);
   // Which page of the pause is up (Pause.tsx). Escape steps back a page, and from the first one resumes.
@@ -1034,7 +1074,7 @@ export function App({ runtime }: { runtime: Runtime }) {
       <Arena game={game} before={tick} />
       <Curtain on={`${match.screen}${campaign ? " campaign" : ""} ${level?.id ?? ""}${awakening ? " within" : ""}`} />
       {match.screen === "Title" && <>
-        <TitleScreen onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onProfile={() => setShowProfile(true)} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => { if (audio.sfxVol() > 0) playSample("ui", audio.sfxVol() * 0.45); }} busy={showProfile || !!conflict || !!choosing || askParty} />
+        <TitleScreen onCredits={setCreditsOpen} onCampaign={() => setPartyChoice(true)} onArena={() => setChoosing("Survival")} onVersus={() => setChoosing("Versus")} onProfile={() => setShowProfile(true)} settings={<Preferences audio={audio} onChange={() => setRedrawn((n) => n + 1)} />} onMove={() => audio.sample("ui", audio.sfxVol() * 0.45)} busy={showProfile || !!conflict || !!choosing || askParty} />
         {askParty && <PartyChoice onBack={() => setPartyChoice(false)} onPick={(coop) => { chime(); setPartyChoice(false); coopWay.current = coop; setCampaign(true); setVersus(false); setPro(false); select("enter"); if (coop) setCoopOpen(true); }} />}
         {choosing && <TierChoice mode={choosing} onBack={() => setChoosing(null)} onPick={(paid) => { chime(); setCampaign(false); setVersus(choosing === "Versus"); setPro(paid); setChoosing(null); select("enter"); }} />}
         {showProfile && saga && <Profile saga={saga} onClose={() => setShowProfile(false)} />}
@@ -1109,11 +1149,11 @@ export function App({ runtime }: { runtime: Runtime }) {
           {awakening && !talk && !match.paused && (
             <p role="status" className="dark pointer-events-none absolute inset-x-0 bottom-[14%] grid justify-items-center gap-2 px-4 text-center text-[14px] text-foreground">
               {awakening.used
-                ? <><span>That is <b className="font-sans font-bold tracking-wider text-[#e0b84a] uppercase">{awakening.name}</b>. It goes with you into every fight from now on.</span><KitWord word="Continue" className="pointer-events-auto" onClick={() => { send({ type: "openMoves" }); select("change"); }} /></>
-                : <span>Use it. Press <b className="font-sans font-bold text-[#e0b84a]">{awakening.slot + 1}</b>, or the <b className="font-sans font-bold text-[#e0b84a]">{awakening.name.split(" ")[0]}</b> button.</span>}
+                ? <><span>That is <b className="font-sans font-bold tracking-wider text-[#e0b84a] uppercase">{awakening.name}</b>. It goes with you into every fight from now on.</span><KitWord word="Continue" className="pointer-events-auto" onClick={() => { send({ type: "openMoves" }); select("change"); const then = afterRoom.current; afterRoom.current = null; then?.(); }} /></>
+                : <span>Use it: <b className="font-sans font-bold text-[#e0b84a]">{SPECIAL_INPUTS[awakening.slot].slice(0, -1).join(" ")}</b>, then <b className="font-sans font-bold text-[#e0b84a]">blast</b>.</span>}
             </p>
           )}
-          {(match.cleared || teamCleared) && level && <ChapterClear ask={!group || group.host} level={level} counts={counts} went={went} onContinue={(from) => void carryOn(from)} />}
+          {(match.cleared || teamCleared || passing) && level && <ChapterClear ask={!group || group.host} level={level} counts={counts} went={went} onContinue={(from) => void carryOn(from)} />}
           {match.paused && (pausePage === "moves"
             ? <MoveList match={match} specials={game.specials()} onResume={toggleMoves} onChange={() => select("change")} extra={<SmallButton className="mt-4" onClick={() => toPage("menu")}>Back</SmallButton>} />
             : <PauseMenu page={pausePage} onPage={toPage} onResume={toggleMoves} actions={pauseActions()} settings={

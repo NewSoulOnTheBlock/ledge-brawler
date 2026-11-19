@@ -46,10 +46,21 @@ inside the packs folder (the build's first argument):
 | `lightyeartraxx-kl-peach-game-over-iii-142453` | the last life of a campaign level going |
 | `freesound_community-game-start-6104` | Campaign, Survival or Versus being chosen |
 | `floraphonic-90s-game-ui-2-185095` | a choice being made in any menu but the main one |
-| `kaazoom-by-the-rafters-glow-stinger-medieval-tavern-music-rpg-game-620394` | the main menu, once each time it is come to |
 | `the_mountain-dark-trap-129999` | under a protagonist's opening cutscene, looped until its last card |
 | `freesound_community-8-bit-moonlight-sonata-music-loop-20436` | the music of the moonlit forest (sky `nightforest`), looped, wherever that is the place in play |
 | `sergequadrado-fast-rocky-loop-275535` | the music of the canyon (sky `wastelands`), looped, wherever that is the place in play |
+| `alex-morgan-dark-trap-lazy-beat-instrumental-587390` | the main menu, looped, from the moment it is come to (`throne`) |
+| `mondamusic-trap-trap-beat-beats-589144` | the main menu while its credits are open (`credits`) |
+| `mondamusic-trap-trap-hype-589115`, `mondamusic-motivation-drill-trap-560145` | the Crownlands: even chapters, odd chapters (`crown`, `crownB`) |
+| `kiravale-phonk-music-593661`, `sub_clair-phonk-instrumental-610091`, `mondamusic-drill-drill-trap-597190` | the Ashen Reach, the Drowned Wilds, the Pale North (`ash`, `drowned`, `north`) |
+| `rovador-nightmare-circus-414856`, `moodmode-creepy-devil-dance-166764` | any fungal place, any shrine (`fungal`, `shrine`) |
+| `mondamusic-phonk-589113` | the Black Archive, over the seal beneath Blackspire, and the Hollow Below (`blackspire`) |
+| `apalonbeats-trap-trap-hype-beat-491423`, `solarflex-trap-instrumental-558263`, `dimmysad-mankind-vs-machines-action-electronic-dubstep-game-420650` | a boss fought: before a hero's fourth chapter, in it, in the fifth (`boss`, `firstborn`, `final`) |
+| `jonasblakewood-trap-action-623046`, `alexzavesa-powerful-beat-trap-loop-635537`, `vaitsez-latin-latino-trap-beat-635218` | a Versus match: one of the three, the same for the whole match (`duelA`, `duelB`, `duelC`) |
+| `kulakovka-background-trap-304347`, `redoctopus-siren-police-trap-194629` | Survival: until wave 10, from it (`waves`, `wavesLate`) |
+
+Which plays where is `musicFor` in `src/game/audio.ts`; a boss fight comes first, then the mode, then a campaign place's
+own music, then its region's. The soundtrack is levelled to -16 LUFS by the build.
 
 The build cuts the short ones to the sound itself and evens out their loudness, which needs `ffmpeg`; the music is used whole.
 
@@ -82,3 +93,39 @@ the pack's folder as the build's fifth argument.
 
 `apps/app/src/home.webp` is the game's own menu picture, the five before the throne, supplied by its owner
 ("Hooded Warriors Before the Golden Throne.png", 1672 by 941). It fills the page, and the name is lettered over it.
+
+## Enemy attack effects
+
+Cut by `foefx.py` (run by `build.py`, or alone: `python -I art/packs/foefx.py <packs folder>`) from the seven VFX
+archives unpacked into `<packs folder>/vfx`, into `src/game/packs/foefx/`. Only enemies use them (`src/game/foefx.ts`),
+so an enemy's attack never looks like a fighter's special.
+
+| Pack | Strips | Licence |
+|---|---|---|
+| Holy VFX 01-02 | `holyBall`, `holyPop` | none in the archive |
+| Thunder Effect 01, 02 | `bolt`, `boltHit`, `slash`, `splash`, `skyStrike` | none in the archive |
+| Ice Effect 01 | `shard`, `shardPop`, `spikes` | none in the archive |
+| Fire Effect 2 | `dome`, `blast` | none in the archive |
+| Water Effect 2 | `waterBall`, `waterPop`, `geyser` | none in the archive |
+| Dark VFX 01 - 02 | `skull`, `skullPop`, `ghost` | none in the archive |
+
+## Enemies of one level each
+
+Cut by `foes.py` (run by `build.py`, or alone: `python -I art/packs/foes.py <packs folder>`, which adds them to
+`cast.json`) from the archives unpacked into `<packs folder>/foes`. Each is a brief's `own` enemy in
+`src/game/levels.ts` and appears in no other level; its basic way of fighting and its special are in `src/game/cast.ts`.
+
+| Pack | Cast | Level | Licence |
+|---|---|---|---|
+| Undead executioner (and its summons) | `executioner`, `spirit` | forbidden-3 | none in the archive |
+| NightBorne | `nightborne` | forbidden-4 | none in the archive |
+| Fire Worm | `fireworm` (+ `fireball`, `fireBurst` in foefx) | ember-2 | CC0 |
+| stormhead | `stormhead` | exile-3 | none in the archive |
+| Mud Guard | `mudguard` | hollow-1 | none in the archive |
+| Small Monster | `sprout` | hollow-5 | none in the archive |
+| Toaster Bot | `toaster` | architect-1 | none in the archive |
+| Droid Zapper | `droid` | architect-2 | none in the archive |
+| Bot Wheel | `botwheel` | architect-3 | none in the archive |
+| Mecha-stone Golem 0.1 | `golem` (+ `fist`, `laser` in foefx) | architect-5 | none in the archive |
+| EVil Wizard 2 | `wizard` | ember-4 | CC0 |
+| FREE_Samurai 2D Pixel Art v1.2 | `ronin` | exile-2 | use in a game only; no resale as an asset; **never in an NFT** |

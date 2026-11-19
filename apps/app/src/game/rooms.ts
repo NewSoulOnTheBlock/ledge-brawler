@@ -6,6 +6,7 @@
 import type { CastId } from "./cast.ts";
 import type { Vec } from "./data.ts";
 import type { Decor, Level, Slab } from "./levels.ts";
+import { dressLocale } from "./locale.ts";
 import { shape } from "./shape.ts";
 import { CRUSH_H, LIFT_MAX, type Traps } from "./traps.ts";
 
@@ -1706,6 +1707,8 @@ export interface Brief {
   secret?: string;
   /** Its enemies, weakest first, and the one that waits by the way out. */
   foes: CastId[]; boss: CastId;
+  /** The enemy that belongs to this level and no other (cast.ts): one of it in every room's ambush. */
+  own?: CastId;
   /** What there is to find, one to a nook for as long as both last. */
   clues: Level["clues"][number]["fact"][]; clueText: string[];
   effects: Level["effects"];
@@ -1787,6 +1790,8 @@ function dressRooms(b: Brief, g: Grid, rnd: () => number, tops: NonNullable<Leve
     const t = tops[Math.floor(rnd() * tops.length)]; if (!t || t[2] < 2 * CELL) continue;
     decor.push({ piece: name, set: set ?? "scenery", x: t[0] + CELL * 0.6 + rnd() * (t[2] - CELL * 1.2), y: t[1] + 2, ...(set ? { k: 4 } : {}) });
   }
+  // What makes the level its own place (locale.ts).
+  dressLocale(b.id, g, rnd, decor);
   // Clear of what a fighter must see: nothing within two cells of a hazard, spring, start or exit, in front or standing tall.
   for (let i = decor.length - 1; i >= 0; i--) { const d = decor[i]; if ("piece" in d && d.set === "scenery" && keepClear.some((x) => Math.abs(x - d.x) < (d.front ? 3 : 1) * CELL) && (d.front || scene.mark.includes(d.piece))) decor.splice(i, 1); }
 }
@@ -1982,7 +1987,8 @@ function made(b: Brief, laid: Grid | undefined, why: string | null, turn: number
     }
     const zone: [number, number, number, number] = [(ox + 2) * CELL, (oy + 1) * CELL, (ox + COLS - 2) * CELL, (oy + ROWS - 1) * CELL];
     const count = Math.min(spots.length, 2 + Math.min(2, b.chapter));
-    const foes = spots.slice(0, count).map((spot, i) => ({ ...spot, kind: kinds(count)[i] }));
+    // The level's own enemy leads every room's ambush (Brief.own); the rest are drawn as ever, so nothing else moves.
+    const foes = spots.slice(0, count).map((spot, i) => { const drawn = kinds(count)[i]; return { ...spot, kind: b.own && i === 0 ? b.own : drawn }; });
     if (boss) last = { at: zone[0], zone, foes: [{ ...boss, kind: b.boss }, ...foes.slice(0, 2)] };
     else if (foes.length) ambushes.push({ at: zone[0], zone, foes });
   }

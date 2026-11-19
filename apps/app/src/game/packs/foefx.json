@@ -1,0 +1,119 @@
+{
+ "skull": {
+  "w": 40,
+  "h": 32,
+  "frames": 10,
+  "loop": 0
+ },
+ "skullPop": {
+  "w": 40,
+  "h": 32,
+  "frames": 6
+ },
+ "ghost": {
+  "w": 48,
+  "h": 64,
+  "frames": 15
+ },
+ "dome": {
+  "w": 48,
+  "h": 48,
+  "frames": 11
+ },
+ "blast": {
+  "w": 64,
+  "h": 64,
+  "frames": 13
+ },
+ "holyBall": {
+  "w": 32,
+  "h": 32,
+  "frames": 8,
+  "loop": 0
+ },
+ "holyPop": {
+  "w": 32,
+  "h": 32,
+  "frames": 6
+ },
+ "shard": {
+  "w": 48,
+  "h": 32,
+  "frames": 10,
+  "loop": 0
+ },
+ "shardPop": {
+  "w": 48,
+  "h": 32,
+  "frames": 7
+ },
+ "spikes": {
+  "w": 32,
+  "h": 32,
+  "frames": 33
+ },
+ "bolt": {
+  "w": 32,
+  "h": 32,
+  "frames": 5,
+  "loop": 0
+ },
+ "boltHit": {
+  "w": 32,
+  "h": 32,
+  "frames": 5
+ },
+ "slash": {
+  "w": 48,
+  "h": 48,
+  "frames": 16
+ },
+ "splash": {
+  "w": 48,
+  "h": 48,
+  "frames": 11
+ },
+ "skyStrike": {
+  "w": 64,
+  "h": 64,
+  "frames": 12
+ },
+ "waterBall": {
+  "w": 64,
+  "h": 64,
+  "frames": 21,
+  "loop": 4
+ },
+ "waterPop": {
+  "w": 64,
+  "h": 64,
+  "frames": 15
+ },
+ "geyser": {
+  "w": 128,
+  "h": 128,
+  "frames": 20
+ },
+ "fireball": {
+  "w": 46,
+  "h": 46,
+  "frames": 6,
+  "loop": 0
+ },
+ "fireBurst": {
+  "w": 46,
+  "h": 46,
+  "frames": 7
+ },
+ "fist": {
+  "w": 100,
+  "h": 100,
+  "frames": 6,
+  "loop": 0
+ },
+ "laser": {
+  "w": 300,
+  "h": 100,
+  "frames": 14
+ }
+}

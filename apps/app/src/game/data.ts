@@ -78,8 +78,13 @@ export const SLOT_INPUTS: Record<Slot, Input> = {
   sweep: ["hold", "S", "+", "K"], hammer: ["in air, hold", "S", "+", "J"], elbow: ["→", "→", "J"], vanish: ["←", "→", "K"],
   juggle: ["in air", "J", "J", "K"], sky: ["→", "↓", "→", "J"],
 };
-export const SPECIAL_INPUTS: Input[] = [["↓", "→", "L", "or", "1"], ["←", "→", "L", "or", "2"], ["↓", "↓", "L", "or", "3"], ["→", "↓", "L", "or", "4"], ["→", "→", "L", "or", "5"], ["→", "↓", "→", "L", "or", "6"]];
-export const SPECIAL_SHORT = ["↓→L", "←→L", "↓↓L", "→↓L", "→→L", "→↓→L"];
+/** How the specials and then the greater arts are called: a motion, read the way the fighter turns as it is made
+ *  (F forward, B back, D down), ended by the blast. There is no other way to them. A greater art takes four, as a
+ *  finisher does; sim.ts reads the longest first. */
+export const SPECIAL_MOTIONS: ("F" | "B" | "D")[][] = [["D", "F"], ["B", "F"], ["D", "D"], ["F", "B", "F", "D"], ["D", "D", "B", "F"], ["B", "F", "B", "F"]];
+const ARROW = { F: "→", B: "←", D: "↓" };
+export const SPECIAL_INPUTS: Input[] = SPECIAL_MOTIONS.map((motion) => [...motion.map((d) => ARROW[d]), "L"]);
+export const SPECIAL_SHORT = SPECIAL_MOTIONS.map((motion) => motion.map((d) => ARROW[d]).join("") + "L");
 /** What can be carried in the bag and used in a fight (sim.ts, `useItem`). */
 export type ItemId = "draught" | "vial" | "bomb" | "ward" | "haste" | "scroll";
 export interface ItemDef {

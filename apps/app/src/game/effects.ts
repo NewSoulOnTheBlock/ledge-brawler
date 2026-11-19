@@ -4,16 +4,19 @@
 import { FX, FX_PALETTE } from "./data.ts";
 import { type FxFrame, type FxInstance, type FxModule, PAL, clearFrame, composite, createFrame, createFx } from "./pixelfx/core/index.js";
 import type { Sprite } from "./sim.ts";
+import { drawFoeFx, isFoeFx } from "./foefx.ts";
 
 const modules = import.meta.glob<FxModule>("./pixelfx/fx/*/*.js", { eager: true });
 interface Live { fx: FxInstance; frame: FxFrame; canvas: HTMLCanvasElement; pixels: ImageData; t: number; stopped: boolean }
 const playing = new WeakMap<Sprite, Live>();
 
-/** How many pixels painting `s` afresh costs: each of its frame's pixels is worked out in code. */
-export function effectArea(s: Sprite) { const [w, h] = modules[`./pixelfx/fx/${FX[s.fx].id}.js`].meta.size; return w * h; }
+/** How many pixels painting `s` afresh costs: each of its frame's pixels is worked out in code. An enemy's drawn
+ *  frames (foefx.ts) cost nothing to paint. */
+export function effectArea(s: Sprite) { if (isFoeFx(s.fx)) return 0; const [w, h] = modules[`./pixelfx/fx/${FX[s.fx].id}.js`].meta.size; return w * h; }
 
 /** Draws `s` as it is `s.age` steps in, its origin at (s.x, s.y); or, not `fresh`, as it was last painted. */
 export function drawEffect(ctx: CanvasRenderingContext2D, s: Sprite, fresh = true) {
+  if (isFoeFx(s.fx)) { drawFoeFx(ctx, { ...s, fx: s.fx }); return; }
   const def = FX[s.fx], mod = modules[`./pixelfx/fx/${def.id}.js`];
   const [w, h] = mod.meta.size, [ox, oy] = mod.meta.origin, px = s.flip ? w - ox : ox;
   let live = playing.get(s);

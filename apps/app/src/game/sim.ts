@@ -7,12 +7,16 @@ import { type Event, type Match, blastCostOf, enabled, fullAura, fullStamina, fu
 import {
   AIR_CHAIN, AIR_FALL, ITEMS, type ItemId, AIR_RISE, BEAM_CHARGE, BEAM_FIRE, BOTH_UP, CASTER_SKIN, CHARGE, CHARS, CLIMB, CROSS_S, type Char, ENEMY_SKIN, FLY_HOVER, FLY_MOVE, FOUND, FX, type FxName,
   GROUND_CHAIN, JAB_S, type Joint, KICK_X, type Key, NOVA_GATHER, NOVA_RELEASE, type Pose, RAISE, SLAM_DOWN, SLAM_UP, SLOTS,
-  STANCE, STUN, type Skeleton, type Skin, type Slot, type SpecialDef, TUCK, type Tone, VOLLEY_A, VOLLEY_B, type Vec, airify, sampleKeys, skeleton, smooth,
+  SPECIAL_MOTIONS, STANCE, STUN, type Skeleton, type Skin, type Slot, type SpecialDef, TUCK, type Tone, VOLLEY_A, VOLLEY_B, type Vec, airify, sampleKeys, skeleton, smooth,
 } from "./data.ts";
 import { OUTFITS, RELICS, RELIC_KINDS, type RelicKind, collect, earned, isFound, outfitOf, skinOf } from "./relics.ts";
 import type { Level } from "./levels.ts";
 import { BLADE_R, CRUMBLE_BACK, CRUMBLE_HOLD, CRUSH_H, type Crumble, type Crusher, SPIKE_H, boltAt, bladeAt, flameAt, EYE_SIGHT, FROZEN_REACH, GRAVE_GRASP, GRAVE_REST, GRAVE_STIR, type Grave, TIDE_BREATH, TIDE_DRAG, TIDE_H, tideAt, liftAt, BELT_SPEED, fireAt, threadAt, MORTAR_EVERY, MORTAR_RANGE, SHELL_BURST, SHELL_FLIGHT, type Shell, LANTERN_SLEEP, SHADE_LAG, SHADE_LIFE, type Shade, FROZEN_SIGHT, WISP_LIFE, WISP_SPEED, WISP_TURN, type Wisp, eyeAt, spiritAt, GUST_PUSH, ICE_GRIP, type Thaw, bellAt, gustAt, jetAt, ramAt, seamAt, spikeAt, wagonAt } from "./traps.ts";
-import { ARTS, artCount, artPower, type CastId, castFrame, FOES } from "./cast.ts";
+import { ARTS, artCount, artPower, type CastId, castFrame, ENEMY_SIZE, FOES } from "./cast.ts";
+import { type FoeFxName, foeSteps, isFoeFx } from "./foefx.ts";
+
+/** The specials' slots, those with the longest motion first (data.ts, SPECIAL_MOTIONS). */
+const BY_LENGTH = SPECIAL_MOTIONS.map((_, slot) => slot).sort((a, b) => SPECIAL_MOTIONS[b].length - SPECIAL_MOTIONS[a].length);
 import type { Frame } from "./figure.ts";
 import { SKY_IDS, type SkyId } from "./sky.ts";
 
@@ -40,6 +44,9 @@ export interface Ui {
   wiped?(): void;
   /** Co-op: the group has cleared the level while this fighter, out of revives, could not stand to: it is cleared for it too. */
   teamClear?(): void;
+  /** In a hero's world: the fighter walked out of this area by its way out (1) or back through where it starts (-1).
+   *  Whether that door leads anywhere. */
+  pass?(way: 1 | -1): boolean;
   banner(text: string, tone?: "red" | "gold"): void; callout(text: string, sub?: string): void; sfx: Sfx;
   /** Shakes a controller or phone, from 0 to 1, for some milliseconds. */
   rumble?(strength: number, ms: number): void;
@@ -78,7 +85,7 @@ export interface Ui {
 /** A blow: its damage, the push it gives, and how it stuns. */
 export interface Hurt { dmg: number; kx: number; ky: number; stun?: number; heavy?: boolean; float?: boolean; from?: number }
 /** A projectile as another player's game shows it: seen, and harmless there. */
-export interface Shot { x: number; y: number; vx: number; vy: number; r: number; g: number; life: number; color: string; big: boolean; disc: boolean }
+export interface Shot { x: number; y: number; vx: number; vy: number; r: number; g: number; life: number; color: string; big: boolean; disc: boolean; /** An enemy's: drawn as this strip of foefx.ts. */ look?: FoeFxName }
 /** Another player's fighter as last heard of: where it is, how it stands, and the frame it shows. */
 export interface Peer {
   id: string; name: string; fighter: number; x: number; y: number; vx: number; vy: number; facing: number;
@@ -105,7 +112,7 @@ interface MoveDef {
   onStart?(F: Fighter): void; onStep?(F: Fighter, t: number, ov: Overrides, a: Attack): void; onLand?(F: Fighter): void; onHitT?(F: Fighter, T: Fighter): void;
 }
 interface Pick { name: string; slot?: Slot }
-interface Intent { dir: number; run: boolean; jumpHeld: boolean; jumpPressed: boolean; down: boolean; up?: boolean; grab?: boolean; dash?: boolean; charge?: boolean; P: boolean; K: boolean; X: boolean; fly?: boolean; special: number }
+interface Intent { dir: number; run: boolean; jumpHeld: boolean; jumpPressed: boolean; down: boolean; up?: boolean; grab?: boolean; dash?: boolean; charge?: boolean; P: boolean; K: boolean; X: boolean; fly?: boolean }
 
 export interface SpecialState { def: SpecialDef; kind: SpecialKind; p: Record<string, number | string>; t: number; dur: number; ang?: number; targets?: Fighter[]; c?: Vec }
 interface SpecialKind {
@@ -139,7 +146,8 @@ export interface Fighter {
   boss: { move: "slam" | "volley" | "rush" | null; t: number; dir: number; hit: boolean } | null;
   /** An enemy's own special (cast.ts, ARTS) under way: steps in, where it is aimed, which way, whether it has landed;
    *  and the steps until it may use it again. */
-  art: { t: number; x: number; y: number; dir: number; hit: boolean } | null; artCool: number;
+  /** Its special under way (foeArt); `push`, how fast it is driven across the ground this step, if it rushes. */
+  art: { t: number; x: number; y: number; dir: number; hit: boolean; push?: number } | null; artCool: number;
   /** In co-op (docs/coop-plan.md): an enemy's number, the same in every game of the group; whether this one is only a
    *  stand-in for the host's, placed and drawn as the host's game says; and the frame the host's game draws it in. */
   uid: number; remote: boolean; shown: { anim: string; frame: number } | null;
@@ -161,15 +169,19 @@ export interface Fighter {
 export interface Orb {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number; hero: boolean; big: boolean; radius?: number; g: number; life: number;
   color: string; disc: boolean; home: boolean; pierce: boolean; cd: Map<Fighter, number>; trail: Vec[]; spin: number;
+  /** An enemy's shot: drawn as this strip of foefx.ts, and bursting as `pop` where it lands. */
+  look?: FoeFxName; pop?: FoeFxName;
+  /** An enemy's shot that turns, a little each step, toward the nearest fighter. */
+  hunt?: boolean;
   /** Another player's, shown here and hitting nothing: their game decides what it hits. */
   ghost?: boolean;
 }
-export interface Ragdoll { parts: B[]; cons: Matter.Constraint[]; head: B; skin: Skin; cast: CastId | null; life: number }
+export interface Ragdoll { parts: B[]; cons: Matter.Constraint[]; head: B; skin: Skin; cast: CastId | null; life: number; /** How big the enemy it was stood (Fighter.big). */ big?: number }
 export interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; heavy?: boolean }
 export interface Burst { x: number; y: number; r: number; life: number; max: number; rot: number; color: string }
 export interface Floater { x: number; y: number; text: string; life: number; red?: boolean; /** An enemy's special named as it warns of it (foeArt): larger, and outlined to be read on any sky. */ warn?: boolean }
 /** One play of a pixel effect: its origin at (x, y), in the colours of `tone`, `scale` times its usual size, `age` steps in. */
-export interface Sprite { fx: FxName; x: number; y: number; tone: Tone; scale: number; flip: boolean; age: number }
+export interface Sprite { fx: FxName | FoeFxName; x: number; y: number; tone: Tone; scale: number; flip: boolean; age: number }
 export interface Ring { x: number; y: number; r: number; max: number; life: number; flat?: boolean; /** Where an enemy's special is about to land (foeArt): drawn red. */ danger?: boolean }
 export type Effect = { step(): boolean } & (
   | { kind: "pillar"; x: number; y: number; t: number }
@@ -221,7 +233,9 @@ export interface Scene {
   voidY: number;
   /** How much of the fighter's guard is left while it is up, from 1 to just above 0; 0 while it is down. */
   guard: number;
-  shake: number; slowMs: number; flashT: number; time: number; worldMin: number; worldMax: number;
+  shake: number; slowMs: number; flashT: number;
+  /** Steps left of a greater art's finisher moment: the world dims and greys round the fighter that called it. */
+  finisher: number; time: number; worldMin: number; worldMax: number;
   /** How far an impact has punched the zoom in, how many steps of red flash are left, and how long the knockout's slow motion still runs. */
   punch: number; red: number; deathMs: number;
   /** The corner of the view in world space, set by the camera: bolts and rain fall from its top. */
@@ -244,7 +258,7 @@ export interface World { foes: FoeWord[]; orbs: Shot[]; fx: Omit<Sprite, "age">[
 /** Co-op: something that happens to the whole group: an ambush sprung, a piece of the key found, the level cleared. */
 export type Shared = { e: "amb"; i: number } | { e: "key"; i: number; by: string } | { e: "clear" };
 
-export type Button = "left" | "right" | "down" | "up" | "grab" | "dash" | "run" | "jump" | "charge" | "punch" | "kick" | "blast" | "fly" | "guard" | "s1" | "s2" | "s3" | "s4" | "s5" | "s6" | "item" | "next";
+export type Button = "left" | "right" | "down" | "up" | "grab" | "dash" | "run" | "jump" | "charge" | "punch" | "kick" | "blast" | "fly" | "guard" | "item" | "next";
 export interface Game {
   scene: Scene;
   press(k: Button): void; release(k: Button): void; clearInput(): void;
@@ -340,7 +354,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   const S: Scene = {
     statics: [], props: [], enemies: [], ragdolls: [], orbs: [], effects: [], particles: [], bursts: [], floaters: [], rings: [], sprites: [],
     bag: [], chosen: 0, drops: [], warded: 0, hasted: 0, nextSky: null, relics: [], fairy: false, sparkle: false,
-    hero: null, match: rules.get(), lastSafe: { ...SPAWN }, level: null, cluesFound: [], sprung: [], sealed: false, traps: { crumbles: [], crushers: [], struck: [], frozen: [], wisps: [], graves: [], unveiled: [], told: false, opened: [], shells: [], booms: [], shades: [], trail: [], step: 0, lanternAt: [] }, dark: false, keys: [], bossRoom: null, locked: false, fade: 0, sky: null, guide: null, talking: false, voidY: VOID_Y, guard: 0, shake: 0, slowMs: 0, flashT: 0, time: 0, worldMin: -500, worldMax: 2000, punch: 0, red: 0, deathMs: 0, camX: 0, camY: 0, fights: 0,
+    hero: null, match: rules.get(), lastSafe: { ...SPAWN }, level: null, cluesFound: [], sprung: [], sealed: false, traps: { crumbles: [], crushers: [], struck: [], frozen: [], wisps: [], graves: [], unveiled: [], told: false, opened: [], shells: [], booms: [], shades: [], trail: [], step: 0, lanternAt: [] }, dark: false, keys: [], bossRoom: null, locked: false, fade: 0, sky: null, guide: null, talking: false, voidY: VOID_Y, guard: 0, shake: 0, slowMs: 0, finisher: 0, flashT: 0, time: 0, worldMin: -500, worldMax: 2000, punch: 0, red: 0, deathMs: 0, camX: 0, camY: 0, fights: 0,
     allies: [], coop: null, down: null,
   };
   const { statics, props, enemies, ragdolls, orbs, effects, particles, bursts, floaters, rings, sprites, drops, allies } = S;
@@ -437,7 +451,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   const ragParts = () => ragdolls.flatMap((r) => r.parts);
   const toneOf = (F: Fighter | null): Tone => (F?.char ? F.char.element : "enemy");
   /** Plays an effect, and gives it back so that what made it can move it. */
-  function play(name: FxName, x: number, y: number, tone: Tone, scale = 1, flip = false): Sprite {
+  function play(name: FxName | FoeFxName, x: number, y: number, tone: Tone, scale = 1, flip = false): Sprite {
     const sprite: Sprite = { fx: name, x, y, tone, scale, flip, age: 0 };
     sprites.push(sprite);
     // In a duel, or co-op, what plays here is told to the others, who would otherwise see a blow land and nothing come
@@ -702,7 +716,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   }
 
   // ---------- input ----------
-  const input = { left: false, right: false, down: false, up: false, grab: false, run: false, jump: false, charge: false, guard: false, dashPressed: false, jumpPressed: false, punchPressed: false, kickPressed: false, blastPressed: false, flyPressed: false, itemPressed: false, special: -1 };
+  const input = { left: false, right: false, down: false, up: false, grab: false, run: false, jump: false, charge: false, guard: false, dashPressed: false, jumpPressed: false, punchPressed: false, kickPressed: false, blastPressed: false, flyPressed: false, itemPressed: false };
   // Motion buffer: absolute L/R/D taps, read relative to the last tap's direction when an attack button lands.
   const tokens: { tok: string; t: number }[] = [];
   function token(t: string) { tokens.push({ tok: t, t: stepCount }); if (tokens.length > 8) tokens.shift(); }
@@ -717,7 +731,6 @@ export function createGame(rules: Rules, ui: Ui): Game {
       case "kick": input.kickPressed = true; break;
       case "blast": input.blastPressed = true; break;
       case "fly": input.flyPressed = true; break;
-      case "s1": case "s2": case "s3": case "s4": case "s5": case "s6": input.special = +k[1] - 1; break;
       case "item": input.itemPressed = true; break;
       case "next": if (S.bag.length) S.chosen = (S.chosen + 1) % S.bag.length; break;
       case "left": if (!input.left) token("L"); input.left = true; break;
@@ -733,7 +746,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   function clearInput() {
     input.left = input.right = input.down = input.up = input.grab = input.run = input.jump = input.charge = input.guard = false;
     input.dashPressed = input.jumpPressed = input.punchPressed = input.kickPressed = input.blastPressed = input.flyPressed = input.itemPressed = false;
-    input.special = -1; tokens.length = 0;
+    tokens.length = 0;
   }
 
   function checkGrounded(F: Fighter) {
@@ -759,17 +772,18 @@ export function createGame(rules: Rules, ui: Ui): Game {
     }
   }
 
-  function motion(seq: string[]) {
+  /** Whether the last taps were `seq`, each within `gap` steps of the one before and the last as recent. */
+  function motion(seq: string[], gap = 14) {
     if (tokens.length < seq.length) return false;
     const tail = tokens.slice(-seq.length);
-    if (stepCount - tail[tail.length - 1].t > 14) return false;
+    if (stepCount - tail[tail.length - 1].t > gap) return false;
     const lastLR = [...tail].reverse().find((x) => x.tok !== "D");
     const f = lastLR ? (lastLR.tok === "R" ? 1 : -1) : hero().facing;
     for (let i = 0; i < seq.length; i++) {
       const tk = tail[i].tok;
       const rel = tk === "D" ? "D" : ((tk === "R") === (f === 1) ? "F" : "B");
       if (rel !== seq[i]) return false;
-      if (i > 0 && tail[i].t - tail[i - 1].t > 14) return false;
+      if (i > 0 && tail[i].t - tail[i - 1].t > gap) return false;
     }
     tokens.length = 0;
     hero().facing = f;
@@ -809,10 +823,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
   function heroIntent(): Intent {
     const I = {
       dir: (input.right ? 1 : 0) - (input.left ? 1 : 0), run: input.run, jumpHeld: input.jump, down: input.down, up: input.up, grab: input.grab, dash: input.dashPressed, charge: input.charge,
-      jumpPressed: input.jumpPressed, P: input.punchPressed, K: input.kickPressed, X: input.blastPressed, fly: input.flyPressed, special: input.special,
+      jumpPressed: input.jumpPressed, P: input.punchPressed, K: input.kickPressed, X: input.blastPressed, fly: input.flyPressed,
     };
     input.dashPressed = input.jumpPressed = input.punchPressed = input.kickPressed = input.blastPressed = input.flyPressed = false;
-    input.special = -1;
     return I;
   }
 
@@ -856,20 +869,23 @@ export function createGame(rules: Rules, ui: Ui): Game {
       else if (own.kind === "arrowRain") mark(A.x, A.y, 130);
       else if (own.kind === "eruption") for (let i = 0; i < n; i++) mark(A.x + (i - (n - 1) / 2) * 150, A.y, 70);
       else if (own.kind === "hexfire") for (let i = 0; i < n; i++) mark(A.x + (i - (n - 1) / 2) * 90, A.y, 50);
+      else if (own.kind === "thunderhead") for (let i = 0; i < n; i++) mark(A.x + (i - (n - 1) / 2) * 120, A.y, 60);
+      else if (own.kind === "rootSnare") mark(A.x, A.y, 90);
       else warn({ ring: { x: at.x, y: at.y, r: 10, max: 70, life: pw.tell, danger: true } });
     }
     const A = E.art!, tell = pw.tell, t = ++A.t;
+    A.push = 0;
     I.dir = 0;
     let done = t > tell + 14;
     switch (own.kind) {
       // A cut drawn in one step across the room, and from chapter 4 a second one back.
       case "iaido": {
         const second = n > 1 && t >= tell + 24;
-        if (t === tell || (n > 1 && t === tell + 24)) { A.dir = Math.sign(H.body.position.x - at.x) || A.dir; A.hit = false; E.facing = A.dir; sfx.vanish(); }
+        if (t === tell || (n > 1 && t === tell + 24)) { A.dir = Math.sign(H.body.position.x - at.x) || A.dir; A.hit = false; E.facing = A.dir; sfx.vanish(); play("slash", at.x + A.dir * 60, at.y, "enemy", 1, A.dir < 0); }
         const cutting = (t >= tell && t < tell + 14) || (second && t < tell + 38);
         if (cutting) {
-          Body.setVelocity(E.body, { x: A.dir * (16 + 2 * k), y: E.body.velocity.y });
-          if (!A.hit && strikeSides(E, (F) => overlaps(hurtBox(F), E.body.bounds), dmg(10), 11, -7)) { A.hit = true; shake(6); sfx.hit(true); }
+          A.push = A.dir * (16 + 2 * k);
+          if (!A.hit && strikeSides(E, (F) => overlaps(hurtBox(F), E.body.bounds), dmg(10), 11, -7)) { A.hit = true; shake(6); sfx.hit(true); play("splash", H.body.position.x, H.body.bounds.max.y, "enemy", 1); }
         }
         done = t > tell + (n > 1 ? 40 : 18);
         break;
@@ -878,7 +894,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
       case "quake": {
         const r = (160 + 25 * k) * (E.big > 1 ? 1.6 : 1);
         const wave = (reach: number, scale: number) => {
-          shake(8); sfx.boom(false); play("quake", at.x, feet, "enemy", scale);
+          // Ice breaking up out of the ground across all it reaches, from the middle out.
+          shake(8); sfx.boom(false);
+          for (let x = 0; x <= reach; x += 70) for (const side of x ? [-1, 1] : [1]) later(Math.round(x / 35), () => play("spikes", at.x + side * x, feet, "enemy", 0.8 + 0.2 * scale, side < 0));
           strikeSides(E, (F) => Math.abs(F.body.position.x - at.x) < reach && Math.abs(F.body.bounds.max.y - feet) < 120, dmg(11), 10, -12);
         };
         if (t === tell) wave(r, 1 + 0.15 * k);
@@ -890,7 +908,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
       case "crescent":
         if (t === tell) {
           const ang = Math.atan2(H.body.position.y - (at.y - 20), H.body.position.x - at.x);
-          for (let i = 0; i < n; i++) spawnOrb(E, at.x + A.dir * 30, at.y - 20, ang + (i - (n - 1) / 2) * 0.25, { speed: 10 + k, dmg: dmg(7), r: 13, disc: true, life: 110 });
+          for (let i = 0; i < n; i++) spawnOrb(E, at.x + A.dir * 30, at.y - 20, ang + (i - (n - 1) / 2) * 0.25, { speed: 10 + k, dmg: dmg(7), r: 13, life: 110, look: "skull", pop: "skullPop" });
           sfx.zap();
         }
         break;
@@ -899,26 +917,27 @@ export function createGame(rules: Rules, ui: Ui): Game {
         if (t === tell) {
           for (let i = 0; i < n; i++) {
             const T = 48 + i * 8, g = 0.35, sx = at.x, sy = at.y - 30, tx = A.x + (i - (n - 1) / 2) * 90;
-            spawnOrb(E, sx, sy, 0, { vx: (tx - sx) / T, vy: (A.y - 20 - sy - 0.5 * g * T * T) / T, g, dmg: dmg(8), r: 12, life: T + 40 });
+            spawnOrb(E, sx, sy, 0, { vx: (tx - sx) / T, vy: (A.y - 20 - sy - 0.5 * g * T * T) / T, g, dmg: dmg(8), r: 12, life: T + 40, look: "holyBall", pop: "dome" });
           }
           sfx.zap();
         }
         break;
       // Gone in a puff, and out of the dark behind the fighter.
       case "shadowStep":
-        if (t === 1) play("puff", at.x, at.y, "enemy", 0.9);
+        if (t === 1) play("ghost", at.x, feet, "enemy", 1);
         if (t === tell) {
           const to = { x: H.body.position.x - (H.facing || 1) * 70, y: H.body.position.y - 10 };
           Body.setPosition(E.body, to); Body.setVelocity(E.body, { x: 0, y: 0 });
-          play("puff", to.x, to.y, "enemy", 0.9); sfx.vanish();
+          play("ghost", to.x, H.body.bounds.max.y, "enemy", 1); sfx.vanish();
           E.facing = Math.sign(H.body.position.x - to.x) || 1;
         }
         if (t === tell + 8 && strikeSides(E, (F) => Math.hypot(F.body.position.x - at.x, F.body.position.y - at.y) < 95, dmg(9), 9, -8)) { shake(5); sfx.hit(true); }
         break;
       // Arrows falling on the marked ground, one every four steps.
       case "arrowRain":
+        if (t === tell) play("skyStrike", A.x, A.y, "enemy", 1);
         if (t >= tell && (t - tell) % 4 === 0 && (t - tell) / 4 < n) {
-          spawnOrb(E, A.x + (rnd() - 0.5) * 220, A.y - 520, Math.PI / 2, { speed: 15, dmg: dmg(6), r: 8, life: 70 });
+          spawnOrb(E, A.x + (rnd() - 0.5) * 220, A.y - 520, Math.PI / 2, { speed: 15, dmg: dmg(6), r: 8, life: 70, look: "bolt", pop: "boltHit" });
           if ((t - tell) % 8 === 0) sfx.zap();
         }
         done = t > tell + n * 4 + 2;
@@ -929,12 +948,150 @@ export function createGame(rules: Rules, ui: Ui): Game {
           shake(10); sfx.boom(true);
           for (let i = 0; i < n; i++) {
             const x = A.x + (i - (n - 1) / 2) * 150;
-            play("holyPillar", x, A.y, "enemy", 1.1);
+            play("ghost", x, A.y, "enemy", 2.2);
             strikeSides(E, (F) => Math.abs(F.body.position.x - x) < 60 && Math.abs(F.body.bounds.max.y - A.y) < 140, dmg(12), 4, -16);
           }
         }
         done = t > tell + 20;
         break;
+      // The enemies that belong each to one level (cast.ts, `own`), each with a special no other has.
+      // NightBorne: gone, and out of the dark at the fighter's side, one side then the other, a cut each time.
+      case "nightRend": {
+        const i = (t - tell) / 12;
+        if (t >= tell && Number.isInteger(i) && i < n) {
+          const side = i % 2 ? 1 : -1, to = { x: H.body.position.x + side * 80, y: H.body.position.y - 6 };
+          play("skullPop", at.x, at.y, "enemy", 1.4);
+          Body.setPosition(E.body, to); Body.setVelocity(E.body, { x: 0, y: 0 }); E.facing = -side;
+          play("skullPop", to.x, to.y, "enemy", 1.6); sfx.vanish();
+          if (strikeSides(E, (F) => Math.hypot(F.body.position.x - to.x, F.body.position.y - to.y) < 105, dmg(8), 8, -7)) { shake(5); sfx.hit(true); }
+        }
+        done = t > tell + n * 12 + 4;
+        break;
+      }
+      // Fire Worm: a fountain of its fireballs, thrown high and falling all round the fighter.
+      case "fireFountain":
+        if (t === tell) {
+          for (let i = 0; i < n; i++) {
+            const T = 46 + i * 5, g = 0.35, sx = at.x + A.dir * 20, sy = at.y - 30, tx = A.x + (i - (n - 1) / 2) * 70;
+            spawnOrb(E, sx, sy, 0, { vx: (tx - sx) / T, vy: (A.y - 20 - sy - 0.5 * g * T * T) / T, g, dmg: dmg(7), r: 12, life: T + 40, look: "fireball", pop: "fireBurst" });
+          }
+          sfx.boom(false);
+        }
+        break;
+      // Stormhead: lightning out of the sky on the marked ground, one strike after another.
+      case "thunderhead": {
+        const i = (t - tell) / 9;
+        if (t >= tell && Number.isInteger(i) && i < n) {
+          const x = A.x + (i - (n - 1) / 2) * 120;
+          play("skyStrike", x, A.y, "enemy", 1); shake(5); sfx.zap();
+          strikeSides(E, (F) => Math.abs(F.body.position.x - x) < 55 && Math.abs(F.body.bounds.max.y - A.y) < 150, dmg(10), 5, -12);
+        }
+        done = t > tell + n * 9 + 2;
+        break;
+      }
+      // Mud Guard: spear down, the length of the room, and whoever it meets is thrown.
+      case "spearRush": {
+        if (t === tell) { A.dir = Math.sign(H.body.position.x - at.x) || A.dir; A.hit = false; E.facing = A.dir; sfx.charge(); }
+        if (t >= tell && t < tell + 30) {
+          A.push = A.dir * (11 + k);
+          if (t % 3 === 0) dust(at.x - A.dir * 20, E.body.bounds.max.y, 3, -A.dir);
+          if (!A.hit && strikeSides(E, (F) => overlaps(hurtBox(F), E.body.bounds) || Math.abs(F.body.position.x - (at.x + A.dir * 70)) < 40 && Math.abs(F.body.position.y - at.y) < 60, dmg(11), 16, -9)) { A.hit = true; shake(7); sfx.hit(true); play("boltHit", H.body.position.x, H.body.position.y, "enemy", 1.2); }
+        }
+        done = t > tell + 32;
+        break;
+      }
+      // Small Monster: roots break up under the fighter and hold it where it stands.
+      case "rootSnare":
+        if (t === tell) {
+          play("spikes", A.x, A.y, "enemy", 1.3); play("spikes", A.x - 50, A.y, "enemy", 1, true); play("spikes", A.x + 50, A.y, "enemy", 1);
+          for (const F of sides()) if (F.alive && Math.abs(F.body.position.x - A.x) < 90 && Math.abs(F.body.bounds.max.y - A.y) < 70) {
+            hurt(F, { dmg: dmg(6), kx: 0, ky: -1, stun: 60 + 10 * k, from: Math.sign(F.body.position.x - at.x) || 1 }); sfx.hit(true);
+          }
+        }
+        done = t > tell + 10;
+        break;
+      // Toaster Bot: it runs hot, then lets it all out in a line of bursts along the ground ahead.
+      case "overheat":
+        if (t === tell) {
+          A.dir = Math.sign(H.body.position.x - at.x) || A.dir; E.facing = A.dir; sfx.beam();
+          const y = E.body.bounds.max.y - 20;
+          for (let i = 1; i <= 6; i++) later(i * 2, () => play("holyPop", at.x + A.dir * i * 60, y, "enemy", 1.6));
+          strikeSides(E, (F) => (F.body.position.x - at.x) * A.dir > 0 && Math.abs(F.body.position.x - at.x) < 380 && Math.abs(F.body.bounds.max.y - E.body.bounds.max.y) < 70, dmg(10), 12, -6);
+        }
+        done = t > tell + 14;
+        break;
+      // Droid Zapper: the air round it crackles, again and again.
+      case "arcField": {
+        const i = (t - tell) / 14;
+        if (t >= tell && Number.isInteger(i) && i < n) {
+          for (let j = 0; j < 6; j++) play("boltHit", at.x + Math.cos(j * 1.05) * 110, at.y + Math.sin(j * 1.05) * 70, "enemy", 1.1);
+          warn({ ring: { x: at.x, y: at.y, r: 20, max: 150, life: 10, danger: true } }); sfx.zap();
+          strikeSides(E, (F) => Math.hypot(F.body.position.x - at.x, F.body.position.y - at.y) < 150, dmg(6), 6, -6);
+        }
+        done = t > tell + n * 14 + 2;
+        break;
+      }
+      // Bot Wheel: a burst of speed across the room, and the gas it leaves behind goes up a moment later.
+      case "gasDash":
+        if (t === tell) { A.dir = Math.sign(H.body.position.x - at.x) || A.dir; A.hit = false; E.facing = A.dir; sfx.charge(); }
+        if (t >= tell && t < tell + 24) {
+          A.push = A.dir * (17 + k);
+          if (!A.hit && strikeSides(E, (F) => overlaps(hurtBox(F), E.body.bounds), dmg(9), 13, -8)) { A.hit = true; shake(6); sfx.hit(true); }
+          if ((t - tell) % 5 === 0) {
+            const p = { x: at.x, y: E.body.bounds.max.y };
+            later(22, () => { play("dome", p.x, p.y, "enemy", 0.9); strikeSides(E, (F) => Math.abs(F.body.position.x - p.x) < 45 && Math.abs(F.body.bounds.max.y - p.y) < 80, dmg(4), 4, -9); });
+          }
+        }
+        done = t > tell + 26;
+        break;
+      // Mecha-stone Golem: its core gathers light, then a laser the width of the room from its arm.
+      case "laser": {
+        if (t === tell) {
+          A.dir = Math.sign(H.body.position.x - at.x) || A.dir; E.facing = A.dir; A.hit = false; sfx.beam();
+          const s = 2.4, hand = { x: at.x + A.dir * 40, y: at.y - 20 };
+          play("laser", hand.x + A.dir * (150 - 52) * s, hand.y + (50 - 33) * s, "enemy", 1, A.dir < 0);
+          A.x = hand.x; A.y = hand.y;
+        }
+        // The beam is out from its eighth frame (foefx.ts, twelve a second) to its last.
+        if (!A.hit && t >= tell + 35 && t < tell + 70 && strikeSides(E, (F) => (F.body.position.x - A.x) * A.dir > 0 && Math.abs(F.body.position.x - A.x) < 600 && A.y > F.body.bounds.min.y - 25 && A.y < F.body.bounds.max.y + 25, dmg(14), 10, -5)) { A.hit = true; shake(8); sfx.hit(true); }
+        done = t > tell + 72;
+        break;
+      }
+      // Undead Executioner: the spared it executed, raised and sent for the fighter.
+      case "summon":
+        if (t === tell && send({ type: "ambush", count: n })) {
+          for (let i = 0; i < n; i++) {
+            if (!send({ type: "arrive" })) continue;
+            const x = at.x + (i - (n - 1) / 2) * 70;
+            play("ghost", x, E.body.bounds.max.y, "enemy", 0.9);
+            enemyAt(x, at.y, false, "spirit");
+          }
+          sfx.vanish();
+        }
+        done = t > tell + 10;
+        break;
+      // Evil Wizard: wraiths out of its staff, slow, that turn after the fighter wherever it goes until they fade.
+      case "haunting":
+        if (t === tell) {
+          for (let i = 0; i < n; i++) spawnOrb(E, at.x + A.dir * 40, at.y - 50 - i * 25, -Math.PI / 2 + A.dir * (0.6 + i * 0.5), { speed: 4.5 + 0.4 * k, dmg: dmg(5), r: 14, life: 170, look: "skull", pop: "skullPop", hunt: true });
+          play("ghost", at.x + A.dir * 40, E.body.bounds.max.y, "enemy", 1.4); sfx.vanish();
+        }
+        done = t > tell + 8;
+        break;
+      // Samurai: straight through the fighter and past it, and only then does the cut land, the whole way along.
+      case "moonCut": {
+        if (t === tell) { A.dir = Math.sign(H.body.position.x - at.x) || A.dir; E.facing = A.dir; A.x = at.x; sfx.vanish(); }
+        if (t >= tell && t < tell + 16) A.push = A.dir * (24 + 2 * k);
+        if (t === tell + 16) A.y = at.x;
+        if (t === tell + 34) {
+          const from = Math.min(A.x, A.y), to = Math.max(A.x, A.y), y = E.body.bounds.max.y;
+          for (let x = from; x <= to; x += 55) play("shardPop", x, y - 40, "enemy", 1.5);
+          shake(9); S.flashT = Math.max(S.flashT, 6); sfx.hit(true);
+          strikeSides(E, (F) => F.body.position.x > from - 30 && F.body.position.x < to + 30 && Math.abs(F.body.bounds.max.y - y) < 90, dmg(15), 9, -10);
+        }
+        done = t > tell + 36;
+        break;
+      }
     }
     if (done) E.art = null;
     return true;
@@ -964,19 +1121,22 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (B.move === "slam") {
       if (B.t === 1) { rings.push({ x: at.x, y: feet, r: 20, max: 340, life: 45, flat: true }); E.flash = 44; }
       if (B.t === 45) {
-        shake(12); S.flashT = Math.max(S.flashT, 6); sfx.boom(true); play("ring", at.x, feet, "enemy", 2.2);
+        shake(12); S.flashT = Math.max(S.flashT, 6); sfx.boom(true); play("blast", at.x, feet - 60, "enemy", 1.4);
+        for (const side of [-1, 1]) for (let i = 1; i <= 3; i++) later(i * 4, () => play("dome", at.x + side * i * 95, feet, "enemy", 1));
         if (dist < 340 && H.body.bounds.max.y > feet - 150) strike(13, 12, -13);
       }
     } else if (B.move === "volley") {
       E.facing = toward;
       if (B.t === 20 || B.t === 34 || B.t === 48) {
         const from = { x: at.x + toward * 70, y: at.y - 40 };
-        spawnOrb(E, from.x, from.y, Math.atan2(H.body.position.y - from.y, H.body.position.x - from.x) + (B.t - 34) / 14 * 0.22, { r: 15, speed: 9, dmg: 8, life: 150 });
+        spawnOrb(E, from.x, from.y, Math.atan2(H.body.position.y - from.y, H.body.position.x - from.x) + (B.t - 34) / 14 * 0.22, { r: 15, speed: 9, dmg: 8, life: 150, look: "waterBall", pop: "waterPop" });
         sfx.zap();
       }
     } else {
       E.facing = B.dir;
       if (B.t === 1) E.flash = 26;
+      // It bursts up out of the ground where it sets off.
+      if (B.t === 27) play("geyser", at.x, feet, "enemy", 1.2);
       if (B.t > 26 && B.t < 62) {
         Body.setVelocity(E.body, { x: B.dir * 11, y: E.body.velocity.y });
         if (!B.hit && overlaps(hurtBox(H), E.body.bounds)) { B.hit = true; shake(8); strike(12, 13, -8); }
@@ -987,7 +1147,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   }
 
   function enemyIntent(E: Fighter): Intent {
-    const I: Intent = { dir: 0, run: false, jumpHeld: true, jumpPressed: false, down: false, P: false, K: false, X: false, special: -1 };
+    const I: Intent = { dir: 0, run: false, jumpHeld: true, jumpPressed: false, down: false, P: false, K: false, X: false };
     const H = targetOf(E);
     if (!H || S.dark) return I;
     if (E.boss) return bossIntent(E, H, I);
@@ -996,7 +1156,15 @@ export function createGame(rules: Rules, ui: Ui): Game {
     const dx = H.body.position.x - E.body.position.x, dy = H.body.position.y - E.body.position.y;
     const dist = Math.abs(dx);
     E.cool--;
-    if (E.caster) {
+    // How its kind fights between its specials (cast.ts, `way`); without one, as a brawler or a caster does.
+    const way = E.cast ? FOES[E.cast].way : undefined, reach = way?.kind === "reach" ? way.reach : 52;
+    if (way?.kind === "ram") {
+      // It drives straight at the fighter, flat out, and what it runs into is struck and thrown; then it backs off.
+      I.dir = Math.sign(dx) || E.facing; I.run = true; E.facing = I.dir;
+      if (E.cool <= 0 && overlaps(hurtBox(H), E.body.bounds) && strikeSides(E, (F) => overlaps(hurtBox(F), E.body.bounds), 7 * E.pow, 11, -7)) {
+        shake(4); sfx.hit(true); Body.setVelocity(E.body, { x: -I.dir * 7, y: -3 }); E.cool = 70;
+      }
+    } else if (E.caster || way?.kind === "shoot") {
       // It keeps its distance, unless the fighter is too far above or below to shoot at: then it makes its way over,
       // as one that fights hand to hand does.
       if (Math.abs(dy) >= 90) I.dir = dy > 60 && dist < 60 ? E.facing || 1 : Math.sign(dx);
@@ -1006,7 +1174,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         E.facing = Math.sign(dx) || E.facing; I.dir = 0; I.X = true;
         E.cool = Math.max(60, 150 + rnd() * 60 - wave * 6);
       }
-    } else if (dist > 52 || Math.abs(dy) > 60) {
+    } else if (dist > reach || Math.abs(dy) > 60) {
       // Right over the fighter there is no way toward it but off the ledge: it keeps on the way it faces.
       I.dir = dy > 60 && dist < 60 ? E.facing || 1 : Math.sign(dx);
       I.run = dist > 260;
@@ -1016,6 +1184,11 @@ export function createGame(rules: Rules, ui: Ui): Game {
       if (E.cool <= 0 && !E.atk) {
         if (rnd() < 0.6) I.P = true; else I.K = true;
         E.cool = Math.max(26, 70 + rnd() * 50 - wave * 5);
+        // A long weapon lands from where it stands, as its swing comes round.
+        if (way?.kind === "reach") later(10, () => {
+          const at = E.body.position, dir = E.facing;
+          if (E.alive && E.stun <= 0 && strikeSides(E, (F) => (F.body.position.x - at.x) * dir > -10 && Math.abs(F.body.position.x - at.x) < way.reach + 20 && Math.abs(F.body.position.y - at.y) < 70 * E.big, 8 * E.pow, 7, -5)) sfx.hit(false);
+        });
       }
     }
     if (I.dir && E.grounded) {
@@ -1253,16 +1426,13 @@ export function createGame(rules: Rules, ui: Ui): Game {
         else if (S.match.learned < 5) ui.callout("Flight not learned", "Finish chapter 5");
         else ui.callout("Need aura to fly", "Hold U to charge");
       }
-      let sp = I.special;
+      // A special is called only by its motion, ended by the blast (data.ts, SPECIAL_MOTIONS): the longest are read
+      // first, so that a greater art is not taken for the special its last taps also make. A greater art's four taps
+      // may come a little further apart.
       if (I.X && !F.atk) {
-        if (motion(["F", "D", "F"])) sp = 5;
-        else if (motion(["D", "F"])) sp = 0;
-        else if (motion(["F", "D"])) sp = 3;
-        else if (motion(["F", "F"])) sp = 4;
-        else if (motion(["B", "F"])) sp = 1;
-        else if (motion(["D", "D"])) sp = 2;
+        const sp = BY_LENGTH.find((slot) => motion(SPECIAL_MOTIONS[slot], slot >= 3 ? 20 : 14));
+        if (sp !== undefined) { if (startSpecial(F, sp)) return; I.X = false; }
       }
-      if (sp >= 0 && !F.atk) { if (startSpecial(F, sp)) return; I.X = false; }
     }
 
     // Attack buttons.
@@ -1365,6 +1535,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     if (ov.dvy) vy += ov.dvy;
     if (ov.vx !== undefined) vx = ov.vx;
     if (ov.vy !== undefined) vy = ov.vy;
+    // An enemy rushing in its special (foeArt) is driven at its own speed, whatever its feet would do.
+    if (F.art?.push) vx = F.art.push;
     vy = Math.max(F.isPlayer ? -19.5 : -17, Math.min(vy, F.isPlayer ? ch(F).fall.most : 17));
     Body.setVelocity(b, { x: vx, y: vy });
     F.lastVy = vy;
@@ -1930,7 +2102,12 @@ export function createGame(rules: Rules, ui: Ui): Game {
     F.special = s;
     if (F.isPlayer && S.dark && slot === proving) ui.used?.();
     F.atk = null; F.queued = null; F.charging = false; F.spin = 0;
-    ui.callout(def.name);
+    // A greater art, its four-tap motion made, lands as a finisher: the world stops and greys round the fighter, its
+    // name is struck across the screen, the view punches in. A special is named as it is thrown.
+    if (slot >= 3 && F.isPlayer) {
+      S.finisher = 50; S.slowMs = Math.max(S.slowMs, 650); S.flashT = Math.max(S.flashT, 10); shake(10); punch(0.14);
+      ui.banner(def.name.toUpperCase(), "red"); ui.callout("Finisher");
+    } else ui.callout(def.name);
     if (slot < 3) discover(FOUND.special + slot);
     sfx.power();
     return true;
@@ -1986,15 +2163,22 @@ export function createGame(rules: Rules, ui: Ui): Game {
     sfx.vanish();
   }
 
+  /** How an enemy's shot looks and bursts: as its attack says, else as its kind shoots (cast.ts, `way`), else an ice shard. */
+  function shotOf(F: Fighter, o: Partial<Orb>) {
+    const way = F.cast ? FOES[F.cast].way : undefined, own = way?.kind === "shoot" ? way : undefined;
+    return { look: o.look ?? own?.look ?? "shard", pop: o.pop ?? own?.pop ?? "shardPop" };
+  }
   function spawnOrb(F: Fighter, x: number, y: number, ang: number, o: Partial<Orb> & { speed?: number } = {}) {
-    const bl = F.char ? F.char.blast : { r: 9, speed: 12.5, dmg: 7 };
-    const speed = o.speed ?? bl.speed;
+    const bl = F.char ? F.char.blast : { r: 9, speed: 12.5, dmg: 7 }, way = F.cast ? FOES[F.cast].way : undefined;
+    const speed = o.speed ?? (way?.kind === "shoot" ? way.speed : bl.speed);
     orbs.push({
       x, y, vx: o.vx ?? Math.cos(ang) * speed, vy: o.vy ?? Math.sin(ang) * speed, r: o.r ?? bl.r,
       dmg: (o.dmg ?? bl.dmg) * dmgMul(F), hero: F.isPlayer, big: !!o.big, radius: o.radius, g: o.g || 0, life: o.life || 90,
-      color: F.isPlayer ? ch(F).orb : "#d42a1e", disc: !!o.disc, home: !!o.home, pierce: !!o.pierce, cd: new Map(), trail: [], spin: 0,
+      color: F.isPlayer ? ch(F).orb : "#d42a1e", disc: !!o.disc, home: !!o.home, pierce: !!o.pierce, hunt: !!o.hunt, cd: new Map(), trail: [], spin: 0,
+      // An enemy's shot is drawn from the enemies' own effects (foefx.ts): an ice shard unless its attack says otherwise.
+      ...(F.isPlayer ? {} : shotOf(F, o)),
     });
-    const made = orbs[orbs.length - 1], seen: Shot = { x, y, vx: made.vx, vy: made.vy, r: made.r, g: made.g, life: made.life, color: made.color, big: made.big, disc: made.disc };
+    const made = orbs[orbs.length - 1], seen: Shot = { x, y, vx: made.vx, vy: made.vy, r: made.r, g: made.g, life: made.life, color: made.color, big: made.big, disc: made.disc, ...(made.look ? { look: made.look } : {}) };
     if (S.coop?.host) { if (outbox.orbs.length < 30) outbox.orbs.push(seen); }
     else if (F.isPlayer && (S.match.duel || S.coop)) ui.shot?.(seen);
   }
@@ -2035,6 +2219,14 @@ export function createGame(rules: Rules, ui: Ui): Game {
           if (returning && Math.hypot(tgt.x - o.x, tgt.y - o.y) < 30) { orbs.splice(i, 1); continue; }
         }
       }
+      if (o.hunt) {
+        const T = heroTargets().filter((F) => F.alive).sort((a, c) => Math.hypot(a.body.position.x - o.x, a.body.position.y - o.y) - Math.hypot(c.body.position.x - o.x, c.body.position.y - o.y))[0];
+        if (T) {
+          const cur = Math.atan2(o.vy, o.vx), want = Math.atan2(T.body.position.y - o.y, T.body.position.x - o.x), sp = Math.hypot(o.vx, o.vy);
+          const turn = cur + Math.max(-0.06, Math.min(0.06, Math.atan2(Math.sin(want - cur), Math.cos(want - cur))));
+          o.vx = Math.cos(turn) * sp; o.vy = Math.sin(turn) * sp;
+        }
+      }
       o.x += o.vx; o.y += o.vy; o.life--; o.spin += 0.45;
       if (o.ghost) { if (o.life <= 0 || o.y > S.voidY || Query.point(statics, { x: o.x, y: o.y }).length > 0) { burst(o.x, o.y, o.big ? 40 : 16, o.color); orbs.splice(i, 1); } continue; }
       const hb = box(o.x - o.r, o.y - o.r, o.x + o.r, o.y + o.r);
@@ -2053,13 +2245,14 @@ export function createGame(rules: Rules, ui: Ui): Game {
       // Landing on a fighter is heard as well as seen; a wall only stops it.
       const landed = (o.hero ? enemies : heroTargets()).some((T) => T.alive && overlaps(hb, hurtBox(T)));
       if (landed) { hit = true; ui.sample?.("bolt"); }
-      if (hit) { explode(o.x, o.y, o.radius || (o.big ? 120 : 46), o.dmg, o.hero, o.big ? 1.7 : 1, false, o.color); orbs.splice(i, 1); }
+      if (hit) { explode(o.x, o.y, o.radius || (o.big ? 120 : 46), o.dmg, o.hero, o.big ? 1.7 : 1, false, o.color, o.pop); orbs.splice(i, 1); }
       else if (o.life <= 0 || o.y > S.voidY) orbs.splice(i, 1);
     }
   }
 
-  /** Radial damage and force; quiet skips the sound for the Overdrive shove. */
-  function explode(x: number, y: number, r: number, dmg: number, heroSide: boolean, k: number, quiet?: boolean, color?: string) {
+  /** Radial damage and force; quiet skips the sound for the Overdrive shove. An enemy's shot bursts as its own `pop`
+   *  (foefx.ts) instead of a fighter's. */
+  function explode(x: number, y: number, r: number, dmg: number, heroSide: boolean, k: number, quiet?: boolean, color?: string, pop?: FoeFxName) {
     for (const T of heroSide ? enemies.slice() : heroTargets()) {
       if (!T.alive) continue;
       const c = T.body.position, dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy);
@@ -2080,8 +2273,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
       particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 24, max: 24, size: 2 + rnd() * 3, color: rnd() < 0.5 ? fx : "17,17,17", heavy: true });
     }
     const tone = heroSide ? toneOf(S.hero) : "enemy";
-    play("boom", x, y, tone, Math.max(0.6, r / 110));
-    if (k > 1.2 && !quiet) play("ring", x, y + r * 0.25, tone, Math.max(0.8, r / 200));
+    if (pop) play(pop, x, y, tone, Math.max(0.8, r / 60));
+    else play("boom", x, y, tone, Math.max(0.6, r / 110));
+    if (k > 1.2 && !quiet && !pop) play("ring", x, y + r * 0.25, tone, Math.max(0.8, r / 200));
     shake(Math.min(18, 6 * k)); if (k > 1.2) punch(0.06);
     if (!quiet) { sfx.boom(k > 1.2); if (k > 1.2) rings.push({ x, y, r: 10, max: r, life: 16 }); }
   }
@@ -2313,7 +2507,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
     }
     // In a duel a blow throws its target further the less health it has: up to two and a half times as far on the last of it.
     // A boss is too big to throw: a quarter of the push, and it does not stay stunned.
-    if (T.big > 1) o = { ...o, kx: o.kx * 0.25, ky: o.ky * 0.25, stun: 6, float: false };
+    if (T.big > 2) o = { ...o, kx: o.kx * 0.25, ky: o.ky * 0.25, stun: 6, float: false };
     if (S.match.duel) { const far = 1 + 1.5 * (1 - Math.max(0, T.hp) / T.maxHp); o = { ...o, kx: o.kx * far, ky: o.ky * far }; }
     // spec/app/index.md, "Being hit costs health and gives 3 aura; a hit that takes the last health is a knockout"
     if (T.isPlayer) { if (!send({ type: "suffer", damage: Math.max(1, Math.round(o.dmg)), heavy: !!o.heavy })) return; }
@@ -2344,7 +2538,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
 
   function leaveWorld(T: Fighter, vel: Vec) {
     Composite.remove(world, T.body);
-    if (T.skel) ragdolls.push({ ...makeRagdoll(T.skel, vel, T.skin), cast: T.cast });
+    if (T.skel) ragdolls.push({ ...makeRagdoll(T.skel, vel, T.skin), cast: T.cast, big: T.big });
     sfx.ko();
   }
   function knockOutHero(vel: Vec) {
@@ -2534,6 +2728,14 @@ export function createGame(rules: Rules, ui: Ui): Game {
     // Its own special (foeArt) not before it has been in the fight a while.
     E.artCool = 180 + rnd() * 240;
     if (caster) { E.caster = true; E.color = "#4d4d4a"; E.skin = CASTER_SKIN; E.cool = 90; }
+    // Every enemy stands taller than a fighter (cast.ts, ENEMY_SIZE), and a kind that stands bigger still in the ranks
+    // (`regular`) by that much more: grown from the feet up, so that it stands where it was put.
+    const regular = kind && !caster ? FOES[kind].regular : undefined, size = ENEMY_SIZE * (regular?.size ?? 1);
+    const tall = E.body.bounds.max.y - E.body.bounds.min.y;
+    Body.scale(E.body, size, size); Body.setInertia(E.body, Infinity);
+    Body.setPosition(E.body, { x, y: y - (tall * (size - 1)) / 2 });
+    E.big = size;
+    if (regular) E.spd = regular.spd;
     enemies.push(E);
   }
 
@@ -2576,7 +2778,8 @@ export function createGame(rules: Rules, ui: Ui): Game {
     // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
     // The page may want to show where the fight stands among everyone's before it starts over: it is told once, and waits.
     if (!S.match.quest && !S.match.duel) { if (!ui.lost) again(); else if (!told) { told = true; ui.lost(S.match.wave, S.match.kos); } return; }
-    if (!send({ type: "revive" })) return;
+    // spec/app/index.md, "A fighter knocked out in the world wakes at its last shrine, with full health and at least 40 aura"
+    if (!(send({ type: "revive" }) || send({ type: "wake" }))) return;
     rise();
   }
   // spec/app/index.md, "Only a knocked-out fighter revives, with full health and at least 40 aura"
@@ -2760,7 +2963,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
         E.hp = E.maxHp = Math.round(E.hp * more);
         // The first to stand in a guarded level's last room is its boss: four times the size and the health, with attacks of its own.
         if (E.final && n === 0 && L.guarded) {
-          Body.scale(E.body, 4, 4); Body.setInertia(E.body, Infinity); Body.setPosition(E.body, { x: foe.x, y: foe.y - 126 });
+          // Four times a fighter however big its kind stands in the ranks, at its kind's own speed.
+          Body.scale(E.body, 4 / E.big, 4 / E.big); Body.setInertia(E.body, Infinity); Body.setPosition(E.body, { x: foe.x, y: foe.y - 126 });
+          if (foe.kind) E.spd = FOES[foe.kind].spd;
           Object.assign(E, { big: 4, hp: E.hp * 4, maxHp: E.maxHp * 4, caster: false, cool: 90, tag: bossName, boss: { move: null, t: 0, dir: 1, hit: false } });
           clearWay(E);
           fought = true; shake(6);
@@ -2771,7 +2976,23 @@ export function createGame(rules: Rules, ui: Ui): Game {
     // What the fighter itself meets is its own game's: a level the arena hosts has none (`haunt`).
     if (!ghost) stepGround(L, H, at);
     S.sealed =!!L.guarded && (!ambushed.has(L.ambushes.length - 1) || S.match.waiting > 0 || enemies.some((E) => E.final));
+    if (S.match.world) { stepDoors(L, at); return; }
     if (!ghost && !S.sealed && Math.hypot(L.exit.x - at.x, L.exit.y - at.y) < 64 && send({ type: "clear" })) { ui.banner("Chapter clear", "gold"); sfx.power(); ui.share?.({ e: "clear" }); }
+  }
+
+  // spec/app/index.md, "Story: Explore a hero's world"
+  // An area of a world has two doors: its way out, into the next area, and where it starts, back to the one before.
+  // A door opens only once the fighter has walked well away from it, so that arriving through it is not leaving.
+  let passed = false, away = [false, false];
+  function stepDoors(L: Level, at: Vec) {
+    if (passed) return;
+    const doors: [Vec, 1 | -1, boolean][] = [[L.exit, 1, !S.sealed], [L.spawn, -1, true]];
+    doors.forEach(([door, way, open], i) => {
+      const far = Math.hypot(door.x - at.x, door.y - at.y);
+      if (far > 320) away[i] = true;
+      // A door that leads nowhere (back out of the first area) shuts again until the fighter walks away from it.
+      if (!passed && open && away[i] && far < 64) { passed = !!ui.pass?.(way); away[i] = passed; }
+    });
   }
 
   /** What a fighter of this game's own meets on the ground of a level: a clue, a spring, a hazard, a trap. */
@@ -3102,8 +3323,9 @@ export function createGame(rules: Rules, ui: Ui): Game {
     for (let i = bursts.length - 1; i >= 0; i--) if (--bursts[i].life <= 0) bursts.splice(i, 1);
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += (r.max - r.r) * 0.25; if (--r.life <= 0) rings.splice(i, 1); }
     for (let i = floaters.length - 1; i >= 0; i--) { floaters[i].y -= 1.2; if (--floaters[i].life <= 0) floaters.splice(i, 1); }
-    for (let i = sprites.length - 1; i >= 0; i--) { const def = FX[sprites[i].fx]; if (++sprites[i].age >= (def.seconds / def.rate) * 60) sprites.splice(i, 1); }
+    for (let i = sprites.length - 1; i >= 0; i--) { const name = sprites[i].fx; if (++sprites[i].age >= (isFoeFx(name) ? foeSteps(name) : (FX[name].seconds / FX[name].rate) * 60)) sprites.splice(i, 1); }
     if (S.flashT > 0) S.flashT--;
+    if (S.finisher > 0) S.finisher--;
     if (S.red > 0) S.red--;
     if (hero().od > 0 && hero().alive && rnd() < 0.5) auraSpark(hero());
   }
@@ -3120,10 +3342,10 @@ export function createGame(rules: Rules, ui: Ui): Game {
     const waves = !S.match.quest && !S.match.duel;
     S.sky = waves ? SKY_IDS[Math.floor(rnd() * SKY_IDS.length)] : null;
     S.nextSky = waves ? skyAfter(S.sky!) : null;
-    dark = 0; S.fade = 0; told = false;
+    dark = 0; S.fade = 0; told = false; passed = false; away = [false, false];
     ambushed.clear(); S.cluesFound.length = 0; S.sprung = []; S.sealed = false; hazardCool = 0;
     // In a duel the fighters start apart, at whichever of the place's starts chance gives each.
-    const spawn = level ? (S.match.duel && level.starts ? level.starts[Math.floor(rnd() * level.starts.length)] : level.spawn) : SPAWN;
+    const spawn = level ? (S.match.duel && level.starts ? level.starts[Math.floor(rnd() * level.starts.length)] : level.entry ?? level.spawn) : SPAWN;
     rivalWait = 180; guardLeft = GUARD; guardCool = 0; S.guard = 0;
     if (S.match.duel) ui.sample?.("go");
     for (const E of enemies) Composite.remove(world, E.body);
@@ -3138,7 +3360,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
     S.hero.airJumpsMax += skills.jumps; S.hero.airJumps = S.hero.airJumpsMax;
     heroInWorld = true;
     sinceHit = 999;
-    waveWait = 70; heroDeadTimer = 0; S.slowMs = 0; hitstop = 0; S.flashT = 0; S.deathMs = 0; S.red = 0; S.punch = 0; streak = 0;
+    waveWait = 70; heroDeadTimer = 0; S.slowMs = 0; S.finisher = 0; hitstop = 0; S.flashT = 0; S.deathMs = 0; S.red = 0; S.punch = 0; streak = 0;
     S.lastSafe = { ...spawn }; start = { ...spawn }; outside = { ...spawn }; fought = false; knocked = -9;
     // Three pieces of the key to the boss's room, hidden afresh each time where the level's other enemies wait:
     // places a fighter on foot is known to reach. Each is well apart from the others where the level allows.
@@ -3203,7 +3425,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
         // A broken guard is down for three seconds; one let go mends itself.
         const guarding = steered ? steered.guard && H.alive && guardCool <= 0 : input.guard && H.alive && H.grounded && !H.atk && !H.special && H.stun <= 0 && guardCool <= 0;
         if (guarding && S.guard === 0) ui.sample?.("shield");
-        if (guarding) { Object.assign(I, { dir: 0, P: false, K: false, X: false, jumpPressed: false, dash: false, fly: false, charge: false, special: -1 }); S.guard = Math.max(0.05, guardLeft / GUARD); }
+        if (guarding) { Object.assign(I, { dir: 0, P: false, K: false, X: false, jumpPressed: false, dash: false, fly: false, charge: false }); S.guard = Math.max(0.05, guardLeft / GUARD); }
         else { S.guard = 0; guardLeft = Math.min(GUARD, guardLeft + 0.15); }
         if (guardCool > 0) guardCool--;
         if (input.itemPressed) { input.itemPressed = false; useItem(); }
@@ -3333,7 +3555,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
   // ---------- a run the arena server plays (arena/run.ts) ----------
   /** Where the fighter's player's game last said it was, while that game plays it. */
   let steered: Peer | null = null;
-  const still = (): Intent => ({ dir: 0, run: false, jumpHeld: false, jumpPressed: false, down: false, P: false, K: false, X: false, special: -1 });
+  const still = (): Intent => ({ dir: 0, run: false, jumpHeld: false, jumpPressed: false, down: false, P: false, K: false, X: false });
   /** Each step: the fighter where its player's game last said, facing as it said, in the special it said. */
   function followPuppet(H: Fighter, p: Peer) {
     Body.setPosition(H.body, { x: p.x, y: p.y }); Body.setVelocity(H.body, { x: p.vx, y: p.vy });
@@ -3414,7 +3636,7 @@ export function createGame(rules: Rules, ui: Ui): Game {
       Object.assign(E, { big, caster: false, tag: f[13] || bossName, boss: { move: null, t: 0, dir: 1, hit: false } });
       shake(6);
     }
-    play("puff", x, E.body.bounds.max.y, "enemy", E.big > 1 ? 2 : 0.8);
+    play("puff", x, E.body.bounds.max.y, "enemy", E.big > 2 ? 2 : 0.8 * E.big);
   }
   /** One the host's game says has fallen: it falls here as it would have, and leaves what a fallen foe leaves. */
   function fellThere(E: Fighter) {

@@ -21,8 +21,8 @@ function Bar({ label, value, max, fill, className }: { label: string; value: num
 }
 
 /** What a controller's buttons do (gamepad.ts), for the legend while one is plugged in. */
-const PADS: [string[], string][] = [[["Stick"], "move"], [["A"], "jump"], [["X"], "punch"], [["Y"], "kick"], [["B"], "blast"], [["RB"], "dash"], [["LB"], "guard"], [["LT"], "charge"], [["RT"], "hold wall"], [["←", "↑", "→"], "specials"], [["Back", "←↑→"], "greater arts"], [["↓"], "fly"], [["L3"], "next item"], [["R3"], "use item"], [["Start"], "move list"]];
-const KEYS: [string[], string][] = [[["A", "D"], "move"], [["S"], "down"], [["Shift"], "run"], [["W"], "jump/flip"], [["I"], "dash"], [["O"], "hold wall"], [["J"], "punch"], [["K"], "kick"], [["L"], "blast"], [["U"], "hold charge"], [["G"], "guard"], [["F"], "fly"], [["1", "2", "3"], "specials"], [["4", "5", "6"], "greater arts"], [["T"], "use item"], [["R"], "next item"], [["H"], "move list"]];
+const PADS: [string[], string][] = [[["Stick"], "move"], [["A"], "jump"], [["X"], "punch"], [["Y"], "kick"], [["B"], "blast"], [["RB"], "dash"], [["LB"], "guard"], [["LT"], "charge"], [["RT"], "hold wall"], [["↓→", "B"], "special"], [["→←→↓", "B"], "finisher"], [["Back"], "fly"], [["L3"], "next item"], [["R3"], "use item"], [["Start"], "move list"]];
+const KEYS: [string[], string][] = [[["A", "D"], "move"], [["S"], "down"], [["Shift"], "run"], [["W"], "jump/flip"], [["I"], "dash"], [["O"], "hold wall"], [["J"], "punch"], [["K"], "kick"], [["L"], "blast"], [["U"], "hold charge"], [["G"], "guard"], [["F"], "fly"], [["↓→", "L"], "special"], [["→←→↓", "L"], "finisher"], [["T"], "use item"], [["R"], "next item"], [["H"], "move list · all motions"]];
 
 /** A number of the fight; it pops when `value` goes up, so that a gain is felt as well as read. */
 function Stat({ label, value, children }: { label: string; value: number; children?: ReactNode }) {
@@ -188,32 +188,31 @@ const FACES: [Shape, left: number, top: number, mark: ReactNode][] = [
   ["triangle", 52, 38, <path key="m" d="M12 4.5 20.5 19h-17Z" />], ["square", 0, 90, <rect key="m" x="5" y="5" width="14" height="14" />],
   ["circle", 104, 90, <circle key="m" cx="12" cy="12" r="7.5" />], ["cross", 52, 142, <path key="m" d="m6 6 12 12M18 6 6 18" />],
 ];
-/** What the face buttons and the right shoulder press on each page: as they are, with Aura held, with Arts held. */
-const PAGES: Record<Shape | "shoulder", [Button, Button, Button]> = {
-  triangle: ["kick", "s2", "s5"], square: ["punch", "s1", "s4"], circle: ["blast", "s3", "s6"], cross: ["jump", "fly", "item"], shoulder: ["dash", "dash", "next"],
+/** What the face buttons and the right shoulder press on each page: as they are, and with Aura held. No button calls
+ *  a special: each is its motion on the stick, then Blast (data.ts, SPECIAL_MOTIONS). */
+const PAGES: Record<Shape | "shoulder", [Button, Button]> = {
+  triangle: ["kick", "fly"], square: ["punch", "next"], circle: ["blast", "item"], cross: ["jump", "jump"], shoulder: ["dash", "dash"],
 };
 const NAMES: Partial<Record<Button, string>> = { punch: "Punch", kick: "Kick", blast: "Blast", jump: "Jump", fly: "Fly", item: "Item", next: "Next", dash: "Dash", guard: "Guard", grab: "Hold" };
 
 /**
  * The controls for a touch screen, shown only where the pointer is coarse and the screen is on its side, kept to a
  * corner each so that the fight stays in sight. Under the left thumb the stick, and over it Aura, which charges while
- * held, and Arts; under the right a diamond of four and two shoulders. Aura or Arts held turns the face buttons into
- * the specials or the greater arts, flight and the bag, and each button names what it does on the page in play.
+ * held; under the right a diamond of four and two shoulders. Aura held turns the face buttons into flight and the
+ * bag, and each button names what it does on the page in play.
  */
 export function TouchPad({ game }: { game: Game; fighter: number }) {
-  // `fighter` draws the controls again when the fighter, and so its specials, changes.
-  // A special is named in full to a screen reader, and by its first word on the button.
-  const specials = game.specials(), name = (k: Button) => NAMES[k] ?? specials[Number(k.slice(1)) - 1]?.name ?? "";
-  // The page is read as a face button comes down, from `pageRef`, which changes the moment a thumb lands on Aura or Arts.
-  const [page, setPage] = useState<0 | 1 | 2>(0), pageRef = useRef<0 | 1 | 2>(0);
-  const turn = (to: 0 | 1 | 2) => { pageRef.current = to; setPage(to); };
+  const name = (k: Button) => NAMES[k] ?? "";
+  // The page is read as a face button comes down, from `pageRef`, which changes the moment a thumb lands on Aura.
+  const [page, setPage] = useState<0 | 1>(0), pageRef = useRef<0 | 1>(0);
+  const turn = (to: 0 | 1) => { pageRef.current = to; setPage(to); };
   const hold = (k: Button) => { game.press(k); return () => game.release(k); };
   // The shoulder on the left guards on the ground and holds a wall in the air: it says which it is about to do.
   const [air, setAir] = useState(false);
   useEffect(() => { const timer = window.setInterval(() => setAir(game.scene.hero?.grounded === false), 150); return () => window.clearInterval(timer); }, [game]);
   // The buttons grow or shrink from the corner each cluster sits in, so that they stay under the thumb.
   const fit = touchFit(), grow = (corner: string): CSSProperties => ({ transform: `scale(${fit.size})`, transformOrigin: corner });
-  const shift = (to: 1 | 2, left: number, label: string, also?: Button) => (
+  const shift = (to: 1, left: number, label: string, also?: Button) => (
     <Hold
       label={label} className={cn("size-11", to === 1 && "border-warn", page === to && "bg-foreground text-background")}
       style={{ left: `calc(max(24px, env(safe-area-inset-left)) + ${left}px)`, bottom: 232, ...grow("bottom left") }}
@@ -227,7 +226,6 @@ export function TouchPad({ game }: { game: Game; fighter: number }) {
     <div aria-label="Touch controls" className="pointer-events-none absolute inset-0 hidden pointer-coarse:block [&>*]:pointer-events-auto" style={{ opacity: fit.seen }}>
       <Stick game={game} />
       {shift(1, 0, "Aura", "charge")}
-      {shift(2, 54, "Arts")}
       {/* Half an inch over the bottom edge, where a thumb rests without curling down to the phone's rim. */}
       <div className="absolute right-[max(12px,env(safe-area-inset-right))] bottom-[calc(max(10px,env(safe-area-inset-bottom))_+_48px)] h-[194px] w-[156px] !pointer-events-none [&>*]:pointer-events-auto" style={grow("bottom right")}>
         <Hold label={name(guard)} className={cn(shoulder, "top-0 left-0")} press={() => hold(game.scene.hero?.grounded === false ? "grab" : "guard")}>{name(guard)}</Hold>

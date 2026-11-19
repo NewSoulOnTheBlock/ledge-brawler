@@ -5,46 +5,14 @@ import glob, json, os, shutil, subprocess, sys
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from components import components
+import foefx, foes
+from sheets import OUT, cast, empty, row, save, strip
 
 SRC, FIGHTER, LORE, SKIES, REAPER = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "apps", "app", "src", "game", "packs")
-os.makedirs(OUT, exist_ok=True)
 src = lambda *p: os.path.join(SRC, *p)
 load = lambda *p: Image.open(src(*p)).convert("RGBA")
-def save(im, name, lossy=False):
-    path = os.path.join(OUT, name + (".webp" if lossy else ".png"))
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    im.save(path, **({"quality": 88, "method": 6} if lossy else {"optimize": True}))
-    return os.path.basename(path)
 def write(name, data):
     with open(os.path.join(OUT, name), "w", newline="\n") as f: json.dump(data, f, indent=1); f.write("\n")
-empty = lambda im: im.getchannel("A").getbbox() is None
-
-# ---------- the cast: every frame of a character in one grid of equal cells ----------
-def strip(im, cw):
-    return [im.crop((i * cw, 0, (i + 1) * cw, im.height)) for i in range(im.width // cw)]
-def row(sheet, cw, ch, r):
-    out = []
-    for i in range(sheet.width // cw):
-        cell = sheet.crop((i * cw, r * ch, (i + 1) * cw, (r + 1) * ch))
-        if empty(cell): break
-        out.append(cell)
-    return out
-def cast(name, anims, fps, target, faces=1):
-    """anims: {anim: [frames]}; target: how tall the character stands in the world."""
-    cw, ch = anims["idle"][0].size
-    frames, index = [], {}
-    for anim, cells in anims.items():
-        index[anim] = {"start": len(frames), "frames": len(cells), "fps": fps.get(anim, 10)}
-        frames += cells
-    cols = min(len(frames), max(1, 2048 // cw))
-    sheet = Image.new("RGBA", (cols * cw, -(-len(frames) // cols) * ch))
-    for i, cell in enumerate(frames): sheet.paste(cell, ((i % cols) * cw, (i // cols) * ch))
-    x0, y0, x1, y1 = anims["idle"][0].getchannel("A").getbbox()
-    a = anims["idle"][0].getchannel("A").load()
-    low = sorted(x for y in range(y1 - max(2, (y1 - y0) // 4), y1) for x in range(x0, x1) if a[x, y] > 24)
-    return {"file": save(sheet, "cast/" + name), "w": cw, "h": ch, "cols": cols, "feet": [low[len(low) // 2], y1],
-            "scale": round(target / (y1 - y0), 2), "faces": faces, "anims": index}
 
 free = lambda *p: src("shadow-free", *p)
 CAST = {}
@@ -66,6 +34,7 @@ CAST["shadeflit"] = cast("shadeflit", {"idle": strip(d("idle.png"), 277), "run":
 b = lambda *f: Image.open(free("SHADOW Series - The Shadowed Wetlands Boss v1.1", "Sprite Sheet", *f)).convert("RGBA")
 CAST["boss"] = cast("boss", {"idle": strip(b("idle.png"), 247), "run": strip(b("walk.png"), 247), "attack": strip(b("Attack 1.png"), 247), "attack2": strip(b("Attack 2.png"), 247),
                              "hit": strip(b("new", "hit.png"), 247), "death": strip(b("new", "death.png"), 247)}, {"attack": 12, "attack2": 12, "death": 14, "idle": 10, "run": 10}, 170)
+CAST.update(foes.build(SRC))
 write("cast.json", CAST)
 
 # ---------- plants: every second frame, a quarter the size, cropped to what the animation ever touches ----------
@@ -173,11 +142,26 @@ CUTS = {
 for name, (file, start, keep, gain) in CUTS.items():
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str(start), "-t", str(keep), "-i", os.path.join(SRC, "sounds", file), "-af", f"volume={gain}dB,afade=t=out:st={keep - 0.06:.2f}:d=0.06",
                     "-ac", "1", "-ar", "44100", "-c:a", "pcm_s16le", os.path.join(OUT, "sfx", name + ".wav")], check=True)
-# The pieces of music are used whole: the end of a campaign's last life, the main menu's, and the two loops that
+# The pieces of music are used whole: the end of a campaign's last life, and the two loops that
 # play in the places that have their own music (src/game/audio.ts, TRACKS).
-for name, file in {"lost": "lightyeartraxx-kl-peach-game-over-iii-142453.mp3", "menu": "kaazoom-by-the-rafters-glow-stinger-medieval-tavern-music-rpg-game-620394.mp3",
-                   "moonlight": "freesound_community-8-bit-moonlight-sonata-music-loop-20436.mp3", "rocky": "sergequadrado-fast-rocky-loop-275535.mp3"}.items():
+for name, file in {"lost": "lightyeartraxx-kl-peach-game-over-iii-142453.mp3", "moonlight": "freesound_community-8-bit-moonlight-sonata-music-loop-20436.mp3", "rocky": "sergequadrado-fast-rocky-loop-275535.mp3"}.items():
     shutil.copyfile(os.path.join(SRC, "sounds", file), os.path.join(OUT, "sfx", name + ".mp3"))
+# The soundtrack (src/game/audio.ts, Track): mastered far louder than the loops above, so each is measured and set to
+# -16 LUFS under a limiter, which at its gain in audio.ts plays as loud as the moonlit forest's.
+SOUNDTRACK = {
+    "throne": "alex-morgan-dark-trap-lazy-beat-instrumental-587390", "crown": "mondamusic-trap-trap-hype-589115", "crownB": "mondamusic-motivation-drill-trap-560145",
+    "ash": "kiravale-phonk-music-593661", "drowned": "sub_clair-phonk-instrumental-610091", "north": "mondamusic-drill-drill-trap-597190",
+    "fungal": "rovador-nightmare-circus-414856", "shrine": "moodmode-creepy-devil-dance-166764", "blackspire": "mondamusic-phonk-589113",
+    "boss": "apalonbeats-trap-trap-hype-beat-491423", "firstborn": "solarflex-trap-instrumental-558263", "final": "dimmysad-mankind-vs-machines-action-electronic-dubstep-game-420650",
+    "duelA": "jonasblakewood-trap-action-623046", "duelB": "alexzavesa-powerful-beat-trap-loop-635537", "duelC": "vaitsez-latin-latino-trap-beat-635218",
+    "waves": "kulakovka-background-trap-304347", "wavesLate": "redoctopus-siren-police-trap-194629", "credits": "mondamusic-trap-trap-beat-beats-589144",
+}
+for name, file in SOUNDTRACK.items():
+    path = os.path.join(SRC, "sounds", file + ".mp3")
+    meter = subprocess.run(["ffmpeg", "-nostats", "-i", path, "-af", "ebur128", "-f", "null", "-"], capture_output=True, text=True).stderr
+    loud = float(meter.rsplit("Integrated loudness:", 1)[1].split("I:", 1)[1].split("LUFS", 1)[0])
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", path, "-af", f"volume={-16 - loud:.2f}dB,alimiter=limit=0.84:level=false",
+                    "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "128k", os.path.join(OUT, "sfx", name + ".mp3")], check=True)
 
 # ---------- skies: each a set of layers from the farthest to the nearest, drawn behind a level and slid at different rates ----------
 sky = lambda *p: os.path.join(SKIES, *p)
@@ -224,6 +208,8 @@ save(ui("Icons", "UI - icons.png"), "ui/icons"); save(ui("Icons", "UI - icons2.p
 save(ui("Things", "UI - border.png"), "ui/border")
 for i in (1, 2, 3, 4): save(fui("borders", "Sprite", f"border {i}.png"), f"ui/frame{i}")
 for i in (1, 2, 3, 5, 6, 7): save(fui("Loading Icons", "Sprite", f"Loading Icons {i}.png"), f"ui/loading{i}")
+# ---------- the enemies' attack effects (foefx.py), from SRC/vfx ----------
+foefx.build(SRC)
 print("cast", {k: (v["w"], v["h"], v["feet"], v["scale"], {a: n["frames"] for a, n in v["anims"].items()}) for k, v in CAST.items()})
 print("plants", {k: (v["w"], v["h"], v["frames"]) for k, v in PLANTS.items()})
 print("places", {k: len(v) for k, v in PLACES.items()})

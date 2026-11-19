@@ -22,8 +22,10 @@ export interface Level {
   /** What the chapter card says before the level. */
   brief: string;
   spawn: Vec;
-  /** The way out. Reaching it clears the level. */
+  /** The way out. Reaching it clears the level, or in a hero's world leads into the next area. */
   exit: Vec;
+  /** In a hero's world, where the fighter comes in when it is not at the start: back through the way out. */
+  entry?: Vec;
   /** The far ends of the level, for the camera and the map. */
   span: [min: number, max: number];
   /** What a hidden chamber of the level tells whoever finds the first of them. */
@@ -82,13 +84,13 @@ export const BRIEFS: Brief[] = [
     clues: ["architectLitBlackspire", "prisonersBeneathBlackspire"], clueText: ["A purse of foreign coin on a dead watchman. Someone outside the Crown is paying for unrest here.", "A gaoler's key cut for a lock four floors below the lowest floor."],
     secret: "A wanted poster with your face, the ink long dry. They had it drawn before you ever ran.",
     effects: [{ measure: 0, amount: -3 }, { measure: 2, amount: 4 }] },
-  { id: "forbidden-3", sky: "corridors", hero: "forbidden", chapter: 2, name: "The Price of Mercy", region: "crownlands", theme: "ruin", w: 7, h: 5, seed: 13, map: PRICE_OF_MERCY, foes: ["samurai", "knight", "hallokin"], boss: "knight",
+  { id: "forbidden-3", own: "executioner", sky: "corridors", hero: "forbidden", chapter: 2, name: "The Price of Mercy", region: "crownlands", theme: "ruin", w: 7, h: 5, seed: 13, map: PRICE_OF_MERCY, foes: ["samurai", "knight", "hallokin"], boss: "knight",
     talk: ["Not everyone you were sent to kill is dead. You were kinder than your orders, more often than you admit.", "The ones you spared found each other. They kept a list, and it runs through the undercroft, room to room.", "Reach its end before the Crown does. If the knights read it first, your mercy becomes their map."],
     brief: "The ones you spared kept a list of each other. Follow it through the undercroft before the Crown reads it first.",
     clues: ["firstVoiceMemory", "crownHarvests"], clueText: ["The sword hums at a name on the wall. It remembers him. It remembers more than him.", "Vials, each labelled with a sentence you carried out."],
     secret: "Letters to the families you spared, never sent. Each one begins the same way, and stops.",
     effects: [{ measure: 2, amount: 6 }, { measure: 1, amount: -3 }] },
-  { id: "forbidden-4", sky: "corridors", hero: "forbidden", chapter: 3, name: "The Black Archive", region: "crownlands", theme: "cavern", w: 7, h: 6, seed: 14, map: BLACK_ARCHIVE, foes: ["knight", "samurai", "hallokin"], boss: "boss",
+  { id: "forbidden-4", own: "nightborne", sky: "corridors", hero: "forbidden", chapter: 3, name: "The Black Archive", region: "crownlands", theme: "cavern", w: 7, h: 6, seed: 14, map: BLACK_ARCHIVE, foes: ["knight", "samurai", "hallokin"], boss: "boss",
     talk: ["Under the archive is the room the archive was built to hide.", "Every sentence you carried out is counted there, and beside each, what was taken from the body. Essence, poured into steel.", "Something guards the lowest shelf that I did not put there. Go carefully. I would rather not collect you yet."],
     brief: "Under the archive is the room the archive was built to hide. What the Crown takes from the dead is counted there.",
     clues: ["firstbornHarvested", "sealBeneathBlackspire"], clueText: ["A ledger of essences, and against each, the weapon it was poured into.", "The lowest shelf is not a shelf. It is the lip of something far older than the city."],
@@ -107,7 +109,7 @@ export const BRIEFS: Brief[] = [
     clues: ["cinderfallSubjects", "crownHarvests"], clueText: ["A manifest pinned under a lantern: not the dead of Cinderfall, but the living, numbered and assigned.", "Crates stamped with the royal seal, packed for people, not ore."],
     secret: "Jars sealed in wax, one for every street of Cinderfall, each labelled and none of them empty.",
     effects: [{ measure: 0, amount: -5 }, { measure: 3, amount: -5 }] },
-  { id: "ember-2", sky: "dawn", hero: "ember", chapter: 1, name: "The Bargain", region: "ashenReach", theme: "ember", w: 6, h: 5, seed: 22, map: BARGAIN, foes: ["hallokin", "sickle", "samurai"], boss: "knight",
+  { id: "ember-2", own: "fireworm", sky: "dawn", hero: "ember", chapter: 1, name: "The Bargain", region: "ashenReach", theme: "ember", w: 6, h: 5, seed: 22, map: BARGAIN, foes: ["hallokin", "sickle", "samurai"], boss: "knight",
     talk: ["You should have come with me that night. Something under the burned ground made you a better offer.", "It carried you out, and it took its price in memory. You were holding someone. You no longer know who.", "Go down and find what you sold. The seams in the rock are opening by themselves, so mind where you stand."],
     brief: "Something under the burned ground offered to carry you out. You cannot remember who you were carrying. Go down and find out what you sold.",
     clues: ["firstbornHarvested", "bindingFails"], clueText: ["Chains too large for any animal, driven into the rock from above.", "The seams in the stone are opening by themselves. Nothing is mining here."],
@@ -119,7 +121,7 @@ export const BRIEFS: Brief[] = [
     clues: ["architectLitBlackspire", "cinderfallSubjects"], clueText: ["The garrison's pay came by a private courier, not the Crown's.", "A survivor's brand under a soldier's gauntlet. They made some of you into them."],
     secret: "A quartermaster's tally: pitchforks taken, three hundred. Pitchforks returned, none.",
     effects: [{ measure: 2, amount: 8 }, { measure: 0, amount: -5 }] },
-  { id: "ember-4", sky: "duskA", hero: "ember", chapter: 3, name: "A Saint Is Born", region: "ashenReach", theme: "ember", w: 7, h: 6, seed: 24, map: SAINT_IS_BORN, foes: ["sickle", "samurai", "knight"], boss: "boss",
+  { id: "ember-4", own: "wizard", sky: "duskA", hero: "ember", chapter: 3, name: "A Saint Is Born", region: "ashenReach", theme: "ember", w: 7, h: 6, seed: 24, map: SAINT_IS_BORN, foes: ["sickle", "samurai", "knight"], boss: "boss",
     talk: ["They are painting your face on shrines. The Crown paid for the paint.", "A saint is easier to manage than a rebel. Saints stand still and are prayed at.", "Tear the first shrine down before anyone kneels. The Crown has sent something to bless it. It is large, and it is not holy."],
     brief: "They are painting your face on shrines. Tear the first one down before anyone prays at it, and meet what the Crown sent to bless it.",
     clues: ["historyIncomplete", "bindingFails"], clueText: ["The shrine's old carving shows the First War ending with no one kneeling to anyone.", "Every candle here leans the same way, towards the ground."],
@@ -138,13 +140,13 @@ export const BRIEFS: Brief[] = [
     clues: ["studentsSacrificed", "monasteryExpectedStars"], clueText: ["Nine names cut from the roll each year, in the Bellkeeper's own hand.", "A star chart with tonight circled, drawn before you were born."],
     secret: "Nine bell ropes, cut. A tenth, uncut, leading nowhere at all.",
     effects: [{ measure: 1, amount: -5 }, { measure: 3, amount: -3 }] },
-  { id: "exile-2", sky: "hills", hero: "exile", chapter: 1, name: "The Two Swords", region: "paleNorth", theme: "frost", w: 6, h: 5, seed: 32, map: TWO_SWORDS, foes: ["shadeflit", "sickle", "samurai"], boss: "huntress",
+  { id: "exile-2", own: "ronin", sky: "hills", hero: "exile", chapter: 1, name: "The Two Swords", region: "paleNorth", theme: "frost", w: 6, h: 5, seed: 32, map: TWO_SWORDS, foes: ["shadeflit", "sickle", "samurai"], boss: "huntress",
     talk: ["The short blade pulls one way and the long one another. They were one thing once.", "Somewhere in these foothills is where they were parted. The swords remember it better than the monks' books do.", "Follow the pull, and listen for a hunter who does not use her eyes. The monastery pays well for runaways."],
     brief: "The short blade pulls one way and the long one another. Somewhere in the foothills is the place they were parted.",
     clues: ["firstbornHarvested", "starsAreBindings"], clueText: ["The swords fit two sockets in the rock, and the rock is warm.", "Where the star fell, the ground is not burned. It is stitched."],
     secret: "Two sword marks in the stone that meet in a single cut.",
     effects: [{ measure: 4, amount: 4 }, { measure: 3, amount: -3 }] },
-  { id: "exile-3", sky: "nightforest", hero: "exile", chapter: 2, name: "The Northern Road", region: "paleNorth", theme: "ruin", w: 7, h: 5, seed: 33, map: NORTHERN_ROAD, foes: ["shadeflit", "sickle", "samurai"], boss: "knight",
+  { id: "exile-3", own: "stormhead", sky: "nightforest", hero: "exile", chapter: 2, name: "The Northern Road", region: "paleNorth", theme: "ruin", w: 7, h: 5, seed: 33, map: NORTHERN_ROAD, foes: ["shadeflit", "sickle", "samurai"], boss: "knight",
     talk: ["Every village on this road owes the monastery a child. None of them will shelter its runaway.", "Two strangers ahead say they will, for a price. One of them is honest. I will not tell you which.", "Walk on. Pride will get you past the knights. It will not get you through the winter."],
     brief: "Villages that owe the monastery their dead will not shelter its runaway. Two strangers on the road say they will, for a price.",
     clues: ["studentsSacrificed", "bindingFails"], clueText: ["A village shrine to a child the Bells took. The offering bowl is still filled.", "The well is dry and the frost in it is climbing."],
@@ -163,7 +165,7 @@ export const BRIEFS: Brief[] = [
     secret: "The abbot's chair, turned to face the wall.",
     effects: [{ measure: 1, amount: -6 }, { measure: 3, amount: -8 }] },
   // ── The Hollow: the Drowned Wilds in fungal glow and deep cavern. ──
-  { id: "hollow-1", sky: "forest", hero: "hollow", chapter: 0, name: "The Last Patient", region: "drownedWilds", theme: "fungal", w: 6, h: 4, seed: 41, map: LAST_PATIENT, foes: ["shadeflit", "hallokin"], boss: "sickle",
+  { id: "hollow-1", own: "mudguard", sky: "forest", hero: "hollow", chapter: 0, name: "The Last Patient", region: "drownedWilds", theme: "fungal", w: 6, h: 4, seed: 41, map: LAST_PATIENT, foes: ["shadeflit", "hallokin"], boss: "sickle",
     talk: ["You died here, among the children you could not save. I had your hand. Then something else took it and sent you back.", "I do not know what it is. That should worry you. It worries me.", "The marsh is awake where you fell. Walk through it and see what was left in your place.", "The dead here will speak to you now. Be gentle. Most of them do not know."],
     brief: "The Drowned Wilds. You died here, among the children you could not save, and something sent you back. Whatever it left in the marsh is still awake.",
     clues: ["memoryUnravels", "bindingFails"], clueText: ["A child's voice in the moss, repeating a name that is not hers. The dead are not returning. They are coming apart.", "The water here runs uphill for a few steps, then remembers itself."],
@@ -187,26 +189,26 @@ export const BRIEFS: Brief[] = [
     clues: ["bindingFails", "kingHasIdentity"], clueText: ["The tide marks on the towers go up and never down.", "The city's dead bow to a king who was never buried here."],
     secret: "A tide line painted on the wall by hand and dated, each mark higher than the one before.",
     effects: [{ measure: 3, amount: -8 }, { measure: 1, amount: 4 }] },
-  { id: "hollow-5", sky: "demonwoods", hero: "hollow", chapter: 4, name: "The Living Brother", region: "drownedWilds", theme: "cavern", w: 8, h: 7, seed: 853, map: LIVING_BROTHER, foes: ["shadeflit", "hallokin", "sickle", "samurai"], boss: "boss",
+  { id: "hollow-5", own: "sprout", sky: "demonwoods", hero: "hollow", chapter: 4, name: "The Living Brother", region: "drownedWilds", theme: "cavern", w: 8, h: 7, seed: 853, map: LIVING_BROTHER, foes: ["shadeflit", "hallokin", "sickle", "samurai"], boss: "boss",
     talk: ["Someone who knew you before has found you. He says he watched you die.", "He does not trust what you have become. Neither would you, in his place.", "The dead you carry are restless tonight. They sense something familiar in the marsh.", "Show him gently. He has lost enough."],
     brief: "A man from your life before finds you in the marsh. He watched you die. The dead you carry remember him too, and not all their memories are kind.",
     clues: ["memoryUnravels", "kingHasIdentity", "firstbornOneSystem"], clueText: ["Two of the dead are arguing over which of them was his friend. Neither is right.", "A voice among the spirits speaks with six others, and none of them belong to it.", "Five roots in the moss, and when one is cut, the others bleed."],
     secret: "Two cups set out for two brothers. One of them has been drunk from tonight.",
     effects: [{ measure: 3, amount: -8 }, { measure: 4, amount: 8 }] },
   // ── The Architect: the Crownlands in ruin and shrine. ──
-  { id: "architect-1", sky: "corridors", hero: "architect", chapter: 0, name: "The Bastard Prince", region: "crownlands", theme: "ruin", w: 6, h: 4, seed: 51, map: BASTARD_PRINCE, foes: ["hallokin", "knight"], boss: "knight",
+  { id: "architect-1", own: "toaster", sky: "corridors", hero: "architect", chapter: 0, name: "The Bastard Prince", region: "crownlands", theme: "ruin", w: 6, h: 4, seed: 51, map: BASTARD_PRINCE, foes: ["hallokin", "knight"], boss: "knight",
     talk: ["A king's son with no claim. They never raised you. They stored you.", "Tonight the household changes hands again, and the new keepers do not plan to keep you long.", "Leave before the knights finish counting the silver. You are patient by nature. Tonight, be quick instead."],
     brief: "A king's son with no claim is a thing to be kept, not raised. Tonight the household changes hands again. Do not be in it when it does.",
     clues: ["crownHarvests", "artificialMind"], clueText: ["Your tutors were paid from the same account as the executioners.", "A clockwork that corrects its own mistakes, hidden in a nursery wall."],
     secret: "The household inventory. You are listed under furnishings.",
     effects: [{ measure: 0, amount: -4 }, { measure: 2, amount: 3 }] },
-  { id: "architect-2", sky: "corridors", hero: "architect", chapter: 1, name: "The Meridian", region: "crownlands", theme: "shrine", w: 6, h: 5, seed: 52, map: MERIDIAN, foes: ["hallokin", "shadeflit", "samurai"], boss: "huntress",
+  { id: "architect-2", own: "droid", sky: "corridors", hero: "architect", chapter: 1, name: "The Meridian", region: "crownlands", theme: "shrine", w: 6, h: 5, seed: 52, map: MERIDIAN, foes: ["hallokin", "shadeflit", "samurai"], boss: "huntress",
     talk: ["Your mother's order hid its real library off every map. You have her handwriting and her stubbornness.", "In it is a way to make power without asking the dead for theirs. I have a professional interest.", "The scholars' notes call it an engine at first. Read on, and see what they call it by the end."],
     brief: "Your mother's order kept its real library off every map. Find it, and the thing in it that makes power without asking the dead for it.",
     clues: ["artificialMind", "historyIncomplete"], clueText: ["The scholars' notes stop calling it an engine and start calling it 'the student'.", "A history with the last third cut out, and the cuts are old."],
     secret: "Your mother's notes in the margin of a book no one else has opened. She wrote them to you, by name.",
     effects: [{ measure: 3, amount: 4 }, { measure: 4, amount: -3 }] },
-  { id: "architect-3", sky: "duskC", hero: "architect", chapter: 2, name: "A Necessary Monster", region: "crownlands", theme: "ruin", w: 7, h: 5, seed: 53, map: NECESSARY_MONSTER, foes: ["hallokin", "samurai", "knight"], boss: "knight",
+  { id: "architect-3", own: "botwheel", sky: "duskC", hero: "architect", chapter: 2, name: "A Necessary Monster", region: "crownlands", theme: "ruin", w: 7, h: 5, seed: 53, map: NECESSARY_MONSTER, foes: ["hallokin", "samurai", "knight"], boss: "knight",
     talk: ["Nobles want a cause and mercenaries want a wage. You have neither yet, only a very good argument.", "Walk into their camp alone. Leave with both, or do not leave. I have come along in case.", "You will tell yourself the people you use tonight will thank you later. Some will. I keep the list of the rest."],
     brief: "Nobles want a cause and mercenaries want a wage. Walk into their camp alone and leave with both, or do not leave.",
     clues: ["cinderfallSubjects", "firstbornHarvested"], clueText: ["A mercenary's contract for 'specimens', countersigned by the Crown.", "A relic blade that weeps when it is sheathed."],
@@ -218,7 +220,7 @@ export const BRIEFS: Brief[] = [
     clues: ["architectLitBlackspire", "sealBeneathBlackspire"], clueText: ["Your own cipher, on an order you never wrote. Someone improved your plan.", "The fire is drawing down, into the foundations, as if something there were breathing."],
     secret: "Your plan for Blackspire, pinned to the wall, with someone else's corrections in red.",
     effects: [{ measure: 0, amount: -10 }, { measure: 3, amount: -6 }] },
-  { id: "architect-5", sky: "corridors", hero: "architect", chapter: 4, name: "The Five Objects", region: "crownlands", theme: "cavern", w: 8, h: 7, seed: 1065, map: FIVE_OBJECTS, foes: ["knight", "hallokin", "samurai", "sickle"], boss: "boss",
+  { id: "architect-5", own: "golem", sky: "corridors", hero: "architect", chapter: 4, name: "The Five Objects", region: "crownlands", theme: "cavern", w: 8, h: 7, seed: 1065, map: FIVE_OBJECTS, foes: ["knight", "hallokin", "samurai", "sickle"], boss: "boss",
     talk: ["Five fragments of something ancient have fallen across Vareth. You knew before anyone.", "Your mother's notes describe exactly this: the moment the old system begins to break.", "Retrieve the one that fell here before the Crown does. It is the key to what you are building.", "I must say, you are remarkably calm for a man racing to collect a piece of a god."],
     brief: "Five fragments of the Firstborn's bindings have fallen. Reach the one in the Crownlands before the Crown does, and bring it to the machine you are building.",
     clues: ["artificialMind", "starsAreBindings", "historyIncomplete"], clueText: ["Your creation whispers in a voice you did not teach it. It is learning.", "The fragment pulses in time with the other four. They are one thing, broken.", "Your mother's last page: the Firstborn did not lose a war. They were one system, sundered."],
@@ -455,4 +457,18 @@ export function levelById(id: string) {
 export function levelOf(hero: Hero, chapter: number) {
   const brief = BRIEFS.find((each) => each.hero === hero && each.chapter === chapter);
   return brief && make(brief);
+}
+
+// spec/app/index.md, "Story: Explore a hero's world"
+/** A hero's world: its first chapters, each an area whose way out leads into the next. Its later chapters stay levels. */
+export const WORLDS: Partial<Record<Hero, { name: string; areas: number }>> = { forbidden: { name: "Blackspire", areas: 3 } };
+
+/** Whether a protagonist's chapter is an area of its world. */
+export const inWorld = (hero: Hero, chapter: number) => chapter < (WORLDS[hero]?.areas ?? 0);
+
+/** An area of a world as the fighter finds it: a boss already beaten is gone, its room open and no key needed; and
+ *  come back to through its way out, the fighter stands there. */
+export function area(made: Level, beaten: boolean, fromEnd: boolean): Level {
+  const open = beaten && made.guarded ? { guarded: false, ambushes: made.ambushes.slice(0, -1) } : {};
+  return { ...made, ...open, ...(fromEnd ? { entry: { x: made.exit.x, y: made.exit.y - 4 } } : {}) };
 }
