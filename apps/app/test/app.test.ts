@@ -878,6 +878,7 @@ async function solana() {
     getTokenAccountBalance: () => ({ context, value: { amount: "1000000000000", decimals: 6, uiAmount: 1_000_000, uiAmountString: "1000000" } }),
     getLatestBlockhash: () => ({ context, value: { blockhash: web3.Keypair.generate().publicKey.toBase58(), lastValidBlockHeight: 1_000 } }),
     getBlockHeight: () => 10,
+    getBalance: () => ({ context, value: 1_000_000_000 }),
     sendTransaction: (params) => { const tx = web3.Transaction.from(Buffer.from(String(params[0]), "base64")); sent.push(tx); return bs58.encode(tx.signature!); },
     getSignatureStatuses: (params) => ({ context, value: (params[0] as string[]).map(() => ({ slot: 1, confirmations: null, err: null, confirmationStatus: "confirmed" })) }),
   };
@@ -911,13 +912,22 @@ function pgSql(db: PGlite) {
 // spec/app/bout.md, "Story: Fight for the pot"; spec/app/index.md, "Story: Fight the waves"
 it("Fight for the pot: the site takes entry fees, and pays a match's pot and a day's best run once each, on the arena's word", async () => {
   const pot = web3.Keypair.generate(), mint = web3.Keypair.generate().publicKey, chain = await solana();
-  Object.assign(process.env, { BLADES_MINT: mint.toBase58(), POT_SECRET: JSON.stringify([...pot.secretKey]), PRO_SIGNING_KEY: "a long random string", SOLANA_RPC: chain.url, DATABASE_URL: "pglite" });
+  Object.assign(process.env, { POT_SECRET: JSON.stringify([...pot.secretKey]), PRO_SIGNING_KEY: "a long random string", SOLANA_RPC: chain.url, TELEGRAM_ADMIN_ID: "42" });
   const db = new PGlite();
   await db.exec(readFileSync(new URL("../server/pro.sql", import.meta.url), "utf8"));
   const sql = pgSql(db);
   type Out = Record<string, unknown> & { entry?: Record<string, unknown> };
-  const pro = createRequire(import.meta.url)("../server/api/_pro.js") as Record<string, (...args: unknown[]) => Promise<Out>> & { FEE_TOKENS: bigint };
-  const fee = pro.FEE_TOKENS * 10n ** 6n, ata = (owner: web3.PublicKey) => spl.getAssociatedTokenAddressSync(mint, owner, true).toBase58();
+  const load = createRequire(import.meta.url);
+  const pro = load("../server/api/_pro.js") as Record<string, (...args: unknown[]) => Promise<Out>>;
+  const bot = load("../server/bot.js") as { answer: (sql: unknown, from: number, text: string) => Promise<string> };
+  const fee = 50_000n * 10n ** 6n, ata = (owner: web3.PublicKey) => spl.getAssociatedTokenAddressSync(mint, owner, true).toBase58();
+  // The operator sets the token from Telegram (server/bot.js): only from their own account, and once confirmed. Until
+  // then pro mode is closed.
+  expect(await pro.configure(sql)).toMatchObject({ open: false, mint: null });
+  expect(await bot.answer(sql, 7, `/token ${mint.toBase58()}`)).toMatch(/private/);
+  expect(await bot.answer(sql, 42, `/token ${mint.toBase58()}`)).toMatch(/confirm/);
+  expect(await bot.answer(sql, 42, "/confirm")).toMatch(/uses it now/);
+  expect(await pro.configure(sql)).toMatchObject({ open: true, mint: mint.toBase58() });
   /** What the site answers when it will not do what was asked: an error, with a reason. */
   const refused: object = { error: expect.any(String) as unknown };
   /** A transaction the site built, signed by `wallet`, as the page sends it back. */
@@ -984,4 +994,13 @@ it("Fight for the pot: the site takes entry fees, and pays a match's pot and a d
   expect(chain.moved().slice(10)).toEqual([{ from: ata(pot.publicKey), to: ata(fay.wallet.publicKey), amount: 3n * fee }]);
   expect(await pro.daily(sql)).toMatchObject({ days: [] });
   expect(chain.moved().length).toBe(11);
+
+  // The token is not changed while a match is still held, nor would a pot taken in one token be paid in another; a new
+  // fee is taken from the next entry on.
+  expect(await bot.answer(sql, 42, `/token ${web3.Keypair.generate().publicKey.toBase58()}`)).toMatch(/Not now/);
+  expect(await bot.answer(sql, 42, "/confirm")).toMatch(/Nothing to confirm/);
+  await bot.answer(sql, 42, "/fee 100");
+  await bot.answer(sql, 42, "/confirm");
+  await pays("ivy", "survival");
+  expect(chain.moved().slice(11)).toEqual([{ from: expect.any(String) as unknown, to: ata(pot.publicKey), amount: 100n * 10n ** 6n }]);
 });

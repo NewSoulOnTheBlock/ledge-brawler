@@ -1,7 +1,8 @@
 // The site's functions (api/*.js) on the game's own server (apps/app/arena/README.md, behind Caddy): a request to
 // /api/<name> is answered by api/<name>.js, given what a Vercel function is given (req.query, req.body, res.status,
 // res.json); files whose names start with an underscore are shared code, never answered. The daily work of pro mode
-// (api/pro-admin.js) is asked here at 04:00 UTC, with CRON_SECRET.
+// (api/pro-admin.js) is asked here at 04:00 UTC, with CRON_SECRET. pro.sql, which only adds what is missing, is laid
+// over the database at every start, so a deploy brings the tables it needs.
 const http = require("node:http");
 const { readdirSync } = require("node:fs");
 
@@ -59,5 +60,6 @@ function daily() {
 }
 
 server.listen(PORT, () => console.log(`site on :${PORT}: /api/${Object.keys(handlers).join(", /api/")}`));
+if (process.env.DATABASE_URL) require("./api/_db.js").db().file(`${__dirname}/pro.sql`).then(() => console.log("site: pro.sql laid"), (error) => console.error("site: pro.sql:", error.message));
 if (process.env.CRON_SECRET) daily();
 process.on("SIGTERM", () => server.close(() => process.exit(0)));

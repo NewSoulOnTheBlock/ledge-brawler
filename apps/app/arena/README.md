@@ -1,6 +1,6 @@
 # The game's server
 
-Five Blades runs on one VPS of its own, in four containers (`compose.yaml`):
+Five Blades runs on one VPS of its own, in five containers (`compose.yaml`):
 
 - **caddy** serves the built game at `SITE_DOMAIN` (fiveblades.online; `www.` goes there too), passes `/api/*` to the
   site, and passes `ARENA_DOMAIN` (api.fiveblades.online) to the arena. It gets and renews every HTTPS certificate
@@ -8,8 +8,13 @@ Five Blades runs on one VPS of its own, in four containers (`compose.yaml`):
 - **site** answers `/api/*` with the functions in `apps/app/server/api` (`server/serve.js`): the leaderboards, saved
   progress, accounts, and pro mode's money (`server/api/_pro.js`, on Solana). It runs pro mode's daily work at
   04:00 UTC.
-- **db** is the site's Postgres. The first time it starts with no data it lays out `server/schema.sql` and
-  `server/pro.sql`; its data lives in the `db` volume.
+- **db** is the site's Postgres. The first time it starts with no data it lays out `server/schema.sql`; the site lays
+  `server/pro.sql` over it at every start. Its data lives in the `db` volume.
+- **bot** is the operator's Telegram bot (`server/bot.js`), answering only `TELEGRAM_ADMIN_ID`'s private chat:
+  `/token <mint>` sets the $BLADES mint for the whole game (pro entries and pots, and the price on the home screen),
+  checked on chain and kept on `/confirm`; `/fee` and `/rpc` set the entry fee and the Solana RPC; `/status` shows
+  them with the pot wallet and today's pot. A change takes at once, with no restart. The mint cannot change while money
+  is still in play in the old one.
 - **arena** is the multiplayer server (`src/arena/`): matchmaking for Versus and Play together
   ([spec/app/lobby.md](../../../spec/app/lobby.md)); the referee of every duel
   ([spec/app/bout.md](../../../spec/app/bout.md)); and every paid Survival run, which it plays itself
@@ -37,12 +42,13 @@ Five Blades runs on one VPS of its own, in four containers (`compose.yaml`):
    # The Privy app (its id is also built into the game).
    PRIVY_APP_ID=
    PRIVY_APP_SECRET=
-   # Pro mode, closed while BLADES_MINT is empty (server/api/_pro.js): the $BLADES mint, the pot wallet's secret key,
-   # an RPC endpoint such as Helius's (the public one is rate limited), and the fee in whole tokens.
-   BLADES_MINT=
+   # The Telegram bot: its token from BotFather, and the operator's Telegram id (several with commas).
+   TELEGRAM_BOT_TOKEN=
+   TELEGRAM_ADMIN_ID=
+   # Pro mode (server/api/_pro.js), open once the bot has set the mint: the pot wallet's secret key, and an RPC
+   # endpoint such as Helius's until the bot sets one (the public one is rate limited).
    POT_SECRET=
    SOLANA_RPC=
-   PRO_FEE=50000
    ```
 
 5. **Start it:** `cd /opt/five-blades/apps/app/arena && docker compose up -d --build`. Once DNS points here,
@@ -55,7 +61,7 @@ little SOL in it.
 
 | | |
 |---|---|
-| Logs | `docker compose logs -f site` (or `arena`, `caddy`, `db`) |
+| Logs | `docker compose logs -f site` (or `arena`, `bot`, `caddy`, `db`) |
 | The database | `docker compose exec db psql -U blades` |
 | A backup | `docker compose exec db pg_dump -U blades blades > backup.sql` |
 | Update | `git pull && docker compose up -d --build` |

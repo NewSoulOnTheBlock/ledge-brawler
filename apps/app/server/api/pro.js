@@ -1,6 +1,7 @@
 // Pro mode for players (the money itself is in _pro.js; schema in server/pro.sql).
-//   GET  /api/pro[?wallet=…]                             open or not; the fee, the mint and the pot wallet on Solana;
-//                                                        today's Survival pot and best runs; what `wallet` holds
+//   GET  /api/pro[?wallet=…]                             open or not, and the mint once the operator has set it (bot.js);
+//                                                        the fee, the pot wallet, today's Survival pot and best runs, and
+//                                                        what `wallet` holds
 //   POST /api/pro {action: "quote",  mode, wallet}       a transaction paying the fee, for the wallet to sign
 //   POST /api/pro {action: "enter",  mode, wallet, tx, token, lastValid}   the signed transaction: sent, and the entry kept
 //   POST /api/pro {action: "check",  entry}              an entry left pending, looked at again
@@ -24,9 +25,11 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (!pro.enabled()) return res.status(200).json({ open: false });
+  if (!process.env.DATABASE_URL) return res.status(200).json({ open: false });
   const sql = db();
   try {
+    const { open, mint } = await pro.configure(sql);
+    if (!open) return res.status(200).json({ open: false, ...(mint && { mint }) });
     const c = await pro.chain();
     if (req.method === "GET") {
       const wallet = WALLET.test(req.query?.wallet ?? "") ? req.query.wallet : null;

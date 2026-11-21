@@ -67,3 +67,13 @@ CREATE TABLE IF NOT EXISTS pro_days (
   day         date PRIMARY KEY,
   settled_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- What the operator sets from Telegram (server/bot.js): `mint` (the $BLADES mint; pro mode is closed without it), `fee`
+-- (the entry fee in whole tokens) and `rpc` (a Solana RPC endpoint). api/_pro.js reads them at every request, so a
+-- change takes at once.
+CREATE TABLE IF NOT EXISTS pro_settings (
+  key     text PRIMARY KEY,
+  value   text NOT NULL,
+  set_by  text,
+  set_at  timestamptz NOT NULL DEFAULT now()
+);

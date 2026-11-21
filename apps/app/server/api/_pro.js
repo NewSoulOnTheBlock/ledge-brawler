@@ -7,41 +7,75 @@
 //     signature is written down before it is broadcast, so a crash can never pay twice;
 //   - a Versus match's winner, and a Survival run's waves and knockouts, are the arena server's word (spec/app/bout.md;
 //     apps/app/src/arena/run.ts), never a player's game's, so a day's best run is paid without the operator.
-// Set in the server's .env (apps/app/arena/README.md), never in the code:
-//   BLADES_MINT        the $BLADES mint; pro mode is closed while it is unset
+// The $BLADES mint, the fee and the RPC are the operator's, set from Telegram (server/bot.js; pro_settings) and read at
+// the start of every request (`configure`). Set in the server's .env (apps/app/arena/README.md), never in the code:
 //   POT_SECRET         the pot wallet's secret key (base58, or a JSON byte array)
 //   PRO_SIGNING_KEY    any long random string: signs the transactions handed out to be signed
-//   SOLANA_RPC         an RPC endpoint (defaults to the public mainnet one, which is rate limited)
-//   PRO_FEE            the entry fee in whole tokens (default 50000)
+//   SOLANA_RPC         an RPC endpoint, until the operator sets one (else the public mainnet one, which is rate limited)
 const { createHmac, timingSafeEqual } = require("node:crypto");
 const web3 = require("@solana/web3.js");
 const spl = require("@solana/spl-token");
 
-const FEE_TOKENS = BigInt(process.env.PRO_FEE ?? "50000");
 const SEATS = 5;
+/** The entry fee in whole tokens until the operator sets one. */
+const FEE = 50_000n;
 /** How long a paid Survival run may take before its result is no longer taken, and how long after a UTC day ends its pot is decided. */
 const RUN_HOURS = 2, GRACE_HOURS = 3;
 const MEMO = new web3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
-const enabled = () => !!(process.env.BLADES_MINT && process.env.POT_SECRET && process.env.PRO_SIGNING_KEY && process.env.DATABASE_URL);
+/** What the operator last set (pro_settings), as `configure` read it. */
+let settings = { mint: null, fee: FEE, rpc: null };
+const enabled = () => !!(settings.mint && process.env.POT_SECRET && process.env.PRO_SIGNING_KEY);
+const rpcOf = (rpc) => rpc || process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com";
+
+/** Reads what the operator has set; a changed mint, fee or RPC is taken from here on. Answers whether pro mode is open,
+ *  with the settings: the mint, which the page shows the price of even while pro mode is closed, the fee in whole
+ *  tokens and the RPC. */
+async function configure(sql) {
+  const set = Object.fromEntries((await sql`SELECT key, value FROM pro_settings`).map((row) => [row.key, row.value]));
+  const now = { mint: set.mint ?? null, fee: BigInt(set.fee ?? FEE), rpc: set.rpc ?? null };
+  if (now.mint !== settings.mint || now.fee !== settings.fee || now.rpc !== settings.rpc) cached = null;
+  settings = now;
+  return { open: enabled(), ...settings };
+}
+
+/** The pot wallet, from POT_SECRET (base58, or a JSON byte array). */
+async function potKey() {
+  const raw = process.env.POT_SECRET.trim();
+  return web3.Keypair.fromSecretKey(raw.startsWith("[") ? Uint8Array.from(JSON.parse(raw)) : (await import("bs58")).default.decode(raw));
+}
+
+/** A mint as it is on chain, at `rpc`: its token program (classic SPL or Token-2022, whichever owns it) and decimals;
+ *  null if no mint is there. */
+async function mintAt(connection, mint) {
+  const info = await connection.getAccountInfo(mint);
+  if (!info || !(info.owner.equals(spl.TOKEN_PROGRAM_ID) || info.owner.equals(spl.TOKEN_2022_PROGRAM_ID))) return null;
+  const { decimals } = await spl.getMint(connection, mint, "confirmed", info.owner);
+  return { program: info.owner, decimals };
+}
 
 let cached = null;
 /** The connection, the pot's keypair, and the mint as it is on chain: its token program and decimals. */
 async function chain() {
   if (cached) return cached;
-  const connection = new web3.Connection(process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com", "confirmed");
-  const raw = process.env.POT_SECRET.trim();
-  const secret = raw.startsWith("[") ? Uint8Array.from(JSON.parse(raw)) : (await import("bs58")).default.decode(raw);
-  const pot = web3.Keypair.fromSecretKey(secret);
-  const mint = new web3.PublicKey(process.env.BLADES_MINT);
-  const info = await connection.getAccountInfo(mint);
-  if (!info) throw new Error("The $BLADES mint was not found on chain.");
-  // Classic SPL or Token-2022, whichever owns the mint.
-  const program = info.owner;
-  const { decimals } = await spl.getMint(connection, mint, "confirmed", program);
-  const fee = FEE_TOKENS * 10n ** BigInt(decimals);
-  cached = { connection, pot, mint, program, decimals, fee };
+  const connection = new web3.Connection(rpcOf(settings.rpc), "confirmed");
+  const pot = await potKey();
+  const mint = new web3.PublicKey(settings.mint);
+  const found = await mintAt(connection, mint);
+  if (!found) throw new Error("The $BLADES mint was not found on chain.");
+  cached = { connection, pot, mint, ...found, fee: settings.fee * 10n ** BigInt(found.decimals) };
   return cached;
+}
+
+/** Money not yet where it ends: an entry not settled, a match or a day whose pot is not paid, a payout not sent. While
+ *  there is any, the mint may not change, or a pot taken in one token would be paid in another. */
+async function inFlight(sql) {
+  const [row] = await sql`SELECT
+      (SELECT count(*) FROM pro_entries WHERE status = 'pending')::int AS entries,
+      (SELECT count(*) FROM pro_matches WHERE status IN ('open', 'fighting', 'held'))::int AS matches,
+      (SELECT count(DISTINCT day) FROM pro_entries WHERE mode = 'survival' AND status = 'paid' AND day NOT IN (SELECT day FROM pro_days))::int AS days,
+      (SELECT count(*) FROM pro_payouts WHERE status IN ('held', 'approved', 'sending', 'failed'))::int AS payouts`;
+  return row;
 }
 
 const ata = (c, owner) => spl.getAssociatedTokenAddressSync(c.mint, owner, true, c.program);
@@ -56,7 +90,7 @@ async function quote(userId, mode, wallet) {
   const c = await chain();
   const owner = new web3.PublicKey(wallet);
   const from = ata(c, owner), to = ata(c, c.pot.publicKey);
-  if (BigInt(await heldBy(c, wallet)) < c.fee) return { error: `This wallet holds less than ${FEE_TOKENS.toLocaleString("en-US")} $BLADES.` };
+  if (BigInt(await heldBy(c, wallet)) < c.fee) return { error: `This wallet holds less than ${settings.fee.toLocaleString("en-US")} $BLADES.` };
   const { blockhash, lastValidBlockHeight } = await c.connection.getLatestBlockhash("confirmed");
   const tx = new web3.Transaction({ feePayer: c.pot.publicKey, blockhash, lastValidBlockHeight }).add(
     spl.createAssociatedTokenAccountIdempotentInstruction(c.pot.publicKey, to, c.pot.publicKey, c.mint, c.program),
@@ -294,4 +328,4 @@ async function daily(sql) {
   return { days: done, refunded: alone.length, held: stale.length };
 }
 
-module.exports = { enabled, chain, heldBy, quote, enter, recheck, playable, result, survivalBoard, seatOf, lock, decided, withdraw, refund, send, retry, daily, FEE_TOKENS, SEATS };
+module.exports = { configure, enabled, rpcOf, mintAt, potKey, inFlight, chain, heldBy, quote, enter, recheck, playable, result, survivalBoard, seatOf, lock, decided, withdraw, refund, send, retry, daily, SEATS };

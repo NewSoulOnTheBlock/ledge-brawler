@@ -6,7 +6,8 @@ const postgres = require("postgres");
 const json = (oid) => ({ to: oid, from: [oid], serialize: (x) => (typeof x === "string" ? x : JSON.stringify(x)), parse: JSON.parse });
 
 let pool = null;
-/** The pool, made the first time it is asked for. A value left undefined is sent as NULL. */
-const db = () => (pool ??= postgres(process.env.DATABASE_URL, { max: 10, transform: { undefined: null }, types: { json: json(114), jsonb: json(3802) } }));
+/** The pool, made the first time it is asked for. A value left undefined is sent as NULL; Postgres's notices (such as
+ *  pro.sql's "already exists, skipping") are not logged. */
+const db = () => (pool ??= postgres(process.env.DATABASE_URL, { max: 10, onnotice: () => undefined, transform: { undefined: null }, types: { json: json(114), jsonb: json(3802) } }));
 
 module.exports = { db };

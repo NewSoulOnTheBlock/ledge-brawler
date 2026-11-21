@@ -18,9 +18,10 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const admin = bearer(req, process.env.PRO_ADMIN_TOKEN), cron = bearer(req, process.env.CRON_SECRET);
   if (!admin && !cron) return res.status(401).json({ error: "Not allowed." });
-  if (!pro.enabled()) return res.status(503).json({ error: "Pro mode is not set up." });
+  if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Pro mode is not set up." });
   const sql = db();
   try {
+    if (!(await pro.configure(sql)).open) return res.status(503).json({ error: "Pro mode is not set up." });
     if (req.method === "GET" && !req.query?.list) return res.status(200).json(await pro.daily(sql));
     if (!admin) return res.status(401).json({ error: "Not allowed." });
     if (req.method === "GET") {

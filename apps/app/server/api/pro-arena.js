@@ -20,10 +20,11 @@ module.exports = async (req, res) => {
   const secret = process.env.ARENA_SECRET;
   if (!secret || !timingSafeEqual(digest(req.headers.authorization ?? ""), digest(`Bearer ${secret}`))) return res.status(401).json({ error: "Not allowed." });
   if (req.method !== "POST") return res.status(405).json({ error: "Only POST." });
-  if (!pro.enabled()) return res.status(503).json({ error: "Pro mode is not set up." });
+  if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Pro mode is not set up." });
   const sql = db();
   const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body ?? {};
   try {
+    if (!(await pro.configure(sql)).open) return res.status(503).json({ error: "Pro mode is not set up." });
     switch (body.action) {
       case "seat": {
         const userId = await userIdOfToken(typeof body.token === "string" ? body.token : "");

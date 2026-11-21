@@ -1,5 +1,5 @@
-# The game's server: Caddy with the game, the site's functions, their database and the arena (README.md). Run from
-# this directory, with a .env beside it: docker compose up -d --build
+# The game's server: Caddy with the game, the site's functions and Telegram bot, their database and the arena
+# (README.md). Run from this directory, with a .env beside it: docker compose up -d --build
 x-build: &build
   context: ../../..
   dockerfile: apps/app/arena/Dockerfile
@@ -24,7 +24,17 @@ services:
         condition: service_healthy
     expose:
       - "3000"
-  # The site's database, laid out by schema.sql and pro.sql the first time it starts with no data.
+  # The operator's Telegram bot (server/bot.js), from the site's image: off while TELEGRAM_BOT_TOKEN is empty.
+  bot:
+    build: { <<: *build, target: site }
+    command: ["node", "bot.js"]
+    restart: on-failure
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://blades:${DB_PASSWORD}@db:5432/blades
+    depends_on:
+      - site
+  # The site's database, laid out by schema.sql the first time it starts with no data (the site lays pro.sql over it).
   db:
     image: postgres:18
     restart: unless-stopped
@@ -34,8 +44,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - db:/var/lib/postgresql
-      - ../server/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
-      - ../server/pro.sql:/docker-entrypoint-initdb.d/2-pro.sql:ro
+      - ../server/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "blades", "-d", "blades"]
       interval: 5s
