@@ -1,5 +1,5 @@
 // Privy for the functions that need to know who is signed in (track.js, admin.js, pro.js, pro-arena.js). Loaded only when sign-in is set
-// up, and as an ES module: on Vercel the library's CommonJS build cannot load its own dependency.
+// up, and as an ES module: the library's CommonJS build cannot load its own dependency.
 let privy = null;
 const getPrivy = async () => {
   if (!privy && process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET) {

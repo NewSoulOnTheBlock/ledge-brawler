@@ -1,3 +1,28 @@
+# The game at SITE_DOMAIN with its functions under /api (the site, server/serve.js), and the arena at ARENA_DOMAIN.
+# Caddy gets and renews every HTTPS certificate and passes the arena's WebSockets through.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy site:3000
+	}
+	handle {
+		root * /srv
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+		header /sw.js Cache-Control no-cache
+		header /sw.js Service-Worker-Allowed /
+		header /manifest.webmanifest Cache-Control no-cache
+		header /manifest.webmanifest >Content-Type application/manifest+json
+		# The operator's dashboard is the game's own page (main.tsx); /privacy is privacy.html.
+		rewrite /admin /index.html
+		try_files {path} {path}.html
+		file_server
+	}
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
 {$ARENA_DOMAIN} {
 	reverse_proxy arena:8787
 }

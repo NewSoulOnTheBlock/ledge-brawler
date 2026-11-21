@@ -1,8 +1,8 @@
 // What players do, for the operator's dashboard (admin.js). Every visitor has an anonymous id kept in their browser
 // (src/track.ts); a signed-in one's Privy user id is stored beside it.
 //   POST /api/track  {player, events: [{kind, data}]}   at most 40 events, of the kinds below
-// Table events (player, user_id, kind, data jsonb, created_at). DATABASE_URL is set on the Vercel project.
-const { neon } = require("@neondatabase/serverless");
+// Table events (player, user_id, kind, data jsonb, created_at). The database is the site's own (api/_db.js).
+const { db } = require("./_db.js");
 const { userIdOf } = require("./_privy.js");
 
 const KINDS = new Set(["visit", "signin", "survival_start", "survival_end", "versus_start", "versus_end", "chapter_start", "chapter_clear", "game_over", "ending"]);
@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
   if (!PLAYER.test(player) || events.length === 0) return res.status(400).json({ error: "Nothing to keep." });
   const rows = events.map((e) => { const data = JSON.stringify(e.data && typeof e.data === "object" ? e.data : {}); return { kind: e.kind, data: data.length > 2000 ? "{}" : data }; });
   const userId = await userIdOf(req);
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     await sql`INSERT INTO events (player, user_id, kind, data)
       SELECT ${player}, ${userId}, r.kind, r.data::jsonb FROM json_to_recordset(${JSON.stringify(rows)}::json) AS r(kind text, data text)`;

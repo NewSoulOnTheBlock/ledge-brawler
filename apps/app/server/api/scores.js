@@ -1,15 +1,15 @@
-// The Survival leaderboard: one table in Neon (project "five-blades"), read and written here and nowhere else.
+// The Survival leaderboard: one table of the site's database (schema.sql), read and written here and nowhere else.
 //   GET  /api/scores                 the best, and how many there are
 //   GET  /api/scores?wave=4&kos=17   the same, and where a fight that ended so would stand
 //   POST /api/scores  {name, wave, kos, fighter}   keeps a standing under a name; answers as GET does, with its place
 // A standing is the wave reached, then knockouts, then who was there first. The numbers come from the player's own
 // browser and are only checked for being possible, so this is a board for fun, not for prizes.
 // When the player is signed in (Authorization: Bearer <privy-token>), their user_id is stored with the score.
-// DATABASE_URL is set on the Vercel project (never in the code).
-const { neon } = require("@neondatabase/serverless");
+// The database is the site's own (api/_db.js).
+const { db } = require("./_db.js");
 
 let privy = null;
-// Loaded only when sign-in is set up, and as an ES module: on Vercel the library's CommonJS build cannot load its own
+// Loaded only when sign-in is set up, and as an ES module: the library's CommonJS build cannot load its own
 // dependency. A failure here never takes the function down: the request is simply not signed in.
 const getPrivy = async () => {
   if (!privy && process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET) {
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (!process.env.DATABASE_URL) return res.status(503).json({ error: "The leaderboard is not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     let wave = null, kos = null, kept = null;
     const filterFighter = req.query?.fighter !== undefined ? whole(req.query.fighter, 4) : null;

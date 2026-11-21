@@ -8,7 +8,7 @@
 // A Versus match's fight and its end, and a Survival run's end, are the arena server's to tell (pro-arena.js), not a
 // player's game's.
 // Every POST needs Authorization: Bearer <privy-token>.
-const { neon } = require("@neondatabase/serverless");
+const { db } = require("./_db.js");
 const pro = require("./_pro.js");
 const { userIdOf } = require("./_privy.js");
 
@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (!pro.enabled()) return res.status(200).json({ open: false });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     const c = await pro.chain();
     if (req.method === "GET") {

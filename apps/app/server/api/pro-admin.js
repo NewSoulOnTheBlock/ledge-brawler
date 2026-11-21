@@ -1,12 +1,12 @@
-// Pro mode for the operator, and the daily cron (vercel.json). Authorization: Bearer <PRO_ADMIN_TOKEN>; the cron
-// comes with Bearer <CRON_SECRET>, which Vercel sends by itself once CRON_SECRET is set on the project.
+// Pro mode for the operator, and the daily cron (server/serve.js). Authorization: Bearer <PRO_ADMIN_TOKEN>; the cron
+// comes with Bearer <CRON_SECRET>, which serve.js sends once CRON_SECRET is set in the server's .env.
 //   GET  /api/pro-admin                                 cron: the daily work (_pro.js, daily)
 //   GET  /api/pro-admin?list=1                          what waits: held payouts and matches, failed or stuck payouts
 //   POST {action: "approve", payout}                    a held payout is sent
 //   POST {action: "award",   match, entry}              a held Versus match is paid to the entrant the operator names
 //   POST {action: "refund",  match}                     a held Versus match: every entrant gets their fee back
 //   POST {action: "retry",   payout}                    a failed or stuck payout, once its last transaction cannot land
-const { neon } = require("@neondatabase/serverless");
+const { db } = require("./_db.js");
 const { createHash, timingSafeEqual } = require("node:crypto");
 const pro = require("./_pro.js");
 
@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
   const admin = bearer(req, process.env.PRO_ADMIN_TOKEN), cron = bearer(req, process.env.CRON_SECRET);
   if (!admin && !cron) return res.status(401).json({ error: "Not allowed." });
   if (!pro.enabled()) return res.status(503).json({ error: "Pro mode is not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     if (req.method === "GET" && !req.query?.list) return res.status(200).json(await pro.daily(sql));
     if (!admin) return res.status(401).json({ error: "Not allowed." });

@@ -10,7 +10,7 @@ import { serve } from "./serve.ts"
 
 export effect function main() {
   const port = try Config.withDefault(Config.Int("PORT"), 8787)
-  const site = try Config.withDefault(Config.String("SITE"), "https://ledge-brawler.vercel.app")
+  const site = try Config.withDefault(Config.String("SITE"), "https://fiveblades.online")
   const secret = try Config.option(Config.Redacted("ARENA_SECRET"))
   let pro: Pro | undefined
   if (Option.isSome(secret)) { provide FetchHttpClient.layer { pro = try pot(site, secret.value) } }

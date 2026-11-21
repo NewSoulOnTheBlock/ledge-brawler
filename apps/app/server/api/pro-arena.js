@@ -6,7 +6,7 @@
 //   POST {action: "result", match, winner}   how it ended: the winner's entry is paid the pot; null holds it for review
 //   POST {action: "run",    entry, token}    whether a paid Survival entry is its owner's and still to be played
 //   POST {action: "kept",   entry, wave, kos, fighter, name}   how the arena played that run to its end, once
-const { neon } = require("@neondatabase/serverless");
+const { db } = require("./_db.js");
 const { createHash, timingSafeEqual } = require("node:crypto");
 const pro = require("./_pro.js");
 const { named } = require("./_names.js");
@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   if (!secret || !timingSafeEqual(digest(req.headers.authorization ?? ""), digest(`Bearer ${secret}`))) return res.status(401).json({ error: "Not allowed." });
   if (req.method !== "POST") return res.status(405).json({ error: "Only POST." });
   if (!pro.enabled()) return res.status(503).json({ error: "Pro mode is not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body ?? {};
   try {
     switch (body.action) {

@@ -2,8 +2,8 @@
 //   GET  /api/daily                  today's seed, fighter and best
 //   GET  /api/daily?wave=4&kos=17    the same, and where a fight that ended so would stand today
 //   POST /api/daily  {name, wave, kos}   keeps a standing for today, with the daily fighter
-// Table daily_scores (day DATE, name, wave, kos, fighter, user_id, created_at). DATABASE_URL is set on the Vercel project.
-const { neon } = require("@neondatabase/serverless");
+// Table daily_scores (day DATE, name, wave, kos, fighter, user_id, created_at). The database is the site's own (api/_db.js).
+const { db } = require("./_db.js");
 
 let privy = null;
 const getPrivy = async () => {
@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (!process.env.DATABASE_URL) return res.status(503).json({ error: "The leaderboard is not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   const today = new Date().toISOString().slice(0, 10);
   const seed = parseInt(today.replace(/-/g, ""), 10);
   const fighter = seed % 5;

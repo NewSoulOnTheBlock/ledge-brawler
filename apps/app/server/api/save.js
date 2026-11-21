@@ -3,10 +3,10 @@
 //   POST /api/save  {data}      save game state (replaces previous)
 // Requires PRIVY_APP_ID, PRIVY_APP_SECRET and DATABASE_URL env vars.
 // The user sends their Privy access token in the Authorization header.
-const { neon } = require("@neondatabase/serverless");
+const { db } = require("./_db.js");
 
 let privy = null;
-// Loaded only when sign-in is set up, and as an ES module: on Vercel the library's CommonJS build cannot load its own
+// Loaded only when sign-in is set up, and as an ES module: the library's CommonJS build cannot load its own
 // dependency. A failure here never takes the function down: the request is simply not signed in.
 const getPrivy = async () => {
   if (!privy && process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET) {
@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
   const userId = await verifyUser(req);
   if (!userId) return res.status(401).json({ error: "Not authenticated." });
 
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
 
   try {
     if (req.method === "GET") {

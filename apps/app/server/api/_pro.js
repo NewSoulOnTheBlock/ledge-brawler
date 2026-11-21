@@ -7,7 +7,7 @@
 //     signature is written down before it is broadcast, so a crash can never pay twice;
 //   - a Versus match's winner, and a Survival run's waves and knockouts, are the arena server's word (spec/app/bout.md;
 //     apps/app/src/arena/run.ts), never a player's game's, so a day's best run is paid without the operator.
-// Set on the Vercel project, never in the code:
+// Set in the server's .env (apps/app/arena/README.md), never in the code:
 //   BLADES_MINT        the $BLADES mint; pro mode is closed while it is unset
 //   POT_SECRET         the pot wallet's secret key (base58, or a JSON byte array)
 //   PRO_SIGNING_KEY    any long random string: signs the transactions handed out to be signed
@@ -270,7 +270,7 @@ async function retry(sql, payoutId) {
 }
 
 /**
- * The daily work (api/pro-admin.js, by Vercel cron): each Survival day past its grace pays its pot to its best run,
+ * The daily work (api/pro-admin.js, asked daily by server/serve.js): each Survival day past its grace pays its pot to its best run,
  * every result being the arena's; a match nobody else joined in an hour is refunded; a match the arena has not
  * settled in an hour is held.
  */

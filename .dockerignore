@@ -1,4 +1,7 @@
-# What the arena server's image (apps/app/arena/Dockerfile) is built without.
+# What the server's images (apps/app/arena/Dockerfile) are built without: never a secret, nor what is built anew.
+**/.env
+**/.env.*
+**/*.env
 **/node_modules
 **/dist
 **/build
@@ -12,5 +15,4 @@
 art
 workbench
 mobile
-apps/app/public
 **/.boost

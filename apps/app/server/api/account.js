@@ -2,8 +2,8 @@
 //   GET    /api/account   what is kept under this account: how many saves and standings
 //   DELETE /api/account   deletes the cloud save, every standing kept under the account on both boards, and the
 //                         sign-in account itself at Privy
-// Authorization: Bearer <privy-token> is required for both. DATABASE_URL and the Privy keys are set on the Vercel project.
-const { neon } = require("@neondatabase/serverless");
+// Authorization: Bearer <privy-token> is required for both. The Privy keys are set in the server's .env; the database is the site's own (api/_db.js).
+const { db } = require("./_db.js");
 
 let privy = null;
 const getPrivy = async () => {
@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
   try { ({ user_id: userId } = await client.utils().auth().verifyAccessToken(header.slice(7))); }
   catch { return res.status(401).json({ error: "Sign in again." }); }
   if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Accounts are not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     if (req.method === "GET") {
       const [{ saves }] = await sql`SELECT count(*)::int AS saves FROM game_saves WHERE user_id = ${userId}`;

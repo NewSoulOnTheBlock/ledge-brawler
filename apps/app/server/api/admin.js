@@ -3,7 +3,7 @@
 // browser) and its SHA-256 compared with the one below, so that no address is written here (as in src/granted.ts).
 //   GET /api/admin                 the whole picture: totals, days, modes, players, accounts, boards, recent events
 //   GET /api/admin?player=<id>     every event of one player
-const { neon } = require("@neondatabase/serverless");
+const { db } = require("./_db.js");
 const { createHash } = require("node:crypto");
 const { getPrivy, userIdOf, emailOf } = require("./_privy.js");
 
@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
   const email = emailOf(me);
   if (!email || !OPERATORS.has(hashed(email))) return res.status(403).json({ error: "This account is not the operator's." });
   if (!process.env.DATABASE_URL) return res.status(503).json({ error: "The database is not set up." });
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = db();
   try {
     if (req.query?.player) {
       const events = await sql`SELECT id, kind, data, user_id, created_at FROM events WHERE player = ${String(req.query.player)} ORDER BY created_at DESC LIMIT 1000`;

@@ -1,5 +1,5 @@
 -- Pro mode: paid entries in $BLADES, the pots they make and what is paid out of them (api/_pro.js).
--- Additive only; safe to run more than once against the "five-blades" Neon database.
+-- Additive only; safe to run more than once. Laid out when the server's database is first made (apps/app/arena/compose.yaml).
 
 -- A pro Versus match: one table of the arena server (`pro<id>`), up to five paid seats.
 --   open      taking entrants

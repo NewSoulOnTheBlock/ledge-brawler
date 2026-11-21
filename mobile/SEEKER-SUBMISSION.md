@@ -20,13 +20,10 @@ Sources: [Submit a new app](https://docs.solanamobile.com/dapp-store/submit-new-
 2. **Deploy.** The app is a shell around the live site, so the live site must have this work: the installable app
    (service worker, manifest, icons), the touch and phone changes, account deletion, name reporting and filtering,
    and the privacy and terms pages. Then check that these answer:
-   - https://ledge-brawler.vercel.app/privacy
-   - https://ledge-brawler.vercel.app/terms
-   - https://ledge-brawler.vercel.app/manifest.webmanifest
-3. **Choose a domain (recommended).** The store shows the app's website and checks it. A domain of your own
-   (for example `fiveblades.xyz`) reads better than `ledge-brawler.vercel.app` and survives a move off Vercel. If you
-   add one, use it everywhere below, and in `apps/app/index.html` (`og:url`, `og:image`).
-4. **Confirm the art licences.** The store refuses apps that use art, sound or type without the right to. Check that
+   - https://fiveblades.online/privacy
+   - https://fiveblades.online/terms
+   - https://fiveblades.online/manifest.webmanifest
+3. **Confirm the art licences.** The store refuses apps that use art, sound or type without the right to. Check that
    each pack in the game's credits allows use in a published, distributed game (most game asset packs do; some
    forbid NFTs, and publishing to this store mints NFTs that carry the app's icon and screenshots):
    - Hooded Seeker by Primitive Pixels (the five fighters; also in every screenshot and the icon's colours)
@@ -36,7 +33,7 @@ Sources: [Submit a new app](https://docs.solanamobile.com/dapp-store/submit-new-
    - Platform Fighter Template (Versus stage and sounds); the supplied sound effects and music
    - The menu picture (`apps/app/src/home.webp`) and the banner made from it: confirm where it came from
    - pixelfx (MIT), Chakra Petch and IBM Plex Mono (SIL OFL): fine
-5. **Choose the Android application id.** It can never be changed and must be unique. Suggested:
+4. **Choose the Android application id.** It can never be changed and must be unique. Suggested:
    `xyz.fiveblades.game` (or your own domain, reversed). Used in the build below and in the portal.
 
 ## The listing
@@ -46,9 +43,9 @@ Sources: [Submit a new app](https://docs.solanamobile.com/dapp-store/submit-new-
 | App name (25 max) | `Five Blades` |
 | Short description (50 max) | `Pixel-art brawler: campaign, waves & online duels` (49) |
 | Category | Games |
-| Website | https://ledge-brawler.vercel.app (or your domain) |
-| Privacy policy | https://ledge-brawler.vercel.app/privacy |
-| Terms of service | https://ledge-brawler.vercel.app/terms |
+| Website | https://fiveblades.online (or your domain) |
+| Privacy policy | https://fiveblades.online/privacy |
+| Terms of service | https://fiveblades.online/terms |
 | Support and contact email | the address you put in the pages |
 
 **Long description**
@@ -111,8 +108,8 @@ npx solana-mobile@latest doctor
 
 # 2. Make the Android project. It asks for a keystore password: choose a strong one and keep it in a password manager.
 npx solana-mobile@latest webshell init five-blades-android `
-  --url https://ledge-brawler.vercel.app/?source=app `
-  --manifest https://ledge-brawler.vercel.app/manifest.webmanifest `
+  --url https://fiveblades.online/?source=app `
+  --manifest https://fiveblades.online/manifest.webmanifest `
   --application-id xyz.fiveblades.game `
   --app-name "Five Blades" `
   --keystore-path ./five-blades.keystore `

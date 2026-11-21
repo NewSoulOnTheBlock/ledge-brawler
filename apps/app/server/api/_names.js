@@ -1,6 +1,6 @@
 // The names players give themselves on the leaderboards (scores.js, daily.js): one line, sixteen characters at most,
 // nothing that is a tag or a control character, and nothing offensive. An offensive name is not refused (the standing
-// is still kept) but is shown as "Player". The file's name starts with an underscore, so Vercel does not serve it.
+// is still kept) but is shown as "Player". The file's name starts with an underscore, so server/serve.js does not answer with it.
 const STEMS = [
   // Whole stems that are seldom inside an ordinary word: "dick" is in Dickens, "cock" in Hancock, "rape" in grape.
   "fuck", "shit", "cunt", "bitch", "whore", "slut", "dickhead", "cocksuck", "pussy", "penis", "vagina", "porn", "rapist",

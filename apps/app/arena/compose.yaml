@@ -1,28 +1,65 @@
-# The arena server behind Caddy, which gets and renews its HTTPS certificate and passes WebSockets through.
-# Run from this directory, with a .env beside it (README.md): docker compose up -d --build
+# The game's server: Caddy with the game, the site's functions, their database and the arena (README.md). Run from
+# this directory, with a .env beside it: docker compose up -d --build
+x-build: &build
+  context: ../../..
+  dockerfile: apps/app/arena/Dockerfile
 services:
   arena:
-    build:
-      context: ../../..
-      dockerfile: apps/app/arena/Dockerfile
+    build: { <<: *build, target: arena }
     restart: unless-stopped
     environment:
-      SITE: ${SITE:-https://ledge-brawler.vercel.app}
+      SITE: http://site:3000
       ARENA_SECRET: ${ARENA_SECRET:?set ARENA_SECRET in .env}
     expose:
       - "8787"
+  site:
+    build: { <<: *build, target: site }
+    restart: unless-stopped
+    # The Privy keys, ARENA_SECRET, CRON_SECRET, PRO_ADMIN_TOKEN, and pro mode's (server/api/_pro.js).
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://blades:${DB_PASSWORD}@db:5432/blades
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+  # The site's database, laid out by schema.sql and pro.sql the first time it starts with no data.
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blades
+      POSTGRES_DB: blades
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db:/var/lib/postgresql
+      - ../server/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
+      - ../server/pro.sql:/docker-entrypoint-initdb.d/2-pro.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "blades", "-d", "blades"]
+      interval: 5s
+      retries: 12
   caddy:
-    image: caddy:2
+    build:
+      <<: *build
+      target: web
+      args:
+        VITE_ARENA_URL: wss://${ARENA_DOMAIN:?set ARENA_DOMAIN in .env}/play
+        VITE_PRIVY_APP_ID: ${PRIVY_APP_ID:-}
     restart: unless-stopped
     depends_on:
+      - site
       - arena
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     environment:
-      ARENA_DOMAIN: ${ARENA_DOMAIN:?set ARENA_DOMAIN in .env}
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env}
+      ARENA_DOMAIN: ${ARENA_DOMAIN}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy:/data
 volumes:
   caddy: {}
+  db: {}

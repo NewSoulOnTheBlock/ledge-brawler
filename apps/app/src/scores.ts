@@ -1,8 +1,6 @@
 // spec/app/index.md, "A fighter knocked out against the waves starts over from the first"
 // The Survival leaderboard, kept for everyone in one database behind the site's /api/scores (server/api/scores.js).
 // A standing is the wave reached, then knockouts. Played from a development server, the live site's board is used.
-const API = /^(localhost|127\.|192\.168\.)/.test(location.hostname) ? "https://ledge-brawler.vercel.app/api/scores" : "/api/scores";
-const SAVE_API = /^(localhost|127\.|192\.168\.)/.test(location.hostname) ? "https://ledge-brawler.vercel.app/api/save" : "/api/save";
 
 export interface Standing { id: number; name: string; wave: number; kos: number; fighter: number }
 /** The best standings, how many there are in all, and, when asked about one, its place among them. */
@@ -18,8 +16,9 @@ export async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** The site's other endpoints (server/api), the live site's when played from a development server. */
-export const SITE = /^(localhost|127.|192.168.)/.test(location.hostname) ? "https://ledge-brawler.vercel.app" : "";
+/** The site's endpoints (server/api), the live site's when played from a development server. */
+export const SITE = /^(localhost|127\.|192\.168\.)/.test(location.hostname) ? "https://fiveblades.online" : "";
+const API = `${SITE}/api/scores`, SAVE_API = `${SITE}/api/save`;
 
 /** Reports a name on a board as offensive (server/api/report.js): enough reports take it off until it is looked at. */
 export async function reportStanding(board: "survival" | "daily", id: number): Promise<void> {
