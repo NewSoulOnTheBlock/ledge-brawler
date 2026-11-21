@@ -211,7 +211,7 @@ function MatchPicker() {
 }
 
 /** Survival or Versus, as chosen on the title: Casual, for nothing, or Pro, for an entry fee in $BLADES (pro.ts). */
-/** The Pro entry fee as the pot contract charges it ("500 $BLADES"), read once from /api/pro; "" until it answers. */
+/** The Pro entry fee as the site charges it ("50,000 $BLADES"), read once from /api/pro; "" until it answers. */
 let entryFee = "";
 function useEntryFee(): string {
   const [fee, setFee] = useState(entryFee);
@@ -219,7 +219,7 @@ function useEntryFee(): string {
     if (entryFee) return;
     proInfo().then((info) => {
       if (!info.fee) return;
-      entryFee = `${tokens(info.fee, info.decimals ?? 18)} $BLADES`;
+      entryFee = `${tokens(info.fee, info.decimals)} $BLADES`;
       setFee(entryFee);
     }).catch(() => {});
   }, []);

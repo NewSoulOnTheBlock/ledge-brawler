@@ -1,7 +1,6 @@
 packages:
   - apps/*
   - packages/*
-  - contracts
   - vibestack/studio
 
 allowBuilds:

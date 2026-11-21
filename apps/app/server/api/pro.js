@@ -1,10 +1,8 @@
 // Pro mode for players (the money itself is in _pro.js; schema in server/pro.sql).
-//   GET  /api/pro[?wallet=0x…]                           open or not; the fee, the token and the pot on Robinhood Chain;
+//   GET  /api/pro[?wallet=…]                             open or not; the fee, the mint and the pot wallet on Solana;
 //                                                        today's Survival pot and best runs; what `wallet` holds
-//   POST /api/pro {action: "quote",  mode, wallet}       the permit paying the fee, for the wallet to sign (or, for a
-//                                                        token without permits, the approval to send first)
-//   POST /api/pro {action: "enter",  mode, wallet, signature, token, deadline, nonce}   the signed permit: the pot takes
-//                                                        the fee, the site paying the gas, and the entry is kept
+//   POST /api/pro {action: "quote",  mode, wallet}       a transaction paying the fee, for the wallet to sign
+//   POST /api/pro {action: "enter",  mode, wallet, tx, token, lastValid}   the signed transaction: sent, and the entry kept
 //   POST /api/pro {action: "check",  entry}              an entry left pending, looked at again
 //   POST /api/pro {action: "withdraw", entry}            a lone seat's fee back, while nobody else has joined
 // A Versus match's fight and its end, and a Survival run's end, are the arena server's to tell (pro-arena.js), not a
@@ -15,7 +13,7 @@ const pro = require("./_pro.js");
 const { userIdOf } = require("./_privy.js");
 
 const MODES = new Set(["survival", "versus"]);
-const WALLET = /^0x[0-9a-fA-F]{40}$/;
+const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const id = (value) => { const n = Number(value); return Number.isSafeInteger(n) && n > 0 ? n : null; };
 /** An entry as the page sees it. */
 const shown = (e) => ({ id: Number(e.id), mode: e.mode, status: e.status, match: e.match_id ? Number(e.match_id) : null, day: e.day ? new Date(e.day).toISOString().slice(0, 10) : null });
@@ -32,8 +30,8 @@ module.exports = async (req, res) => {
     const c = await pro.chain();
     if (req.method === "GET") {
       const wallet = WALLET.test(req.query?.wallet ?? "") ? req.query.wallet : null;
-      return res.status(200).json({ open: true, fee: (await pro.feeOf(c)).toString(), decimals: c.decimals, token: c.token, pot: c.pot, chainId: c.id,
-        survival: await pro.survivalBoard(sql), ...(wallet && { held: await pro.heldBy(c, wallet) }) });
+      return res.status(200).json({ open: true, fee: c.fee.toString(), decimals: c.decimals, mint: c.mint.toBase58(), pot: c.pot.publicKey.toBase58(),
+        survival: await pro.survivalBoard(sql, c), ...(wallet && { held: await pro.heldBy(c, wallet) }) });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Only GET and POST." });
     const userId = await userIdOf(req);
@@ -46,8 +44,8 @@ module.exports = async (req, res) => {
         if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "")) return answer({ error: "Pick a mode and a wallet." });
         return answer(await pro.quote(userId, body.mode, body.wallet));
       case "enter": {
-        if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "") || typeof body.token !== "string" || !/^\d{1,78}$/.test(`${body.deadline}`) || !/^\d{1,78}$/.test(`${body.nonce}`)) return answer({ error: "That entry is incomplete." });
-        const out = await pro.enter(sql, userId, body.mode, body.wallet, body.signature, body.token, `${body.deadline}`, `${body.nonce}`);
+        if (!MODES.has(body.mode) || !WALLET.test(body.wallet ?? "") || typeof body.tx !== "string" || typeof body.token !== "string") return answer({ error: "That entry is incomplete." });
+        const out = await pro.enter(sql, userId, body.mode, body.wallet, body.tx, body.token, body.lastValid);
         return answer(out.entry ? { entry: shown(out.entry) } : out);
       }
       case "check": {

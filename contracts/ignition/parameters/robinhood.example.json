@@ -1,8 +1,0 @@
-{
-  "BladesPot": {
-    "token": "0x… the $BLADES token's address",
-    "owner": "0x… the address that may change the referee and the fee: a safe",
-    "referee": "0x… the site's key's address (REFEREE_KEY)",
-    "fee": "50000000000000000000000"
-  }
-}

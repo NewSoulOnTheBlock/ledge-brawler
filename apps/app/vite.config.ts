@@ -60,8 +60,7 @@ self.addEventListener("fetch", (event) => {
 });
 `;
 
-/** Privy's Solana programs, which its main module imports and the game (paying on Robinhood Chain) never calls, stood in
- *  for by src/stubs/: for the build and the tests alike. */
+/** Privy's Solana programs the game never calls, stood in for by src/stubs/: for the build and the tests alike. */
 export const solanaStubs: Plugin = {
   name: "five-blades-solana-stubs",
   config: () => ({
